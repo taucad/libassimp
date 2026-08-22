@@ -32,7 +32,13 @@ if(EMSCRIPTEN)
   endif()
   # The engine and the binding have to agree on the exception ABI and on SIMD, so
   # these go in before assimp is configured rather than being patched on afterwards.
-  set(LIBASSIMP_COMMON_FLAGS "${LIBASSIMP_OPTIMIZE} -DNDEBUG -fwasm-exceptions -msimd128")
+  # The prefix maps keep build-machine paths out of the binary: assimp, tinyusdz,
+  # lib3mf and web-ifc all bake __FILE__ into assertion and log strings, which CI
+  # caught as /__w/libassimp/libassimp/... inside the wasm. Both directories are
+  # named because a preset may put the binary dir outside the source tree.
+  set(LIBASSIMP_COMMON_FLAGS
+      "${LIBASSIMP_OPTIMIZE} -DNDEBUG -fwasm-exceptions -msimd128 -ffile-prefix-map=${CMAKE_BINARY_DIR}=. -ffile-prefix-map=${CMAKE_SOURCE_DIR}=."
+  )
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBASSIMP_COMMON_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBASSIMP_COMMON_FLAGS}")
 endif()
@@ -67,7 +73,10 @@ if(EMSCRIPTEN)
     -lembind
     --emit-symbol-map
     "SHELL:--emit-tsd ${LIBASSIMP_TARGET}.d.ts"
-    "SHELL:-sBINARYEN_EXTRA_PASSES=--strip-debug,--strip-producers,--converge"
+    # --converge dropped 2026-08-23: +3,287 bytes brotli-11 (+0.18%) for -261 s of an
+    # importer link measured at 4,107 s on 8 cores, which is roughly -9 min on the
+    # 4-vCPU CI runner. Re-measure if the runner size changes.
+    "SHELL:-sBINARYEN_EXTRA_PASSES=--strip-debug,--strip-producers"
   )
 
   if(LIBASSIMP_FAST)

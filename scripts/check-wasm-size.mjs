@@ -6,13 +6,16 @@
 import { readFile } from 'node:fs/promises';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
-// Origin: the first production Emscripten 6.0.8 build of each variant, plus
-// about 1% headroom. Manifests: `src/wasm/libassimp-<variant>.manifest.json`,
-// engine 24c936c1, measured 2026-08-23 on macOS arm64.
+// Origin: the production Emscripten 6.0.8 build of each variant with source paths
+// remapped out of the binary and --converge dropped, plus about 1% headroom.
+// Manifests: `src/wasm/libassimp-<variant>.manifest.json`, engine 24c936c1,
+// measured 2026-08-23 on macOS arm64. Dropping --converge is what costs bytes
+// (+3,190 brotli-11 on `importer`, +0.17%); the prefix maps give about 100 back.
+// See CMakeLists.txt for the build time the trade bought.
 const CEILINGS = {
-  exporter: { raw: 7_702_744, gzip9: 1_946_981, brotli11: 1_263_957 },
-  importer: { raw: 10_224_035, gzip9: 2_828_954, brotli11: 1_878_065 },
-  full: { raw: 11_624_568, gzip9: 3_199_474, brotli11: 2_113_829 },
+  exporter: { raw: 7_705_011, gzip9: 1_949_578, brotli11: 1_266_377 },
+  importer: { raw: 10_226_360, gzip9: 2_831_319, brotli11: 1_881_287 },
+  full: { raw: 11_627_350, gzip9: 3_201_826, brotli11: 2_117_248 },
 };
 // Closure keeps every glue under 36 kB; above 50 kB it silently stopped.
 const GLUE_CEILING = 50_000;

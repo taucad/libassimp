@@ -139,8 +139,14 @@ for (const variant of names) {
     ['wasm', wasm],
     ['glue', glue],
   ]) {
-    if (bytes.includes(root.replace(/\/$/, ''))) {
-      throw new Error(`${target} ${name} embeds the checkout path ${root}`);
+    // The host checkout, the container mount, and the GitHub Actions workspace: the
+    // binary must name none of them, whichever machine produced it. Anchored, because
+    // plenty of legitimately relative paths end in `/src/`.
+    const text = bytes.toString('latin1');
+    for (const path of [root.replace(/\/$/, ''), '/src/', '/__w/']) {
+      if (new RegExp(`(?<![\\w./-])${RegExp.escape(path)}`, 'u').test(text)) {
+        throw new Error(`${target} ${name} embeds the build path ${path}`);
+      }
     }
   }
 
