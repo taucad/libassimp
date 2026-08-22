@@ -52,7 +52,10 @@ jobs:
   build-wasm:
     needs: preflight
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    # Measured 2026-08-23 on run 32583934372: `full` took 2 h 33 m and `importer`
+    # hit the old 180-minute ceiling. Dropping --converge buys back roughly 9 min,
+    # not the hour that would make 150 realistic, so the ceiling moves up instead.
+    timeout-minutes: 240
     container:
       image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
     strategy:
@@ -69,13 +72,24 @@ jobs:
       - name: Record the engine submodule commit
         id: engine
         run: echo "sha=$(git -C assimp rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      # The artifacts are a pure function of these inputs, and the determinism tests
+      # prove the outputs are reproducible, so an exact hit skips a link that costs
+      # over an hour; no restore-keys, because a near miss is a wrong answer, and
+      # validate-pack still asserts the manifest's image and engine sha downstream.
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        id: wasm-cache
+        with:
+          path: src/wasm/libassimp-${{ matrix.variant }}.*
+          key: wasm-${{ matrix.variant }}-${{ hashFiles('emsdk-image.txt', 'variants.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**', '.gitmodules') }}-${{ steps.engine.outputs.sha }}
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        if: steps.wasm-cache.outputs.cache-hit != 'true'
         with:
           path: .ccache
           key: ${{ runner.os }}-ccache-${{ matrix.variant }}-${{ hashFiles('emsdk-image.txt', 'variants.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**') }}-${{ hashFiles('.gitmodules') }}-${{ steps.engine.outputs.sha }}
           restore-keys: |
             ${{ runner.os }}-ccache-${{ matrix.variant }}-
       - name: Build the ${{ matrix.variant }} variant
+        if: steps.wasm-cache.outputs.cache-hit != 'true'
         env:
           LIBASSIMP_EMSDK: host
         run: node scripts/build-wasm.mjs --variant ${{ matrix.variant }}
