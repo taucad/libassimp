@@ -1,0 +1,72 @@
+name: Benchmark drift
+
+on:
+  schedule:
+    - cron: '17 4 1 * *' # Origin: monthly exploratory cadence from picovoxel.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  # Exploratory runs need the same artifact `ci.yml` gates, and wasm is never
+  # committed, so the drift run builds the one variant the benchmark uses.
+  build-wasm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    container:
+      image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Install the build tools the emsdk image omits
+        run: apt-get update && apt-get install -y ccache ninja-build
+      - name: Build the exporter variant
+        env:
+          LIBASSIMP_EMSDK: host
+        run: node scripts/build-wasm.mjs --variant exporter
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wasm-exporter
+          path: src/wasm/libassimp-exporter.*
+          if-no-files-found: error
+
+  drift:
+    needs: build-wasm
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '26'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: wasm-*
+          path: src/wasm
+          merge-multiple: true
+      - id: benchmark
+        continue-on-error: true # Origin: exploratory drift opens an issue; PR gate remains fail-closed in ci.yml.
+        env:
+          # Origin: provisional exploratory ceiling; blueprint step R4 replaces
+          # it with twice the first measured median on this runner.
+          MAX_MEDIAN_MS: '1000'
+        run: |
+          pnpm run build
+          pnpm run benchmark
+      - if: steps.benchmark.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create claude \
+            --color 5319E7 \
+            --description 'Picked up by Claude automation' \
+            --force
+          gh issue create \
+            --title 'Benchmark drift detected' \
+            --body "Monthly benchmark drift failed in ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}." \
+            --label claude

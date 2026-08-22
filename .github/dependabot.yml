@@ -1,0 +1,56 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      root:
+        patterns: ['*']
+
+  # The engine: taucad/assimp as a git submodule. Every bump runs the format
+  # matrix and the native ctest leg.
+  - package-ecosystem: gitsubmodule
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      engine:
+        patterns: ['*']
+
+  # The digest-pinned Emscripten toolchain image in the workflows. Keep
+  # emsdk-image.txt in step with the bumped literal; `pnpm run workflows`
+  # asserts they stay equal.
+  - package-ecosystem: docker
+    directory: /.github/workflows
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      emsdk:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /docs-site
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      docs:
+        patterns: ['*']
