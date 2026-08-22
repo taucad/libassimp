@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { hasWebAssembly, loadAssimp } from '@/lib/assimp-demo';
+import { hasWebAssembly, loadAssimp, packageVersion } from '@/lib/assimp-demo';
 
 /** A cube with a material library beside it: the smallest model that needs a sidecar file. */
 const CUBE_OBJ = `mtllib cube.mtl
@@ -61,9 +61,9 @@ export const ConvertDemo = ({
     try {
       assimp = await loadAssimp();
     } catch {
-      // A build without the binaries beside it still ships the page; say so rather than
-      // surfacing a bare module-resolution error.
-      setOutcome({ kind: 'failed', message: 'the importer build could not be loaded from /demo/' });
+      // The binary comes from the registry copy of this version, which a release has to publish
+      // first; say so rather than surfacing a bare module-resolution error.
+      setOutcome({ kind: 'failed', message: `libassimp@${packageVersion} is not available on the CDN yet` });
       return;
     }
 
@@ -107,7 +107,7 @@ export const ConvertDemo = ({
         <output className="font-mono text-xs text-fd-muted-foreground" data-testid="convert-demo-output">
           {!supported && 'This host has no WebAssembly, so the conversion cannot run here.'}
           {supported && outcome.kind === 'idle' && 'Converts cube.obj plus cube.mtl to GLB, in this tab.'}
-          {outcome.kind === 'running' && 'Loading the importer build (about 10 MB) and converting…'}
+          {outcome.kind === 'running' && 'Loading the published importer build (about 10 MB) and converting…'}
           {outcome.kind === 'done' &&
             `${outcome.name} — ${outcome.bytes.toLocaleString('en-US')} bytes in ${outcome.ms} ms`}
           {outcome.kind === 'failed' && `failed: ${outcome.message}`}

@@ -39,7 +39,9 @@ console.log(assimp.formats.export.length);
 
 The binary is several megabytes, so serve it with a long-lived cache header
 and a content hash in the name. Compressed transfer matters more than the raw
-figure: the exporter build is under 1.3 MB over brotli.
+figure: the exporter build is under 1.3 MB over brotli. The live demo in these
+docs loads the published package from a registry CDN, which suits a
+documentation page; an application should bundle the binary it ships.
 
 ### 3. Move the work off the main thread
 
