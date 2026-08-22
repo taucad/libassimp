@@ -65,7 +65,7 @@ jobs:
           submodules: true
           persist-credentials: false
       - name: Install the build tools the emsdk image omits
-        run: apt-get update && apt-get install -y ccache ninja-build
+        run: apt-get update && apt-get install -y --no-install-recommends ccache ninja-build
       - name: Record the engine submodule commit
         id: engine
         run: echo "sha=$(git -C assimp rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -89,9 +89,11 @@ jobs:
     needs: [preflight, build-wasm]
     runs-on: ubuntu-24.04
     steps:
+      # The format matrix reads the engine's own fixture corpus.
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          submodules: true
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
@@ -155,6 +157,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          submodules: true
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
@@ -179,7 +182,7 @@ jobs:
           submodules: true
           persist-credentials: false
       - name: Install the native build tools
-        run: sudo apt-get update && sudo apt-get install --yes ccache ninja-build
+        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends ccache ninja-build zlib1g-dev
       - name: Record the engine submodule commit
         id: engine
         run: echo "sha=$(git -C assimp rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -286,8 +289,7 @@ jobs:
         run: pnpm exec vitest run --config vitest.browser.config.ts
         env:
           BROWSER: ${{ matrix.browser }}
-          LIBASSIMP_CANDIDATE_DIR: candidate
-          LIBASSIMP_WASM_MODULE: candidate/extracted/package/dist/wasm/libassimp-exporter.js
+          LIBASSIMP_DIST_DIR: candidate/extracted/package/dist
 
   benchmark:
     if: github.event_name == 'pull_request'

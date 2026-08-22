@@ -19,9 +19,10 @@ ever reaches a consumer. `assimp/` is the engine, a git submodule tracking
 `taucad/assimp`.
 
 `variants.json` is the single source for what each build contains.
-`scripts/variants-to-presets.mjs` derives `CMakePresets.json` from it, and the
-same file feeds the format-union test and the docs format matrix, so adding a
-format the engine gained is one JSON edit.
+`scripts/variants-to-presets.mjs` derives `CMakePresets.json` from it and the
+docs format matrix reads it, so adding a format the engine gained is one JSON
+edit; the export unions in `src/formats.ts` are asserted against the compiled
+build rather than derived from it.
 
 `scripts/build-wasm.mjs` runs the digest-pinned toolchain from
 `emsdk-image.txt` and writes `src/wasm/`, which is git-ignored and CI-built:
@@ -39,8 +40,9 @@ TypeScript exports.
 - Every compatibility check mark maps to a CI job.
 - Admission changes are explicit budget or benchmark-identity diffs. The
   budgets in `.size-limit.json`, `scripts/check-wasm-size.mjs`, and
-  `bench.yml` are provisional bootstrap values until the first production
-  build re-anchors each one with its measured origin.
+  `bench/gated.mjs` are the first production build's measurements plus stated
+  headroom, and `tests/determinism.json` pins the output bytes; each moves only
+  in the pull request that causes the move.
 - Bump `emsdk-image.txt` and the `container:` literals in the workflows
   together; `pnpm run workflows` asserts they stay equal.
 
