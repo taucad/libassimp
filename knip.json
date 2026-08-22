@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "treatConfigHintsAsErrors": true,
+  "workspaces": {
+    ".": {
+      "entry": [
+        "bench/*.mjs",
+        "scripts/*.mjs",
+        "src/**/*.test.ts",
+        "src/**/*.test-d.ts",
+        "tests/**/*.test.mjs",
+        "*.config.ts",
+        "*.test.ts"
+      ],
+      "ignore": ["assimp/**", "src/cjs-error.d.cts", "src/wasm/**"],
+      "ignoreBinaries": ["cmake", "ctest", "docker"],
+      "ignoreDependencies": ["@nx/js"]
+    },
+    "docs-site": {
+      "entry": [
+        "app/**/*.{ts,tsx}",
+        "content/docs/props.ts",
+        "mdx-components.tsx",
+        "source.config.ts",
+        "*.config.{mjs,ts}"
+      ]
+    }
+  }
+}

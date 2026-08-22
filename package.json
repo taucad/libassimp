@@ -1,0 +1,139 @@
+{
+  "name": "libassimp",
+  "version": "0.0.0",
+  "description": "Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.",
+  "keywords": [
+    "3d",
+    "3mf",
+    "assimp",
+    "converter",
+    "fbx",
+    "glb",
+    "gltf",
+    "mesh",
+    "stl",
+    "usd",
+    "wasm",
+    "webassembly"
+  ],
+  "homepage": "https://libassimp.vercel.app",
+  "bugs": {
+    "url": "https://github.com/taucad/libassimp/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "Richard Fontein",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/taucad/libassimp.git"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "compatibility.md",
+    "CHANGELOG.md",
+    "BREAKING_CHANGES.md",
+    "NOTICE",
+    "license"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs-error.d.cts",
+        "default": "./dist/cjs-error.cjs"
+      },
+      "default": "./dist/index.mjs"
+    },
+    "./importer": {
+      "import": {
+        "types": "./dist/importer.d.mts",
+        "default": "./dist/importer.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs-error.d.cts",
+        "default": "./dist/cjs-error.cjs"
+      },
+      "default": "./dist/importer.mjs"
+    },
+    "./exporter": {
+      "import": {
+        "types": "./dist/exporter.d.mts",
+        "default": "./dist/exporter.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs-error.d.cts",
+        "default": "./dist/cjs-error.cjs"
+      },
+      "default": "./dist/exporter.mjs"
+    },
+    "./wasm": "./dist/wasm/libassimp-full.wasm",
+    "./importer/wasm": "./dist/wasm/libassimp-importer.wasm",
+    "./exporter/wasm": "./dist/wasm/libassimp-exporter.wasm",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "benchmark": "node bench/gated.mjs",
+    "build": "tsdown && node scripts/copy-wasm.mjs",
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "check:dead-code": "pnpm run docs:source && knip",
+    "check:size": "size-limit && node scripts/check-wasm-size.mjs",
+    "check": "nx run libassimp:quality",
+    "docs:build": "pnpm --filter libassimp-docs build",
+    "docs:source": "pnpm --filter libassimp-docs generate:source",
+    "docs:test": "pnpm --filter libassimp-docs test",
+    "format:check": "oxfmt --check .",
+    "lint": "pnpm run docs:source && oxlint --deny-warnings --type-aware && eslint .",
+    "pkgcheck": "pnpm run validate-pack && publint && attw --pack . --profile esm-only --entrypoints . ./importer ./exporter",
+    "plan:check": "nx release plan:check",
+    "prose": "./scripts/check-prose.sh",
+    "test": "vitest run",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "test:coverage": "vitest run --coverage",
+    "test:package": "node scripts/test-package.mjs",
+    "typecheck": "tsc --noEmit",
+    "validate-pack": "node scripts/validate-pack.mjs",
+    "workflows": "./scripts/check-workflows.sh",
+    "release:prepare": "node scripts/prepare-release.mjs",
+    "prepublishOnly": "nx run libassimp:validate-pack"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@eslint/js": "9.32.0",
+    "@nx/js": "23.1.1",
+    "@size-limit/file": "13.0.3",
+    "@types/mdx": "2.0.14",
+    "@types/node": "24.13.3",
+    "@vitest/browser-playwright": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10",
+    "eslint": "9.32.0",
+    "globals": "17.11.0",
+    "knip": "6.17.1",
+    "nx": "23.1.1",
+    "oxfmt": "0.36.0",
+    "oxlint": "1.70.0",
+    "oxlint-tsgolint": "0.22.1",
+    "playwright": "1.62.0",
+    "publint": "0.3.23",
+    "semver": "7.8.5",
+    "size-limit": "13.0.3",
+    "tsdown": "0.22.14",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.61.1",
+    "vitest": "4.1.10"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "packageManager": "pnpm@11.7.0"
+}
