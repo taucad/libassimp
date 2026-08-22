@@ -2,12 +2,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: [
-      'src/**/*.test.ts',
-      'tests/packaging.test.mjs',
-      'prose-quality.test.ts',
-      'readme-shape.test.ts',
-    ],
+    // `tests/ci/**` is deliberately absent: those run under `node --test`.
+    include: ['src/**/*.test.ts', 'tests/*.test.mjs', '*.test.ts'],
     coverage: {
       exclude: ['src/**/*.{test,spec}.ts', 'src/wasm/**', '**/*.test-d.ts'],
       include: ['src/**/*.ts'],

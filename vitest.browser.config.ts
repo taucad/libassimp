@@ -4,8 +4,8 @@ import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
 const providers = {
-  chromium: { browser: 'chromium', headless: true, provider: playwright() },
-  firefox: { browser: 'firefox', headless: true, provider: playwright() },
+  chromium: { browser: 'chromium', headless: true },
+  firefox: { browser: 'firefox', headless: true },
   webkit: { browser: 'webkit', headless: true },
 } as const;
 
@@ -17,14 +17,18 @@ const instances = requestedBrowser
   ? [providers[requestedBrowser as keyof typeof providers]]
   : [providers.chromium, providers.firefox, providers.webkit];
 
+// The entries of the exact candidate under test: CI points this at the
+// extracted tarball's `dist`, a local run at the TypeScript sources over the
+// working `src/wasm/` build.
+const distribution = process.env['LIBASSIMP_DIST_DIR'];
+const entry = (name: string): string =>
+  resolve(distribution ? `${distribution}/${name}.mjs` : `src/${name}.ts`);
+
 export default defineConfig({
   resolve: {
     alias: {
-      // The exporter glue of the exact candidate under test; CI points this at
-      // the extracted tarball, a local run at the working `src/wasm/` build.
-      'libassimp-candidate': resolve(
-        process.env['LIBASSIMP_WASM_MODULE'] ?? 'src/wasm/libassimp-exporter.js',
-      ),
+      'libassimp-candidate/importer': entry('importer'),
+      'libassimp-candidate/exporter': entry('exporter'),
     },
   },
   test: {

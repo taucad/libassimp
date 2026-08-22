@@ -12,12 +12,20 @@
   ],
   "plugins": ["typescript", "unicorn"],
   "rules": {
-    "max-params": ["error", { "max": 3 }]
+    "max-params": [
+      "error",
+      {
+        "max": 3
+      }
+    ]
   },
   "overrides": [
     {
       "files": ["tests/**/*.mjs", "bench/**/*.mjs"],
-      "rules": { "typescript/no-floating-promises": "off" }
+      "rules": {
+        "typescript/no-floating-promises": "off",
+        "typescript/restrict-template-expressions": "off"
+      }
     }
   ]
 }

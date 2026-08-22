@@ -1,0 +1,3 @@
+# Model fixtures are compared byte for byte against other tools' output, so git
+# must never normalize their line endings or diff them as text.
+tests/fixtures/** -text -diff

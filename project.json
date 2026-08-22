@@ -23,6 +23,7 @@
     },
     "test": {
       "executor": "nx:run-commands",
+      "dependsOn": ["build"],
       "options": { "command": "pnpm run test:coverage" }
     },
     "test:browser": {
