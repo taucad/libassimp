@@ -1,0 +1,44 @@
+{
+  "$comment": "Single source for the compiled format sets. scripts/variants-to-presets.mjs turns this into CMakePresets.json; the TypeScript ExportFormat union test and the docs format matrix read the same file. Adding a format the engine gained is one edit here. Ids are assimp's CMake format ids: a bare id in a list or in `disable` covers both ASSIMP_BUILD_<id>_IMPORTER and ASSIMP_BUILD_<id>_EXPORTER; an id ending in _IMPORTER or _EXPORTER covers only that side.",
+  "disable": {
+    "$comment": "Shared across every variant. M3D: undefined behaviour, crashes and leaks (assimp#4044) — importer and exporter (M3D_EXPORTER is listed explicitly because the exporter leak is a separate defect from the importer UB). RAW: assertion failure from a memory error. IRR/IRRMESH: XML parse failure. TERRAGEN: broken. PBRT/ASSBIN/ASSXML: not interchange formats (ASSBIN/ASSXML are assimp's own debug dumps).",
+    "ids": ["M3D", "RAW", "IRR", "IRRMESH", "TERRAGEN", "PBRT", "ASSBIN", "ASSXML", "M3D_EXPORTER"]
+  },
+  "cacheVariables": {
+    "$comment": "Applied to every wasm preset. ASSIMP_BUILD_ZLIB builds zlib from source rather than probing the host. ASSIMP_BUILD_DRACO stays at assimp's own default (OFF): Draco support pulls a FetchContent dependency and costs size for a glTF sub-feature no consumer has asked for — recorded as a decision, revisit behind the size ratchets.",
+    "BUILD_SHARED_LIBS": "OFF",
+    "ASSIMP_BUILD_TESTS": "OFF",
+    "ASSIMP_BUILD_ASSIMP_TOOLS": "OFF",
+    "ASSIMP_BUILD_ZLIB": "ON",
+    "ASSIMP_BUILD_DRACO": "OFF",
+    "ASSIMP_NO_EXPORT": "OFF",
+    "ASSIMP_INSTALL": "OFF",
+    "ASSIMP_WARNINGS_AS_ERRORS": "OFF",
+    "ASSIMP_BUILD_3MF_LIB3MF": "ON"
+  },
+  "variants": {
+    "full": {
+      "$comment": "Root entry: everything the engine builds cleanly. USD, VRML and IFC each sit behind their own ASSIMP_BUILD_<X>_IMPORTER switch that ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT does not flip, and IFC additionally gates the web-ifc/glm include paths on it, so all three have to be named.",
+      "importers": "all",
+      "exporters": "all",
+      "enable": ["USD_IMPORTER", "VRML_IMPORTER", "IFC_IMPORTER"]
+    },
+    "importer": {
+      "$comment": "Read anything, write the web formats.",
+      "importers": "all",
+      "exporters": ["GLTF", "ASSJSON"],
+      "enable": ["USD_IMPORTER", "VRML_IMPORTER", "IFC_IMPORTER"]
+    },
+    "exporter": {
+      "$comment": "Read glTF/GLB, write anything. USD_IMPORTER is on because the USD exporter shares tinyusdz with it. There is no ASSJSON importer in assimp (assjson is export-only), so none is listed.",
+      "importers": ["GLTF", "USD"],
+      "exporters": "all",
+      "enable": []
+    }
+  },
+  "nativeTest": {
+    "$comment": "Host build for ctest. Importers the fixture subset needs, exporters the fixture subset writes; small enough to configure and build in minutes. USD is deliberately absent: tinyusdz would dominate the ctest leg's minutes (OQ8) and the wasm format matrix covers it.",
+    "importers": ["OBJ", "GLTF", "FBX", "STL", "PLY", "COLLADA"],
+    "exporters": ["GLTF", "ASSJSON", "OBJ", "STL", "PLY", "3MF", "STEP", "COLLADA"]
+  }
+}
