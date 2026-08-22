@@ -1,0 +1,7 @@
+# libassimp
+
+Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.
+
+- Overview: https://libassimp.vercel.app/docs
+- Quick start: https://libassimp.vercel.app/docs/quick-start
+- API: https://libassimp.vercel.app/docs/api

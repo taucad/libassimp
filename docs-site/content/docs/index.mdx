@@ -1,0 +1,20 @@
+---
+title: Overview
+description: 'Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.'
+---
+
+libassimp converts 3D model files in the browser, in Node.js, and in a worker.
+It is the Open Asset Import Library compiled to WebAssembly behind a small
+TypeScript API: hand it the bytes of a model, name the format you want back,
+and it returns the converted bytes.
+
+Three entries ship the same API and differ only in the formats compiled in.
+`libassimp` imports and exports everything, `libassimp/importer` carries every
+importer with the glTF exporters, and `libassimp/exporter` carries every
+exporter with the glTF importers.
+
+## Install
+
+```bash
+npm install libassimp
+```

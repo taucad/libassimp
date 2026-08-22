@@ -1,0 +1,14 @@
+---
+title: Errors
+description: Handle stable error codes and host failures.
+---
+
+A failed conversion rejects with an `AssimpError` carrying a stable `code` and
+the engine's own message.
+
+<auto-type-table path="./props.ts" name="AssimpFailureCode" />
+
+`NO_FILES` means the call carried no entry file. `UNSUPPORTED_FORMAT` means the
+entry names a format this build does not carry, and the message lists the ones
+it does. `IMPORT_FAILED` and `EXPORT_FAILED` carry the importer's or exporter's
+own diagnostic text.
