@@ -10,7 +10,7 @@ runs:
     - uses: pnpm/action-setup@f2b2b233b538f500472c7274c7012f57857d8ce0 # v4.1.0
       with:
         run_install: false
-        version: '11'
+        version: '11.7.0'
     - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
         node-version: ${{ inputs.node-version }}
