@@ -12,8 +12,8 @@
         "*.config.ts",
         "*.test.ts"
       ],
-      "ignore": ["assimp/**", "src/cjs-error.d.cts", "src/wasm/**"],
-      "ignoreBinaries": ["cmake", "ctest", "docker"],
+      "ignore": ["assimp/**", "src/cjs-error.d.cts"],
+      "ignoreBinaries": ["cmake", "ctest"],
       "ignoreDependencies": ["@nx/js"]
     },
     "docs-site": {

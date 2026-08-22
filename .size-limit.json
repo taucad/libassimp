@@ -1,22 +1,22 @@
 [
   {
-    "name": "public ESM facade (placeholder budget)",
+    "name": "public ESM facade",
     "path": "dist/index.mjs",
-    "limit": "50 kB"
+    "limit": "620 B"
   },
   {
-    "name": "importer entry (placeholder budget)",
+    "name": "importer entry",
     "path": "dist/importer.mjs",
-    "limit": "50 kB"
+    "limit": "640 B"
   },
   {
-    "name": "exporter entry (placeholder budget)",
+    "name": "exporter entry",
     "path": "dist/exporter.mjs",
-    "limit": "50 kB"
+    "limit": "630 B"
   },
   {
-    "name": "instance factory (placeholder budget)",
+    "name": "instance factory",
     "path": "dist/create-assimp.mjs",
-    "limit": "50 kB"
+    "limit": "960 B"
   }
 ]

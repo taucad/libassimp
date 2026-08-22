@@ -48,10 +48,19 @@ try {
     `import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { convert } from 'libassimp';
+import { convert as convertToGltf } from 'libassimp/importer';
+import { convert as convertFromGltf, createAssimp } from 'libassimp/exporter';
 
 const bytes = new Uint8Array(await readFile(process.argv[2]));
 const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'glb' });
 assert.equal(Buffer.from(files[0].bytes.subarray(0, 4)).toString('latin1'), 'glTF');
+
+const gltf = await convertToGltf({ name: 'cube.obj', bytes }, { to: 'glb' });
+const stl = await convertFromGltf({ name: 'model.glb', bytes: gltf.files[0].bytes }, { to: 'stl' });
+assert.equal(stl.files[0].name, 'result.stl');
+
+using assimp = await createAssimp();
+assert.ok(assimp.formats.export.some((format) => format.id === 'stl'));
 
 for (const specifier of ['libassimp/wasm', 'libassimp/importer/wasm', 'libassimp/exporter/wasm']) {
   const wasm = await readFile(new URL(import.meta.resolve(specifier)));

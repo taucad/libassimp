@@ -2,7 +2,7 @@ import path from 'node:path';
 
 // Initial public package contract from the blueprint's Target Package Manifest.
 // Change the list and ceiling together in the causing pull request.
-const PACKAGE_FILE_COUNT_CEILING = 29;
+const PACKAGE_FILE_COUNT_CEILING = 28;
 
 export const PACKAGE_FILES = [
   'BREAKING_CHANGES.md',
@@ -21,7 +21,6 @@ export const PACKAGE_FILES = [
   'dist/exporter.d.mts',
   'dist/exporter.mjs',
   'dist/formats.d.mts',
-  'dist/formats.mjs',
   'dist/importer.d.mts',
   'dist/importer.mjs',
   'dist/index.d.mts',

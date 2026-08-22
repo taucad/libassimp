@@ -24,7 +24,7 @@ export const compareBenchmark = (current, base) => {
   const percentage = `${change >= 0 ? '+' : ''}${(change * 100).toFixed(1)}%`;
   return {
     failed: change > THRESHOLD,
-    markdown: `${MARKER}\n### Benchmark\n\n| Benchmark | main | PR | Change | Limit |\n| --- | ---: | ---: | ---: | ---: |\n| \`${current.name}\` | ${base.medianMs} ms | ${current.medianMs} ms | ${percentage} | +10.0% |`,
+    markdown: `${MARKER}\n### Benchmark\n\n| Benchmark | main | PR | Change | Limit |\n| --- | ---: | ---: | ---: | ---: |\n| \`${current.name}\` | ${base.medianMs} ms | ${current.medianMs} ms | ${percentage} | +10.0% |\n| \`createAssimp\` | ${base.initMs} ms | ${current.initMs} ms | | |`,
   };
 };
 
