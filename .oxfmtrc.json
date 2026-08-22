@@ -6,9 +6,10 @@
     "dist/**",
     "docs-site/.next/**",
     "docs-site/.source/**",
-    "docs-site/tsconfig.json",
     "docs-site/next-env.d.ts",
     "docs-site/out/**",
+    "docs-site/public/demo/**",
+    "docs-site/tsconfig.json",
     "src/wasm/**"
   ],
   "printWidth": 110,

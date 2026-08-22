@@ -3,10 +3,15 @@ import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 
 import { TauAttributionFooter } from '@/components/tau-attribution-footer';
 import { source } from '@/lib/source';
+import { baseOptions, packageVersion } from '../layout.config';
 
 const Layout = ({ children }: { readonly children: ReactNode }): React.JSX.Element => (
   <DocsLayout
-    nav={{ title: 'libassimp' }}
+    {...baseOptions}
+    nav={{
+      ...baseOptions.nav,
+      children: <span className="self-center text-xs text-fd-muted-foreground">{packageVersion}</span>,
+    }}
     sidebar={{ footer: <TauAttributionFooter /> }}
     tree={source.pageTree}
   >

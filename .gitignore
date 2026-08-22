@@ -4,6 +4,7 @@
 .nx/*
 !.nx/version-plans/
 !.nx/version-plans/*.md
+.vercel
 build/
 coverage/
 dist/

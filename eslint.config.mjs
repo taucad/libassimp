@@ -13,6 +13,7 @@ export default tseslint.config(
       'dist/**',
       'docs-site/.next/**',
       'docs-site/.source/**',
+      'docs-site/public/demo/**',
       'docs-site/out/**',
       'node_modules/**',
       'src/wasm/**',

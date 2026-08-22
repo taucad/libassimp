@@ -1,0 +1,14 @@
+# Everything the documentation build never reads. The engine submodule alone is 2.5 GB, and a
+# Vercel build only needs the TypeScript sources, the site, and the manifests that pin them.
+.ccache
+.nx
+assimp
+bench
+build
+coverage
+dist
+docs-site/.next
+docs-site/out
+src/cpp
+src/wasm
+tests

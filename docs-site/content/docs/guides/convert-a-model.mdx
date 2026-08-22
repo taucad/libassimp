@@ -1,0 +1,80 @@
+---
+title: Convert a model
+description: Name the entry file, pass the files it needs, and read the output the exporter wrote.
+---
+
+One call does the whole job: `convert` takes what to read and what to write,
+and resolves to the files that came out.
+
+### 1. Pass one file when one file is enough
+
+A single-file format — STL, PLY, GLB, 3MF — needs nothing beside it.
+
+```typescript
+import { convert } from 'libassimp';
+
+import { readFile } from 'node:fs/promises';
+
+const bytes = new Uint8Array(await readFile('part.stl'));
+const { files } = await convert({ name: 'part.stl', bytes }, { to: 'glb' });
+
+console.log(files[0].name, files[0].bytes.byteLength);
+```
+
+The `name` matters: its extension is how the engine picks an importer, and
+references inside the file resolve against it. Bytes with a name that lies
+about their format import as the wrong thing or fail.
+
+### 2. Pass an array when the model has company
+
+The first element is the entry file; the rest are available under their names.
+
+```typescript
+import { convert } from 'libassimp';
+
+import { readFile } from 'node:fs/promises';
+
+const read = async (name: string) => ({ name, bytes: new Uint8Array(await readFile(name)) });
+
+const { files } = await convert([await read('scene.gltf'), await read('scene.bin')], { to: 'usdz' });
+
+console.log(files[0].name);
+```
+
+Files the entry never references cost nothing beyond the copy. When you cannot
+know the list up front, hand over a
+[`resolve` callback](resolve-sidecar-files) instead.
+
+### 3. Read the output
+
+The result is `{ files }`: the primary output first, then any sidecars the
+exporter wrote, each a name and a copied `Uint8Array`.
+
+```typescript
+import { convert } from 'libassimp';
+
+import { readFile, writeFile } from 'node:fs/promises';
+
+const bytes = new Uint8Array(await readFile('part.stl'));
+const { files } = await convert({ name: 'part.stl', bytes }, { to: 'gltf' });
+
+for (const file of files) await writeFile(file.name, file.bytes);
+```
+
+```console
+result.gltf result.bin
+```
+
+Names come from the target format, never from the input: `glb` writes
+`result.glb`, `step` writes `result.stp`, `assjson` writes `result.json`.
+Rename them on the way out when your storage wants something else.
+
+## Variations
+
+**Converting between two formats you chose at runtime.** `to` is a plain
+string union; a value outside it fails with `UNSUPPORTED_FORMAT` and a message
+listing what the entry does carry.
+
+**Keeping the module warm.** Repeated `convert` calls already share one
+instance. Use [`createAssimp`](../api#createassimp) when you want to dispose it
+or point it at a different binary.

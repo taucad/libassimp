@@ -1,4 +1,4 @@
-import { globSync, readFileSync } from 'node:fs';
+import { globSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -19,7 +19,10 @@ const DOCUMENTS = globSync('**/*.{md,mdx}', {
     'docs-site/out/**',
     'node_modules/**',
   ],
-}).sort();
+})
+  // Route segments such as `docs-site/app/docs.mdx/` are directories, not documents.
+  .filter((path) => statSync(resolve(ROOT, path)).isFile())
+  .sort();
 
 type Block = { readonly line: number; readonly text: string };
 

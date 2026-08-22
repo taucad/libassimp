@@ -21,6 +21,7 @@
         "app/**/*.{ts,tsx}",
         "content/docs/props.ts",
         "mdx-components.tsx",
+        "scripts/*.mjs",
         "source.config.ts",
         "*.config.{mjs,ts}"
       ]
