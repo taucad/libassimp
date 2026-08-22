@@ -1,0 +1,3 @@
+# libassimp
+
+Bootstrap in progress.
