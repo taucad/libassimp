@@ -33,6 +33,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const wasmDir = `${root}src/wasm`;
+const emsdk = process.env.LIBASSIMP_EMSDK === 'host' ? process.env.EMSDK : '/emsdk';
+const wasmOpt = emsdk ? `${emsdk}/upstream/bin/wasm-opt` : 'wasm-opt';
 const wasmOptFlags = [
   '-O4',
   '--strip-debug',
@@ -143,7 +145,7 @@ for (const variant of names) {
 
   if (!fast) {
     build(
-      `wasm-opt ${buildPath}/${target}.wasm ${wasmOptFlags.join(' ')} ` +
+      `${wasmOpt} ${buildPath}/${target}.wasm ${wasmOptFlags.join(' ')} ` +
         `--output=${buildPath}/${target}.optimized.wasm`,
       { stdio: 'inherit' },
     );
