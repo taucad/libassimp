@@ -33,6 +33,20 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const wasmDir = `${root}src/wasm`;
+const wasmOptFlags = [
+  '-O4',
+  '--strip-debug',
+  '--strip-producers',
+  '--enable-mutable-globals',
+  '--enable-bulk-memory',
+  '--enable-sign-ext',
+  '--enable-nontrapping-float-to-int',
+  '--traps-never-happen',
+  '--converge',
+  '--enable-exception-handling',
+  '--enable-simd',
+  '--skip-pass=code-folding',
+];
 
 const args = process.argv.slice(2);
 const fast = args.includes('--fast');
@@ -117,6 +131,7 @@ mkdirSync(wasmDir, { recursive: true });
 
 for (const variant of names) {
   const target = `libassimp-${variant}`;
+  const buildPath = `build/wasm-${variant}`;
   const buildDir = `${root}build/wasm-${variant}`;
   const started = Date.now();
 
@@ -125,6 +140,15 @@ for (const variant of names) {
       `&& cmake --build --preset wasm-${variant} --parallel`,
     { stdio: 'inherit' },
   );
+
+  if (!fast) {
+    build(
+      `wasm-opt ${buildPath}/${target}.wasm ${wasmOptFlags.join(' ')} ` +
+        `--output=${buildPath}/${target}.optimized.wasm`,
+      { stdio: 'inherit' },
+    );
+    renameSync(`${buildDir}/${target}.optimized.wasm`, `${buildDir}/${target}.wasm`);
+  }
 
   const linkFlags = /^ *LINK_FLAGS = (.*)$/m.exec(readFileSync(`${buildDir}/build.ninja`, 'utf8'));
   const emccVersion = build('emcc --version').split('\n')[0].trim();
@@ -159,6 +183,7 @@ for (const variant of names) {
         engineSha,
         variantsSha256,
         flags: linkFlags === null ? [] : linkFlags[1].trim().split(/\s+/),
+        wasmOptFlags: fast ? [] : wasmOptFlags,
         fast,
         sizes: { wasm: wasm.length, js: glue.length },
         sourceDateEpoch,

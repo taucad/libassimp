@@ -30,21 +30,13 @@ if(EMSCRIPTEN)
     set(LIBASSIMP_LINK_OPTIMIZE "-O1")
   else()
     set(LIBASSIMP_COMPILE_OPTIMIZE "-O3")
-    set(LIBASSIMP_LINK_OPTIMIZE "-O2")
+    set(LIBASSIMP_LINK_OPTIMIZE "-O3")
   endif()
-  # Measured 2026-08-23, emsdk 6.0.8, `full` objects at `-O3`: link `-O3` 4,348.7 s
-  # (99.4 % Binaryen `code-folding` on web-ifc's 1.25 MB `getPropertyName`), `-O2`
-  # 28 s, `-O3 --skip-pass=code-folding` 37 s, `-Os --skip-pass=code-folding` 60 s;
-  # `-O2` is the smallest brotli (2,040,233 vs 2,096,285) at +6.0 % raw; `-Os`/`-Oz`
-  # re-enter code-folding (`shrinkLevel >= 1`); `EVAL_CTORS=2` is inert under embind
-  # (an `=0` rerun was +575 B raw / +315 B brotli); `--closure=1` is load-bearing for
-  # the 50 KB glue gate; legacy EH is the
-  # 6.0.8 default — exnref floors are Chrome 137 / Firefox 131 / Safari 18.4 / Node
-  # 24.15, so flip only when Node 22 leaves the matrix.
-  # W13, same toolchain and objects: mimalloc added 58,380 B raw / 21,172 B brotli but
-  # cut the quiet-host IFC median 136.5 -> 117.8 ms (13.7 %) while cube/init held their
-  # gates, so production uses it. `-flto` was rejected: a 317 s rebuild grew full wasm
-  # to 13,067,503 B raw / 2,213,659 B brotli instead of clearing the 2 % size gate.
+  # Match the production Replicad/OpenCascade shape: `-O3` compile and link, no LTO,
+  # then standalone `wasm-opt -O4` in build-wasm.mjs. Binaryen's size-only
+  # `code-folding` pass consumed 99.4% of a measured 4,348.7 s full link on web-ifc;
+  # skipping it retains the speed-oriented passes and brings the same link to 37 s.
+  # Baseline SIMD is universal in Tau's supported browsers; relaxed SIMD is not.
   # The engine and the binding have to agree on the exception ABI and on SIMD, so
   # these go in before assimp is configured rather than being patched on afterwards.
   # The prefix maps keep build-machine paths out of the binary: assimp, tinyusdz,
@@ -85,13 +77,12 @@ if(EMSCRIPTEN)
     -sSUPPORT_LONGJMP=0
     -sEXIT_RUNTIME=0
     -sINVOKE_RUN=0
+    -sWASM_BIGINT=1
     -lembind
+    --no-entry
     --emit-symbol-map
     "SHELL:--emit-tsd ${LIBASSIMP_TARGET}.d.ts"
-    # --converge dropped 2026-08-23: +3,287 bytes brotli-11 (+0.18%) for -261 s of an
-    # importer link measured at 4,107 s on 8 cores, which is roughly -9 min on the
-    # 4-vCPU CI runner. Re-measure if the runner size changes.
-    "SHELL:-sBINARYEN_EXTRA_PASSES=--strip-debug,--strip-producers"
+    "SHELL:-sBINARYEN_EXTRA_PASSES=--strip-debug,--strip-producers,--skip-pass=code-folding"
   )
 
   if(LIBASSIMP_FAST)
