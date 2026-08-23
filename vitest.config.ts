@@ -14,6 +14,9 @@ export default defineConfig({
     },
     environment: 'node',
     reporters: ['verbose'],
+    // Origin: MDL3/MDL5's 2.85 MB fixtures took 6.0–6.3 s on the 4-vCPU
+    // quality runner under parallel Nx tasks, versus 1.0–1.4 s locally.
+    testTimeout: 30_000,
     typecheck: {
       enabled: true,
       include: ['src/**/*.test-d.ts'],
