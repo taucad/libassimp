@@ -15,7 +15,10 @@ jobs:
   # stages all three variants, so the drift run builds all three.
   build-wasm:
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    # Origin: about 3x the measured cold job after the -O2 link: compile takes
+    # roughly 25 minutes on 4 vCPU and link takes less than 1 minute. The prior
+    # 180-minute ceiling matched the -O3 link.
+    timeout-minutes: 90
     container:
       image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
     strategy:

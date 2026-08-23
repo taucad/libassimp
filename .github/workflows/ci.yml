@@ -52,10 +52,10 @@ jobs:
   build-wasm:
     needs: preflight
     runs-on: ubuntu-24.04
-    # Measured 2026-08-23 on run 32583934372: `full` took 2 h 33 m and `importer`
-    # hit the old 180-minute ceiling. Dropping --converge buys back roughly 9 min,
-    # not the hour that would make 150 realistic, so the ceiling moves up instead.
-    timeout-minutes: 240
+    # Origin: about 3x the measured cold job after the -O2 link: compile takes
+    # roughly 25 minutes on 4 vCPU and link takes less than 1 minute. The prior
+    # 240-minute ceiling matched the -O3 link measured on run 32583934372.
+    timeout-minutes: 90
     container:
       image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
     strategy:
