@@ -6,16 +6,14 @@
 import { readFile } from 'node:fs/promises';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
-// Origin: the production Emscripten 6.0.8 build of each variant with source paths
-// remapped out of the binary and --converge dropped, plus about 1% headroom.
-// Manifests: `src/wasm/libassimp-<variant>.manifest.json`, engine 24c936c1,
-// measured 2026-08-23 on macOS arm64. Dropping --converge is what costs bytes
-// (+3,190 brotli-11 on `importer`, +0.17%); the prefix maps give about 100 back.
-// See CMakeLists.txt for the build time the trade bought.
+// Origin: production emsdk 6.0.8 build at compile `-O3` / link `-O2` (see
+// CMakeLists.txt), engine 24c936c1, measured 2026-08-23 on macOS arm64; 1%
+// headroom. Raw is +6% because `-O2` omits `code-folding` and `wasm-metadce`;
+// brotli is -2.6%; link is 214x faster.
 const CEILINGS = {
-  exporter: { raw: 7_705_011, gzip9: 1_949_578, brotli11: 1_266_377 },
-  importer: { raw: 10_226_360, gzip9: 2_831_319, brotli11: 1_881_287 },
-  full: { raw: 11_627_350, gzip9: 3_201_826, brotli11: 2_117_248 },
+  exporter: { raw: 7_738_049, gzip9: 1_859_084, brotli11: 1_258_009 },
+  importer: { raw: 10_901_302, gzip9: 2_710_971, brotli11: 1_834_748 },
+  full: { raw: 12_324_380, gzip9: 3_054_180, brotli11: 2_060_636 },
 };
 // Closure keeps every glue under 36 kB; above 50 kB it silently stopped.
 const GLUE_CEILING = 50_000;
