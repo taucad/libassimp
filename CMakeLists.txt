@@ -37,9 +37,14 @@ if(EMSCRIPTEN)
   # 28 s, `-O3 --skip-pass=code-folding` 37 s, `-Os --skip-pass=code-folding` 60 s;
   # `-O2` is the smallest brotli (2,040,233 vs 2,096,285) at +6.0 % raw; `-Os`/`-Oz`
   # re-enter code-folding (`shrinkLevel >= 1`); `EVAL_CTORS=2` is inert under embind
-  # (-548 B); `--closure=1` is load-bearing for the 50 KB glue gate; legacy EH is the
+  # (an `=0` rerun was +575 B raw / +315 B brotli); `--closure=1` is load-bearing for
+  # the 50 KB glue gate; legacy EH is the
   # 6.0.8 default — exnref floors are Chrome 137 / Firefox 131 / Safari 18.4 / Node
   # 24.15, so flip only when Node 22 leaves the matrix.
+  # W13, same toolchain and objects: mimalloc added 58,380 B raw / 21,172 B brotli but
+  # cut the quiet-host IFC median 136.5 -> 117.8 ms (13.7 %) while cube/init held their
+  # gates, so production uses it. `-flto` was rejected: a 317 s rebuild grew full wasm
+  # to 13,067,503 B raw / 2,213,659 B brotli instead of clearing the 2 % size gate.
   # The engine and the binding have to agree on the exception ABI and on SIMD, so
   # these go in before assimp is configured rather than being patched on afterwards.
   # The prefix maps keep build-machine paths out of the binary: assimp, tinyusdz,
@@ -92,7 +97,7 @@ if(EMSCRIPTEN)
   if(LIBASSIMP_FAST)
     target_link_options(${LIBASSIMP_TARGET} PRIVATE -sEVAL_CTORS=0)
   else()
-    target_link_options(${LIBASSIMP_TARGET} PRIVATE --closure=1 -sEVAL_CTORS=2)
+    target_link_options(${LIBASSIMP_TARGET} PRIVATE --closure=1 -sEVAL_CTORS=2 -sMALLOC=mimalloc)
   endif()
 elseif(LIBASSIMP_NATIVE_TESTS)
   add_executable(libassimp-native-test src/cpp/native-test.cpp src/cpp/libassimp.cpp)
