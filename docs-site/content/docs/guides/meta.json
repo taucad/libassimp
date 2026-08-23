@@ -1,0 +1,11 @@
+{
+  "title": "Guides",
+  "pages": [
+    "convert-a-model",
+    "choose-an-entry",
+    "resolve-sidecar-files",
+    "export-properties",
+    "use-in-the-browser",
+    "handle-failures"
+  ]
+}

@@ -1,0 +1,91 @@
+name: Benchmark drift
+
+on:
+  schedule:
+    - cron: '17 4 1 * *' # Origin: monthly exploratory cadence from picovoxel.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  # Exploratory runs need the same artifacts `ci.yml` gates, and wasm is never
+  # committed. The benchmark measures the root entry, and the package build
+  # stages all three variants, so the drift run builds all three.
+  build-wasm:
+    runs-on: ubuntu-24.04
+    # Origin: about 3x the measured cold job after the -O2 link: compile takes
+    # roughly 25 minutes on 4 vCPU and link takes less than 1 minute. The prior
+    # 180-minute ceiling matched the -O3 link.
+    timeout-minutes: 90
+    container:
+      image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [full, importer, exporter]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Install the build tools the emsdk image omits
+        run: apt-get update && apt-get install -y --no-install-recommends ccache ninja-build
+      - name: Record the engine submodule commit
+        id: engine
+        run: echo "sha=$(git -C assimp rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-ccache-${{ matrix.variant }}-${{ hashFiles('emsdk-image.txt', 'variants.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**') }}-${{ hashFiles('.gitmodules') }}-${{ steps.engine.outputs.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-${{ matrix.variant }}-
+      - name: Build the ${{ matrix.variant }} variant
+        env:
+          LIBASSIMP_EMSDK: host
+        run: node scripts/build-wasm.mjs --variant ${{ matrix.variant }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wasm-${{ matrix.variant }}
+          path: src/wasm/libassimp-${{ matrix.variant }}.*
+          if-no-files-found: error
+
+  drift:
+    needs: build-wasm
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '26'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: wasm-*
+          path: src/wasm
+          merge-multiple: true
+      - id: benchmark
+        continue-on-error: true # Origin: exploratory drift opens an issue; PR gate remains fail-closed in ci.yml.
+        env:
+          # Origin: two de72965 exact-head runs on ubuntu-24.04/Node 26 measured
+          # 1.113-3.274 ms conversion and 67.883-68.856 ms initialization.
+          # The fail-closed same-runner comparison remains in `ci.yml`.
+          MAX_MEDIAN_MS: '5'
+          MAX_INIT_MS: '100'
+        run: |
+          pnpm run build
+          pnpm run benchmark
+      - if: steps.benchmark.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create claude \
+            --color 5319E7 \
+            --description 'Picked up by Claude automation' \
+            --force
+          gh issue create \
+            --title 'Benchmark drift detected' \
+            --body "Monthly benchmark drift failed in ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}." \
+            --label claude

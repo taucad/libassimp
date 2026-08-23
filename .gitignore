@@ -1,0 +1,17 @@
+.DS_Store
+.ccache/
+.ci-tools/
+.nx/*
+!.nx/version-plans/
+!.nx/version-plans/*.md
+.vercel
+build/
+coverage/
+dist/
+docs-site/.next/
+docs-site/.source/
+docs-site/next-env.d.ts
+docs-site/out/
+node_modules/
+*.tsbuildinfo
+src/wasm/

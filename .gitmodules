@@ -1,0 +1,4 @@
+[submodule "assimp"]
+	path = assimp
+	url = https://github.com/taucad/assimp
+	ignore = untracked

@@ -1,0 +1,93 @@
+{
+  "name": "libassimp",
+  "$schema": "./node_modules/nx/schemas/project-schema.json",
+  "root": ".",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm run build" }
+    },
+    "build:wasm": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm run build:wasm" }
+    },
+    "build:native-test": {
+      "executor": "nx:run-commands",
+      "options": { "command": "cmake --preset native-test && cmake --build --preset native-test --parallel" }
+    },
+    "test:native": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build:native-test"],
+      "options": { "command": "ctest --preset native-test --output-on-failure" }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": { "command": "pnpm run test:coverage" }
+    },
+    "test:browser": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm run test:browser" }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm run typecheck" }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm run lint" }
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm run format:check" }
+    },
+    "prose": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm run prose" }
+    },
+    "workflows": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm run workflows" }
+    },
+    "check:size": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": { "command": "pnpm run check:size" }
+    },
+    "validate-pack": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": { "command": "pnpm run validate-pack" }
+    },
+    "check:dead-code": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm run check:dead-code" }
+    },
+    "docs": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": { "command": "pnpm run docs:build && pnpm run docs:test" }
+    },
+    "quality": {
+      "executor": "nx:noop",
+      "dependsOn": [
+        "build",
+        "check:dead-code",
+        "check:size",
+        "docs",
+        "format",
+        "lint",
+        "prose",
+        "test",
+        "typecheck",
+        "validate-pack",
+        "workflows"
+      ]
+    },
+    "docs-prose": {
+      "executor": "nx:noop",
+      "dependsOn": ["check:dead-code", "docs", "format", "lint", "prose", "workflows"]
+    }
+  }
+}

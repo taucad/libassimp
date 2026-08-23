@@ -1,0 +1,88 @@
+---
+title: Handle failures
+description: Turn a rejected conversion into a decision — fix the input, supply a missing file, or name a different format.
+---
+
+Every rejection is an `AssimpError` with a stable `code` and the engine's own
+text. Four codes cover everything the binding can refuse.
+
+### 1. Catch the typed error
+
+```typescript
+import { AssimpError, convert } from 'libassimp';
+
+const bytes = new Uint8Array();
+
+try {
+  const { files } = await convert({ name: 'model.obj', bytes }, { to: 'glb' });
+  console.log(files[0].name);
+} catch (error) {
+  if (!(error instanceof AssimpError)) throw error;
+  console.error(error.code, error.message);
+}
+```
+
+Anything that is not an `AssimpError` came from loading the binary — a failed
+fetch, a host without WebAssembly — and belongs to your transport, not to a
+conversion.
+
+### 2. Route on the code
+
+```typescript
+import { AssimpError, type AssimpFailureCode } from 'libassimp';
+
+const advise = (error: AssimpError): string => {
+  const remedies: Record<AssimpFailureCode, string> = {
+    NO_FILES: 'The call carried no entry file.',
+    UNSUPPORTED_FORMAT: 'This entry cannot write that id; the message lists the ones it can.',
+    IMPORT_FAILED: 'The entry file could not be read, or a file it references was missing.',
+    EXPORT_FAILED: 'The scene imported, and the exporter refused to write it.',
+  };
+  return remedies[error.code];
+};
+
+console.log(advise(new AssimpError('NO_FILES', 'convert needs at least one input file.')));
+```
+
+None of the four is worth retrying unchanged: each names something about the
+request that has to change first.
+
+### 3. Read the message, which names the file
+
+`IMPORT_FAILED` covers both a file the engine cannot parse and a reference it
+could not find, and the two read differently:
+
+```console
+No suitable reader found for the file format of file "model.txt".
+GLTF: could not open referenced file "scene.bin".
+```
+
+The second is a missing sidecar: pass those bytes in the array or through
+[`resolve`](resolve-sidecar-files). The first is an input problem — the wrong
+extension on the name, or bytes that are not the format they claim.
+
+### 4. Check the format before the bytes
+
+`UNSUPPORTED_FORMAT` is the one failure you can rule out ahead of a
+conversion, by asking the instance what it carries.
+
+```typescript
+import { createAssimp } from 'libassimp/importer';
+
+using assimp = await createAssimp();
+const ids = new Set(assimp.formats.export.map((format) => format.id));
+
+console.log(ids.has('glb2'), ids.has('stl'));
+```
+
+Aliases resolve before the lookup, so `glb` matches the `glb2` id in that
+table. A build without your target is the signal to
+[choose another entry](choose-an-entry).
+
+## Variations
+
+**A disposed instance.** Calls after `dispose()` reject with a plain `Error`,
+not an `AssimpError`: recreate the instance rather than retrying the call.
+
+**Diagnostics without a failure.** Assimp writes warnings the conversion
+survives. Pass `onLog` to `createAssimp` to see them.

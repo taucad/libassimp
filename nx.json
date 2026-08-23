@@ -1,0 +1,53 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "defaultBase": "main",
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "runtime"],
+    "runtime": [
+      { "runtime": "node --version" },
+      { "runtime": "pnpm --version" },
+      { "runtime": "command -v emcc >/dev/null 2>&1 && emcc --version | head -n1 || echo emcc-absent" },
+      { "runtime": "cat emsdk-image.txt" }
+    ]
+  },
+  "analytics": false,
+  "release": {
+    "projects": ["libassimp"],
+    "projectsRelationship": "fixed",
+    "version": {
+      "specifierSource": "version-plans",
+      "adjustSemverBumpsForZeroMajorVersion": false,
+      "preVersionCommand": "pnpm nx run libassimp:quality"
+    },
+    "versionPlans": {
+      "ignorePatternsForPlanCheck": [
+        "**/*.test.*",
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "MAINTAINER.md",
+        "SECURITY.md",
+        ".github/**",
+        "docs-site/**",
+        "tests/**",
+        "bench/**"
+      ]
+    },
+    "changelog": {
+      "projectChangelogs": {
+        "file": "CHANGELOG.md",
+        "renderOptions": {
+          "authors": true,
+          "commitReferences": true,
+          "versionTitleDate": true
+        }
+      }
+    },
+    "releaseTag": { "pattern": "v{version}" },
+    "git": {
+      "commit": false,
+      "push": false,
+      "stageChanges": false,
+      "tag": false
+    }
+  }
+}

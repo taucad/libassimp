@@ -1,0 +1,36 @@
+{
+  "name": "libassimp-docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "if [ ! -f ../dist/index.d.mts ]; then pnpm --dir .. exec tsdown; fi && node scripts/measure-sizes.mjs && next build && node scripts/emit-mdx-aliases.mjs && VERIFY_STATIC_OUTPUT=true vitest run api-coverage.test.ts sizes.test.ts",
+    "dev": "next dev",
+    "predev": "node scripts/measure-sizes.mjs",
+    "format-matrix": "node scripts/format-matrix.mjs",
+    "generate:source": "fumadocs-mdx",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "typecheck": "fumadocs-mdx && tsc --noEmit"
+  },
+  "dependencies": {
+    "fumadocs-core": "16.10.4",
+    "fumadocs-mdx": "14.3.2",
+    "fumadocs-typescript": "5.2.6",
+    "fumadocs-ui": "16.10.4",
+    "libassimp": "workspace:*",
+    "mermaid": "11.16.1",
+    "next": "16.3.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "24.13.3",
+    "@types/react": "19.0.12",
+    "@types/react-dom": "19.0.4",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

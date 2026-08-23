@@ -1,0 +1,16 @@
+{
+  "ignorePatterns": [
+    ".ci-tools/**",
+    "assimp/**",
+    "build/**",
+    "dist/**",
+    "docs-site/.next/**",
+    "docs-site/.source/**",
+    "docs-site/next-env.d.ts",
+    "docs-site/out/**",
+    "docs-site/tsconfig.json",
+    "src/wasm/**"
+  ],
+  "printWidth": 110,
+  "singleQuote": true
+}

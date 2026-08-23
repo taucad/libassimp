@@ -1,0 +1,980 @@
+{
+  "full": {
+    "import": [
+      {
+        "id": "usd",
+        "extension": "usd",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "usda",
+        "extension": "usda",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "usdc",
+        "extension": "usdc",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "usdz",
+        "extension": "usdz",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "x",
+        "extension": "x",
+        "description": "Direct3D XFile Importer"
+      },
+      {
+        "id": "obj",
+        "extension": "obj",
+        "description": "Wavefront Object Importer"
+      },
+      {
+        "id": "amf",
+        "extension": "amf",
+        "description": "Additive manufacturing file format(AMF) Importer"
+      },
+      {
+        "id": "3ds",
+        "extension": "3ds",
+        "description": "Discreet 3DS Importer"
+      },
+      {
+        "id": "prj",
+        "extension": "prj",
+        "description": "Discreet 3DS Importer"
+      },
+      {
+        "id": "md3",
+        "extension": "md3",
+        "description": "Quake III Mesh Importer"
+      },
+      {
+        "id": "md2",
+        "extension": "md2",
+        "description": "Quake II Mesh Importer"
+      },
+      {
+        "id": "ply",
+        "extension": "ply",
+        "description": "Stanford Polygon Library (PLY) Importer"
+      },
+      {
+        "id": "mdl",
+        "extension": "mdl",
+        "description": "Quake Mesh / 3D GameStudio Mesh Importer"
+      },
+      {
+        "id": "ase",
+        "extension": "ase",
+        "description": "ASE Importer"
+      },
+      {
+        "id": "ask",
+        "extension": "ask",
+        "description": "ASE Importer"
+      },
+      {
+        "id": "hmp",
+        "extension": "hmp",
+        "description": "3D GameStudio Heightmap (HMP) Importer"
+      },
+      {
+        "id": "smd",
+        "extension": "smd",
+        "description": "Valve SMD Importer"
+      },
+      {
+        "id": "vta",
+        "extension": "vta",
+        "description": "Valve SMD Importer"
+      },
+      {
+        "id": "mdc",
+        "extension": "mdc",
+        "description": "Return To Castle Wolfenstein Mesh Importer"
+      },
+      {
+        "id": "md5mesh",
+        "extension": "md5mesh",
+        "description": "Doom 3 / MD5 Mesh Importer"
+      },
+      {
+        "id": "md5camera",
+        "extension": "md5camera",
+        "description": "Doom 3 / MD5 Mesh Importer"
+      },
+      {
+        "id": "md5anim",
+        "extension": "md5anim",
+        "description": "Doom 3 / MD5 Mesh Importer"
+      },
+      {
+        "id": "stl",
+        "extension": "stl",
+        "description": "Stereolithography (STL) Importer"
+      },
+      {
+        "id": "lwo",
+        "extension": "lwo",
+        "description": "LightWave/Modo Object Importer"
+      },
+      {
+        "id": "lxo",
+        "extension": "lxo",
+        "description": "LightWave/Modo Object Importer"
+      },
+      {
+        "id": "dxf",
+        "extension": "dxf",
+        "description": "Drawing Interchange Format (DXF) Importer"
+      },
+      {
+        "id": "enff",
+        "extension": "enff",
+        "description": "Neutral File Format Importer"
+      },
+      {
+        "id": "nff",
+        "extension": "nff",
+        "description": "Neutral File Format Importer"
+      },
+      {
+        "id": "sib",
+        "extension": "sib",
+        "description": "Silo SIB Importer"
+      },
+      {
+        "id": "off",
+        "extension": "off",
+        "description": "OFF Importer"
+      },
+      {
+        "id": "ac",
+        "extension": "ac",
+        "description": "AC3D Importer"
+      },
+      {
+        "id": "acc",
+        "extension": "acc",
+        "description": "AC3D Importer"
+      },
+      {
+        "id": "ac3d",
+        "extension": "ac3d",
+        "description": "AC3D Importer"
+      },
+      {
+        "id": "bvh",
+        "extension": "bvh",
+        "description": "BVH Importer (MoCap)"
+      },
+      {
+        "id": "q3o",
+        "extension": "q3o",
+        "description": "Quick3D Importer"
+      },
+      {
+        "id": "q3s",
+        "extension": "q3s",
+        "description": "Quick3D Importer"
+      },
+      {
+        "id": "b3d",
+        "extension": "b3d",
+        "description": "BlitzBasic 3D Importer"
+      },
+      {
+        "id": "dae",
+        "extension": "dae",
+        "description": "Collada Importer"
+      },
+      {
+        "id": "xml",
+        "extension": "xml",
+        "description": "Collada Importer"
+      },
+      {
+        "id": "zae",
+        "extension": "zae",
+        "description": "Collada Importer"
+      },
+      {
+        "id": "csm",
+        "extension": "csm",
+        "description": "CharacterStudio Motion Importer (MoCap)"
+      },
+      {
+        "id": "3d",
+        "extension": "3d",
+        "description": "Unreal Mesh Importer"
+      },
+      {
+        "id": "uc",
+        "extension": "uc",
+        "description": "Unreal Mesh Importer"
+      },
+      {
+        "id": "lws",
+        "extension": "lws",
+        "description": "LightWave Scene Importer"
+      },
+      {
+        "id": "mot",
+        "extension": "mot",
+        "description": "LightWave Scene Importer"
+      },
+      {
+        "id": "mesh",
+        "extension": "mesh",
+        "description": "Ogre3D Mesh Importer"
+      },
+      {
+        "id": "mesh.xml",
+        "extension": "mesh.xml",
+        "description": "Ogre3D Mesh Importer"
+      },
+      {
+        "id": "ogex",
+        "extension": "ogex",
+        "description": "Open Game Engine Exchange"
+      },
+      {
+        "id": "ms3d",
+        "extension": "ms3d",
+        "description": "Milkshape 3D Importer"
+      },
+      {
+        "id": "cob",
+        "extension": "cob",
+        "description": "TrueSpace Object Importer"
+      },
+      {
+        "id": "scn",
+        "extension": "scn",
+        "description": "TrueSpace Object Importer"
+      },
+      {
+        "id": "blend",
+        "extension": "blend",
+        "description": "Blender 3D Importer (http://www.blender3d.org)"
+      },
+      {
+        "id": "bsp",
+        "extension": "bsp",
+        "description": "Quake III BSP Importer"
+      },
+      {
+        "id": "pk3",
+        "extension": "pk3",
+        "description": "Quake III BSP Importer"
+      },
+      {
+        "id": "ndo",
+        "extension": "ndo",
+        "description": "Nendo Mesh Importer"
+      },
+      {
+        "id": "ifc",
+        "extension": "ifc",
+        "description": "Industry Foundation Classes (IFC) Importer (Web-IFC)"
+      },
+      {
+        "id": "xgl",
+        "extension": "xgl",
+        "description": "XGL Importer"
+      },
+      {
+        "id": "zgl",
+        "extension": "zgl",
+        "description": "XGL Importer"
+      },
+      {
+        "id": "fbx",
+        "extension": "fbx",
+        "description": "Autodesk FBX Importer"
+      },
+      {
+        "id": "gltf",
+        "extension": "gltf",
+        "description": "glTF Importer"
+      },
+      {
+        "id": "glb",
+        "extension": "glb",
+        "description": "glTF Importer"
+      },
+      {
+        "id": "vrm",
+        "extension": "vrm",
+        "description": "glTF2 Importer"
+      },
+      {
+        "id": "3mf",
+        "extension": "3mf",
+        "description": "3mf Importer"
+      },
+      {
+        "id": "wrl",
+        "extension": "wrl",
+        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
+      },
+      {
+        "id": "x3d",
+        "extension": "x3d",
+        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
+      },
+      {
+        "id": "x3db",
+        "extension": "x3db",
+        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
+      },
+      {
+        "id": "x3dv",
+        "extension": "x3dv",
+        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
+      },
+      {
+        "id": "pmx",
+        "extension": "pmx",
+        "description": "MMD Importer"
+      },
+      {
+        "id": "iqm",
+        "extension": "iqm",
+        "description": "Inter-Quake Model Importer"
+      }
+    ],
+    "export": [
+      {
+        "id": "collada",
+        "extension": "dae",
+        "description": "COLLADA - Digital Asset Exchange Schema"
+      },
+      {
+        "id": "x",
+        "extension": "x",
+        "description": "X Files"
+      },
+      {
+        "id": "stp",
+        "extension": "stp",
+        "description": "Step Files"
+      },
+      {
+        "id": "obj",
+        "extension": "obj",
+        "description": "Wavefront OBJ format"
+      },
+      {
+        "id": "objnomtl",
+        "extension": "obj",
+        "description": "Wavefront OBJ format without material file"
+      },
+      {
+        "id": "stl",
+        "extension": "stl",
+        "description": "Stereolithography"
+      },
+      {
+        "id": "stlb",
+        "extension": "stl",
+        "description": "Stereolithography (binary)"
+      },
+      {
+        "id": "ply",
+        "extension": "ply",
+        "description": "Stanford Polygon Library"
+      },
+      {
+        "id": "plyb",
+        "extension": "ply",
+        "description": "Stanford Polygon Library (binary)"
+      },
+      {
+        "id": "3ds",
+        "extension": "3ds",
+        "description": "Autodesk 3DS (legacy)"
+      },
+      {
+        "id": "gltf2",
+        "extension": "gltf",
+        "description": "GL Transmission Format v. 2"
+      },
+      {
+        "id": "glb2",
+        "extension": "glb",
+        "description": "GL Transmission Format v. 2 (binary)"
+      },
+      {
+        "id": "gltf",
+        "extension": "gltf",
+        "description": "GL Transmission Format"
+      },
+      {
+        "id": "glb",
+        "extension": "glb",
+        "description": "GL Transmission Format (binary)"
+      },
+      {
+        "id": "x3d",
+        "extension": "x3d",
+        "description": "Extensible 3D"
+      },
+      {
+        "id": "fbx",
+        "extension": "fbx",
+        "description": "Autodesk FBX (binary)"
+      },
+      {
+        "id": "fbxa",
+        "extension": "fbx",
+        "description": "Autodesk FBX (ascii)"
+      },
+      {
+        "id": "3mf",
+        "extension": "3mf",
+        "description": "The 3MF-File-Format"
+      },
+      {
+        "id": "assjson",
+        "extension": "json",
+        "description": "Assimp JSON Document"
+      },
+      {
+        "id": "usda",
+        "extension": "usda",
+        "description": "Universal Scene Description (ASCII)"
+      },
+      {
+        "id": "usdz",
+        "extension": "usdz",
+        "description": "Universal Scene Description (USDZ)"
+      }
+    ]
+  },
+  "importer": {
+    "import": [
+      {
+        "id": "usd",
+        "extension": "usd",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "usda",
+        "extension": "usda",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "usdc",
+        "extension": "usdc",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "usdz",
+        "extension": "usdz",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "x",
+        "extension": "x",
+        "description": "Direct3D XFile Importer"
+      },
+      {
+        "id": "obj",
+        "extension": "obj",
+        "description": "Wavefront Object Importer"
+      },
+      {
+        "id": "amf",
+        "extension": "amf",
+        "description": "Additive manufacturing file format(AMF) Importer"
+      },
+      {
+        "id": "3ds",
+        "extension": "3ds",
+        "description": "Discreet 3DS Importer"
+      },
+      {
+        "id": "prj",
+        "extension": "prj",
+        "description": "Discreet 3DS Importer"
+      },
+      {
+        "id": "md3",
+        "extension": "md3",
+        "description": "Quake III Mesh Importer"
+      },
+      {
+        "id": "md2",
+        "extension": "md2",
+        "description": "Quake II Mesh Importer"
+      },
+      {
+        "id": "ply",
+        "extension": "ply",
+        "description": "Stanford Polygon Library (PLY) Importer"
+      },
+      {
+        "id": "mdl",
+        "extension": "mdl",
+        "description": "Quake Mesh / 3D GameStudio Mesh Importer"
+      },
+      {
+        "id": "ase",
+        "extension": "ase",
+        "description": "ASE Importer"
+      },
+      {
+        "id": "ask",
+        "extension": "ask",
+        "description": "ASE Importer"
+      },
+      {
+        "id": "hmp",
+        "extension": "hmp",
+        "description": "3D GameStudio Heightmap (HMP) Importer"
+      },
+      {
+        "id": "smd",
+        "extension": "smd",
+        "description": "Valve SMD Importer"
+      },
+      {
+        "id": "vta",
+        "extension": "vta",
+        "description": "Valve SMD Importer"
+      },
+      {
+        "id": "mdc",
+        "extension": "mdc",
+        "description": "Return To Castle Wolfenstein Mesh Importer"
+      },
+      {
+        "id": "md5mesh",
+        "extension": "md5mesh",
+        "description": "Doom 3 / MD5 Mesh Importer"
+      },
+      {
+        "id": "md5camera",
+        "extension": "md5camera",
+        "description": "Doom 3 / MD5 Mesh Importer"
+      },
+      {
+        "id": "md5anim",
+        "extension": "md5anim",
+        "description": "Doom 3 / MD5 Mesh Importer"
+      },
+      {
+        "id": "stl",
+        "extension": "stl",
+        "description": "Stereolithography (STL) Importer"
+      },
+      {
+        "id": "lwo",
+        "extension": "lwo",
+        "description": "LightWave/Modo Object Importer"
+      },
+      {
+        "id": "lxo",
+        "extension": "lxo",
+        "description": "LightWave/Modo Object Importer"
+      },
+      {
+        "id": "dxf",
+        "extension": "dxf",
+        "description": "Drawing Interchange Format (DXF) Importer"
+      },
+      {
+        "id": "enff",
+        "extension": "enff",
+        "description": "Neutral File Format Importer"
+      },
+      {
+        "id": "nff",
+        "extension": "nff",
+        "description": "Neutral File Format Importer"
+      },
+      {
+        "id": "sib",
+        "extension": "sib",
+        "description": "Silo SIB Importer"
+      },
+      {
+        "id": "off",
+        "extension": "off",
+        "description": "OFF Importer"
+      },
+      {
+        "id": "ac",
+        "extension": "ac",
+        "description": "AC3D Importer"
+      },
+      {
+        "id": "acc",
+        "extension": "acc",
+        "description": "AC3D Importer"
+      },
+      {
+        "id": "ac3d",
+        "extension": "ac3d",
+        "description": "AC3D Importer"
+      },
+      {
+        "id": "bvh",
+        "extension": "bvh",
+        "description": "BVH Importer (MoCap)"
+      },
+      {
+        "id": "q3o",
+        "extension": "q3o",
+        "description": "Quick3D Importer"
+      },
+      {
+        "id": "q3s",
+        "extension": "q3s",
+        "description": "Quick3D Importer"
+      },
+      {
+        "id": "b3d",
+        "extension": "b3d",
+        "description": "BlitzBasic 3D Importer"
+      },
+      {
+        "id": "dae",
+        "extension": "dae",
+        "description": "Collada Importer"
+      },
+      {
+        "id": "xml",
+        "extension": "xml",
+        "description": "Collada Importer"
+      },
+      {
+        "id": "zae",
+        "extension": "zae",
+        "description": "Collada Importer"
+      },
+      {
+        "id": "csm",
+        "extension": "csm",
+        "description": "CharacterStudio Motion Importer (MoCap)"
+      },
+      {
+        "id": "3d",
+        "extension": "3d",
+        "description": "Unreal Mesh Importer"
+      },
+      {
+        "id": "uc",
+        "extension": "uc",
+        "description": "Unreal Mesh Importer"
+      },
+      {
+        "id": "lws",
+        "extension": "lws",
+        "description": "LightWave Scene Importer"
+      },
+      {
+        "id": "mot",
+        "extension": "mot",
+        "description": "LightWave Scene Importer"
+      },
+      {
+        "id": "mesh",
+        "extension": "mesh",
+        "description": "Ogre3D Mesh Importer"
+      },
+      {
+        "id": "mesh.xml",
+        "extension": "mesh.xml",
+        "description": "Ogre3D Mesh Importer"
+      },
+      {
+        "id": "ogex",
+        "extension": "ogex",
+        "description": "Open Game Engine Exchange"
+      },
+      {
+        "id": "ms3d",
+        "extension": "ms3d",
+        "description": "Milkshape 3D Importer"
+      },
+      {
+        "id": "cob",
+        "extension": "cob",
+        "description": "TrueSpace Object Importer"
+      },
+      {
+        "id": "scn",
+        "extension": "scn",
+        "description": "TrueSpace Object Importer"
+      },
+      {
+        "id": "blend",
+        "extension": "blend",
+        "description": "Blender 3D Importer (http://www.blender3d.org)"
+      },
+      {
+        "id": "bsp",
+        "extension": "bsp",
+        "description": "Quake III BSP Importer"
+      },
+      {
+        "id": "pk3",
+        "extension": "pk3",
+        "description": "Quake III BSP Importer"
+      },
+      {
+        "id": "ndo",
+        "extension": "ndo",
+        "description": "Nendo Mesh Importer"
+      },
+      {
+        "id": "ifc",
+        "extension": "ifc",
+        "description": "Industry Foundation Classes (IFC) Importer (Web-IFC)"
+      },
+      {
+        "id": "xgl",
+        "extension": "xgl",
+        "description": "XGL Importer"
+      },
+      {
+        "id": "zgl",
+        "extension": "zgl",
+        "description": "XGL Importer"
+      },
+      {
+        "id": "fbx",
+        "extension": "fbx",
+        "description": "Autodesk FBX Importer"
+      },
+      {
+        "id": "gltf",
+        "extension": "gltf",
+        "description": "glTF Importer"
+      },
+      {
+        "id": "glb",
+        "extension": "glb",
+        "description": "glTF Importer"
+      },
+      {
+        "id": "vrm",
+        "extension": "vrm",
+        "description": "glTF2 Importer"
+      },
+      {
+        "id": "3mf",
+        "extension": "3mf",
+        "description": "3mf Importer"
+      },
+      {
+        "id": "wrl",
+        "extension": "wrl",
+        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
+      },
+      {
+        "id": "x3d",
+        "extension": "x3d",
+        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
+      },
+      {
+        "id": "x3db",
+        "extension": "x3db",
+        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
+      },
+      {
+        "id": "x3dv",
+        "extension": "x3dv",
+        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
+      },
+      {
+        "id": "pmx",
+        "extension": "pmx",
+        "description": "MMD Importer"
+      },
+      {
+        "id": "iqm",
+        "extension": "iqm",
+        "description": "Inter-Quake Model Importer"
+      }
+    ],
+    "export": [
+      {
+        "id": "gltf2",
+        "extension": "gltf",
+        "description": "GL Transmission Format v. 2"
+      },
+      {
+        "id": "glb2",
+        "extension": "glb",
+        "description": "GL Transmission Format v. 2 (binary)"
+      },
+      {
+        "id": "gltf",
+        "extension": "gltf",
+        "description": "GL Transmission Format"
+      },
+      {
+        "id": "glb",
+        "extension": "glb",
+        "description": "GL Transmission Format (binary)"
+      },
+      {
+        "id": "assjson",
+        "extension": "json",
+        "description": "Assimp JSON Document"
+      }
+    ]
+  },
+  "exporter": {
+    "import": [
+      {
+        "id": "usd",
+        "extension": "usd",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "usda",
+        "extension": "usda",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "usdc",
+        "extension": "usdc",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "usdz",
+        "extension": "usdz",
+        "description": "USD Object Importer"
+      },
+      {
+        "id": "gltf",
+        "extension": "gltf",
+        "description": "glTF Importer"
+      },
+      {
+        "id": "glb",
+        "extension": "glb",
+        "description": "glTF Importer"
+      },
+      {
+        "id": "vrm",
+        "extension": "vrm",
+        "description": "glTF2 Importer"
+      }
+    ],
+    "export": [
+      {
+        "id": "collada",
+        "extension": "dae",
+        "description": "COLLADA - Digital Asset Exchange Schema"
+      },
+      {
+        "id": "x",
+        "extension": "x",
+        "description": "X Files"
+      },
+      {
+        "id": "stp",
+        "extension": "stp",
+        "description": "Step Files"
+      },
+      {
+        "id": "obj",
+        "extension": "obj",
+        "description": "Wavefront OBJ format"
+      },
+      {
+        "id": "objnomtl",
+        "extension": "obj",
+        "description": "Wavefront OBJ format without material file"
+      },
+      {
+        "id": "stl",
+        "extension": "stl",
+        "description": "Stereolithography"
+      },
+      {
+        "id": "stlb",
+        "extension": "stl",
+        "description": "Stereolithography (binary)"
+      },
+      {
+        "id": "ply",
+        "extension": "ply",
+        "description": "Stanford Polygon Library"
+      },
+      {
+        "id": "plyb",
+        "extension": "ply",
+        "description": "Stanford Polygon Library (binary)"
+      },
+      {
+        "id": "3ds",
+        "extension": "3ds",
+        "description": "Autodesk 3DS (legacy)"
+      },
+      {
+        "id": "gltf2",
+        "extension": "gltf",
+        "description": "GL Transmission Format v. 2"
+      },
+      {
+        "id": "glb2",
+        "extension": "glb",
+        "description": "GL Transmission Format v. 2 (binary)"
+      },
+      {
+        "id": "gltf",
+        "extension": "gltf",
+        "description": "GL Transmission Format"
+      },
+      {
+        "id": "glb",
+        "extension": "glb",
+        "description": "GL Transmission Format (binary)"
+      },
+      {
+        "id": "x3d",
+        "extension": "x3d",
+        "description": "Extensible 3D"
+      },
+      {
+        "id": "fbx",
+        "extension": "fbx",
+        "description": "Autodesk FBX (binary)"
+      },
+      {
+        "id": "fbxa",
+        "extension": "fbx",
+        "description": "Autodesk FBX (ascii)"
+      },
+      {
+        "id": "3mf",
+        "extension": "3mf",
+        "description": "The 3MF-File-Format"
+      },
+      {
+        "id": "assjson",
+        "extension": "json",
+        "description": "Assimp JSON Document"
+      },
+      {
+        "id": "usda",
+        "extension": "usda",
+        "description": "Universal Scene Description (ASCII)"
+      },
+      {
+        "id": "usdz",
+        "extension": "usdz",
+        "description": "Universal Scene Description (USDZ)"
+      }
+    ]
+  }
+}
