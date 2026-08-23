@@ -113,6 +113,8 @@ elseif(LIBASSIMP_NATIVE_TESTS)
           obj-to-ply
           3mf-without-lib3mf-fails-cleanly
           obj-to-assjson
+          obj-to-usda
+          obj-to-usdz
           obj-sidecar-via-resolve
           gltf2-to-glb
           fbx-ascii-to-glb

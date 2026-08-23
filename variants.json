@@ -37,8 +37,8 @@
     }
   },
   "nativeTest": {
-    "$comment": "Host build for ctest. Importers the fixture subset needs, exporters the fixture subset writes; small enough to configure and build in minutes. USD is deliberately absent: tinyusdz would dominate the ctest leg's minutes (OQ8) and the wasm format matrix covers it.",
-    "importers": ["OBJ", "GLTF", "FBX", "STL", "PLY", "COLLADA"],
-    "exporters": ["GLTF", "ASSJSON", "OBJ", "STL", "PLY", "3MF", "STEP", "COLLADA"]
+    "$comment": "Host build for ctest. Importers the fixture subset needs, exporters the fixture subset writes; USD coverage stays only while the native CI job remains within OQ8's 15-minute ceiling.",
+    "importers": ["OBJ", "GLTF", "FBX", "STL", "PLY", "COLLADA", "USD"],
+    "exporters": ["GLTF", "ASSJSON", "OBJ", "STL", "PLY", "3MF", "STEP", "COLLADA", "USD"]
   }
 }

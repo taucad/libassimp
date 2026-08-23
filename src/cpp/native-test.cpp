@@ -47,6 +47,8 @@ const Case kCases[] = {
     // matrix covers the happy path; here we pin that the bypass surfaces as a clean failure.
     {"3mf-without-lib3mf-fails-cleanly", "OBJ/box.obj", "3mf", "EXPORT_FAILED", "", ""},
     {"obj-to-assjson", "OBJ/box.obj", "assjson", "", "{", "result.json"},
+    {"obj-to-usda", "OBJ/box.obj", "usda", "", "#usda", "result.usda"},
+    {"obj-to-usdz", "OBJ/box.obj", "usdz", "", "PK", "result.usdz"},
     {"obj-sidecar-via-resolve", "OBJ/spider.obj", "glb", "", "glTF", "result.glb"},
     {"gltf2-to-glb", "glTF2/BoxTextured-glTF-Binary/BoxTextured.glb", "glb", "", "glTF", "result.glb"},
     {"fbx-ascii-to-glb", "FBX/embedded_ascii/box.FBX", "glb", "", "glTF", "result.glb"},
