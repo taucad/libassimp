@@ -314,6 +314,13 @@ jobs:
     if: github.event_name == 'pull_request'
     needs: candidate
     runs-on: ubuntu-24.04
+    env:
+      # Origin: two de72965 exact-head runs on ubuntu-24.04/Node 26 measured
+      # 1.113-3.274 ms conversion and 67.883-68.856 ms initialization. These
+      # ceilings absorb shared-runner capacity while the same-runner +10%
+      # comparison below remains the regression gate after the first merge.
+      MAX_MEDIAN_MS: '5'
+      MAX_INIT_MS: '100'
     permissions:
       contents: read
       pull-requests: write
@@ -331,10 +338,14 @@ jobs:
           path: src/wasm
           merge-multiple: true
       - name: Benchmark the pull request
+        id: current
+        continue-on-error: true # The always-run comparison and comment must report an absolute-gate failure.
         run: |
           pnpm run build
           node bench/gated.mjs > /tmp/current-benchmark.json
       - name: Benchmark main on the same runner
+        id: base
+        continue-on-error: true # Preserve the report when the base-side absolute gate fails.
         shell: bash
         run: |
           base_directory="$(mktemp -d)"
@@ -375,7 +386,7 @@ jobs:
             } else {
               await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
             }
-      - if: steps.compare.outcome == 'failure'
+      - if: steps.current.outcome == 'failure' || steps.base.outcome == 'failure' || steps.compare.outcome == 'failure'
         run: exit 1
 
   security:

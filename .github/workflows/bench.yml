@@ -69,10 +69,10 @@ jobs:
       - id: benchmark
         continue-on-error: true # Origin: exploratory drift opens an issue; PR gate remains fail-closed in ci.yml.
         env:
-          # Origin: four times the workstation medians `bench/gated.mjs` records,
-          # the allowance a shared runner needs. The fail-closed comparison
-          # against the base branch runs in `ci.yml`.
-          MAX_MEDIAN_MS: '1.8'
+          # Origin: two de72965 exact-head runs on ubuntu-24.04/Node 26 measured
+          # 1.113-3.274 ms conversion and 67.883-68.856 ms initialization.
+          # The fail-closed same-runner comparison remains in `ci.yml`.
+          MAX_MEDIAN_MS: '5'
           MAX_INIT_MS: '100'
         run: |
           pnpm run build
