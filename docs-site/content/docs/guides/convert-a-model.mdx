@@ -10,16 +10,20 @@ and resolves to the files that came out.
 
 A single-file format — STL, PLY, GLB, 3MF — needs nothing beside it.
 
+<ConvertDemo>
+
 ```typescript
 import { convert } from 'libassimp';
 
 import { readFile } from 'node:fs/promises';
 
-const bytes = new Uint8Array(await readFile('part.stl'));
-const { files } = await convert({ name: 'part.stl', bytes }, { to: 'glb' });
+const bytes = new Uint8Array(await readFile('cube.obj'));
+const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'glb' });
 
 console.log(files[0].name, files[0].bytes.byteLength);
 ```
+
+</ConvertDemo>
 
 The `name` matters: its extension is how the engine picks an importer, and
 references inside the file resolve against it. Bytes with a name that lies

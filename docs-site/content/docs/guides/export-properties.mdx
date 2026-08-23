@@ -1,32 +1,45 @@
 ---
-title: Set export properties
-description: Reach assimp's own exporter settings, such as 3MF units, without leaving the typed API.
+title: Configure 3MF output
+description: Set units, precision, up-axis and application metadata on a live 3MF conversion.
 ---
 
-Some exporters read settings that have no place in a cross-format API: 3MF
-units, the application name written into a file's metadata. `properties` passes
-those through verbatim.
+Some exporters read settings that have no place in a cross-format API. The 3MF
+writer exposes its declared unit, decimal precision, up-axis and application
+metadata through `properties`; the controls below change the same object the
+example sends and rerun the conversion.
 
 ### 1. Name the property the exporter documents
+
+<ConvertDemo>
 
 ```typescript
 import { convert } from 'libassimp';
 
-const bytes = new Uint8Array();
+import { readFile } from 'node:fs/promises';
+
+const bytes = new Uint8Array(await readFile('cube.obj'));
 
 const { files } = await convert(
-  { name: 'part.stl', bytes },
+  { name: 'cube.obj', bytes },
   {
     to: '3mf',
     properties: {
       '3MF_EXPORT_UNIT': 'millimeter',
-      '3MF_EXPORT_APPLICATION': 'my-slicer',
+      '3MF_EXPORT_DECIMAL_PRECISION': 9,
+      '3MF_EXPORT_APPLICATION': 'libassimp docs',
+      '3MF_EXPORT_UPAXIS': 2,
     },
   },
 );
 
-console.log(files[0].name);
+console.log(files[0].name, files[0].bytes.byteLength);
 ```
+
+</ConvertDemo>
+
+`3MF_EXPORT_UNIT` accepts `micron`, `millimeter`, `centimeter`, `inch`,
+`foot` or `meter`. Precision is 1–16 digits, and up-axis is 0 (X), 1 (Y) or
+2 (Z). The writer defaults to millimetres, 9 digits and Z-up.
 
 Values are booleans, numbers or strings, and each goes to the exporter with
 its own type. Keys the exporter does not recognise are ignored, so a property

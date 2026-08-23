@@ -12,6 +12,7 @@ const EXTENSIONS = ['js', 'wasm'];
 
 const source = new URL('../src/wasm/', import.meta.url);
 const destination = new URL('../dist/wasm/', import.meta.url);
+const demo = new URL('../docs-site/public/demo/', import.meta.url);
 
 const wanted = VARIANTS.flatMap((variant) =>
   EXTENSIONS.map((extension) => `libassimp-${variant}.${extension}`),
@@ -25,7 +26,11 @@ if (missing.length > 0) {
 }
 
 mkdirSync(fileURLToPath(destination), { recursive: true });
+mkdirSync(fileURLToPath(demo), { recursive: true });
 for (const name of wanted) copyFileSync(new URL(name, source), new URL(name, destination));
+for (const name of ['libassimp-full.js', 'libassimp-full.wasm']) {
+  copyFileSync(new URL(name, source), new URL(name, demo));
+}
 copyFileSync(
   new URL('../src/cjs-error.cjs', import.meta.url),
   new URL('../dist/cjs-error.cjs', import.meta.url),
@@ -34,4 +39,4 @@ copyFileSync(
   new URL('../src/cjs-error.d.cts', import.meta.url),
   new URL('../dist/cjs-error.d.cts', import.meta.url),
 );
-console.log(`copied ${wanted.length} Emscripten artifacts and the CommonJS shim into dist/`);
+console.log(`copied ${wanted.length} Emscripten artifacts, the full docs demo, and the CommonJS shim`);

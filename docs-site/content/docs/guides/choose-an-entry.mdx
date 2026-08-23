@@ -21,14 +21,20 @@ customer files into GLB reads everything and writes one format; a viewer
 exporting its own glTF scene to 3MF or STEP reads one format and writes
 everything.
 
+<ConvertDemo>
+
 ```typescript
 import { convert } from 'libassimp/importer';
 
-const bytes = new Uint8Array();
-const { files } = await convert({ name: 'model.fbx', bytes }, { to: 'glb' });
+import { readFile } from 'node:fs/promises';
+
+const bytes = new Uint8Array(await readFile('cube.obj'));
+const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'glb' });
 
 console.log(files[0].name);
 ```
+
+</ConvertDemo>
 
 ### 2. Chain two entries rather than reaching for the third
 

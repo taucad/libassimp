@@ -8,19 +8,23 @@ text. Four codes cover everything the binding can refuse.
 
 ### 1. Catch the typed error
 
+<ConvertDemo>
+
 ```typescript
 import { AssimpError, convert } from 'libassimp';
 
-const bytes = new Uint8Array();
+const bytes = new TextEncoder().encode('v 0 0\nf 99 100 101\n');
 
 try {
-  const { files } = await convert({ name: 'model.obj', bytes }, { to: 'glb' });
+  const { files } = await convert({ name: 'broken.obj', bytes }, { to: 'glb' });
   console.log(files[0].name);
 } catch (error) {
   if (!(error instanceof AssimpError)) throw error;
   console.error(error.code, error.message);
 }
 ```
+
+</ConvertDemo>
 
 Anything that is not an `AssimpError` came from loading the binary — a failed
 fetch, a host without WebAssembly — and belongs to your transport, not to a

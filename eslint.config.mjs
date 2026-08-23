@@ -14,6 +14,7 @@ export default tseslint.config(
       'docs-site/.next/**',
       'docs-site/.source/**',
       'docs-site/out/**',
+      'docs-site/public/demo/**',
       'node_modules/**',
       'src/wasm/**',
     ],

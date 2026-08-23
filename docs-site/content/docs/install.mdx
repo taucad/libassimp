@@ -38,6 +38,26 @@ carries.
 
 ## Verify the install
 
+Run one conversion rather than checking a version string: it proves the
+JavaScript entry, glue, binary, importer and exporter all meet in this host.
+
+<ConvertDemo>
+
+```typescript
+import { convert } from 'libassimp';
+
+import { readFile } from 'node:fs/promises';
+
+const bytes = new Uint8Array(await readFile('cube.obj'));
+const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'glb' });
+
+console.log(files[0].name, files[0].bytes.byteLength);
+```
+
+</ConvertDemo>
+
+Every instance also reports the tables it was compiled with:
+
 ```typescript
 import { createAssimp } from 'libassimp';
 

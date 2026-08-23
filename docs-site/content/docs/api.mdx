@@ -32,14 +32,20 @@ Calls share one lazily created instance per process, so the first call pays for
 loading the binary and later calls do not. Reach for `createAssimp` when you
 want that lifetime in your own hands.
 
+<ConvertDemo>
+
 ```typescript
 import { convert } from 'libassimp';
 
-const bytes = new Uint8Array();
-const { files } = await convert({ name: 'model.dae', bytes }, { to: 'glb' });
+import { readFile } from 'node:fs/promises';
+
+const bytes = new Uint8Array(await readFile('cube.obj'));
+const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'glb' });
 
 console.log(files[0].name);
 ```
+
+</ConvertDemo>
 
 ## `createAssimp`
 

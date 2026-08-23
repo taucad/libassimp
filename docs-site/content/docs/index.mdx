@@ -31,21 +31,21 @@ npm install libassimp
 pnpm add libassimp
 ```
 
+<ConvertDemo>
+
 ```typescript
 import { convert } from 'libassimp';
 
 import { readFile, writeFile } from 'node:fs/promises';
 
-const bytes = new Uint8Array(await readFile('model.obj'));
-const { files } = await convert({ name: 'model.obj', bytes }, { to: 'glb' });
+const bytes = new Uint8Array(await readFile('cube.obj'));
+const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'glb' });
 
 await writeFile(files[0].name, files[0].bytes);
 console.log(files[0].name, files[0].bytes.byteLength);
 ```
 
-```console
-result.glb 4820
-```
+</ConvertDemo>
 
 The result is plain data: each file is a name and a copied `Uint8Array` that
 belongs to you. Nothing is a handle, and nothing has to be freed.

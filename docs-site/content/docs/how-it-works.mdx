@@ -32,6 +32,21 @@ file system. Its output is copied into fresh `Uint8Array`s before it crosses
 into JavaScript, so the result stays valid after the module grows its heap and
 holds no handle back into WebAssembly.
 
+<ConvertDemo>
+
+```typescript
+import { convert } from 'libassimp';
+
+import { readFile } from 'node:fs/promises';
+
+const bytes = new Uint8Array(await readFile('cube.obj'));
+const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'assjson' });
+
+console.log(files[0].name, files[0].bytes.byteLength);
+```
+
+</ConvertDemo>
+
 ## Post-processing
 
 Every conversion runs the same four assimp steps: `Triangulate`,

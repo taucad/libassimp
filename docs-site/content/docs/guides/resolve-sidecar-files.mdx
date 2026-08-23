@@ -9,16 +9,18 @@ by name, one at a time.
 
 ### 1. Return the bytes, or `undefined`
 
+<ConvertDemo>
+
 ```typescript
 import { convert } from 'libassimp';
 
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 
-const bytes = new Uint8Array(await readFile('scene.gltf'));
+const bytes = new Uint8Array(await readFile('cube.obj'));
 
 const { files } = await convert(
-  { name: 'scene.gltf', bytes },
+  { name: 'cube.obj', bytes },
   {
     to: 'glb',
     resolve: (name) => {
@@ -33,6 +35,8 @@ const { files } = await convert(
 
 console.log(files[0].name);
 ```
+
+</ConvertDemo>
 
 Returning `undefined` is not a failure by itself: the import fails only if the
 engine needed that file. A missing `.mtl` leaves an OBJ with default
