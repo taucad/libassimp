@@ -68,8 +68,12 @@ each build can read.
 
 ## Why the binaries are the size they are
 
-The engine is compiled with `-O3 -DNDEBUG`, Closure-compiled glue
-(`--closure=1`), `-sEVAL_CTORS=2` to run static constructors at build time,
+The engine is compiled and linked with `-O3 -DNDEBUG`, then the module goes
+through standalone `wasm-opt -O4 --converge --traps-never-happen`. Binaryen's
+size-only `code-folding` pass is skipped because it consumed 99.4% of a
+measured 4,348-second full link on web-ifc's generated schema function without
+adding a runtime optimisation. The build also uses mimalloc, Closure-compiled
+glue (`--closure=1`), `-sEVAL_CTORS=2` to run static constructors at build time,
 and `-fwasm-exceptions`, which is native WebAssembly exception handling rather
 than the JavaScript-based emulation assimp's error paths would otherwise pay
 for on every call. `-msimd128` turns on the fixed-width SIMD every supported
