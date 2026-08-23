@@ -149,6 +149,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          # Origin: knip's `assimp/**` ignore needs the submodule present when
+          # `treatConfigHintsAsErrors` checks whether the pattern is useful.
+          submodules: true
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
