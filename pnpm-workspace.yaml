@@ -9,3 +9,7 @@ allowBuilds:
   nx: true
 
 linkWorkspacePackages: true
+
+overrides:
+  # Origin: brace-expansion 5.0.9 fixes GHSA-rgw5-rvv9-x895 in Nx's minimatch path.
+  'brace-expansion@5': 5.0.9
