@@ -20,6 +20,9 @@ jobs:
       scan-args: |-
         --lockfile=pnpm-lock.yaml
         --config=osv-scanner.toml
+      # Origin: code scanning is unavailable while this repository is private;
+      # re-enable the SARIF upload when operator item O2 enables it.
+      upload-sarif: false
     permissions:
       actions: read
       contents: read
@@ -33,6 +36,9 @@ jobs:
       scan-args: |-
         --lockfile=pnpm-lock.yaml
         --config=osv-scanner.toml
+      # Origin: code scanning is unavailable while this repository is private;
+      # re-enable the SARIF upload when operator item O2 enables it.
+      upload-sarif: false
     permissions:
       actions: read
       contents: read
