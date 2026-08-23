@@ -26,10 +26,20 @@ option(LIBASSIMP_FAST "Skip the slow optimization passes; local iteration only" 
 
 if(EMSCRIPTEN)
   if(LIBASSIMP_FAST)
-    set(LIBASSIMP_OPTIMIZE "-O1")
+    set(LIBASSIMP_COMPILE_OPTIMIZE "-O1")
+    set(LIBASSIMP_LINK_OPTIMIZE "-O1")
   else()
-    set(LIBASSIMP_OPTIMIZE "-O3")
+    set(LIBASSIMP_COMPILE_OPTIMIZE "-O3")
+    set(LIBASSIMP_LINK_OPTIMIZE "-O2")
   endif()
+  # Measured 2026-08-23, emsdk 6.0.8, `full` objects at `-O3`: link `-O3` 4,348.7 s
+  # (99.4 % Binaryen `code-folding` on web-ifc's 1.25 MB `getPropertyName`), `-O2`
+  # 28 s, `-O3 --skip-pass=code-folding` 37 s, `-Os --skip-pass=code-folding` 60 s;
+  # `-O2` is the smallest brotli (2,040,233 vs 2,096,285) at +6.0 % raw; `-Os`/`-Oz`
+  # re-enter code-folding (`shrinkLevel >= 1`); `EVAL_CTORS=2` is inert under embind
+  # (-548 B); `--closure=1` is load-bearing for the 50 KB glue gate; legacy EH is the
+  # 6.0.8 default — exnref floors are Chrome 137 / Firefox 131 / Safari 18.4 / Node
+  # 24.15, so flip only when Node 22 leaves the matrix.
   # The engine and the binding have to agree on the exception ABI and on SIMD, so
   # these go in before assimp is configured rather than being patched on afterwards.
   # The prefix maps keep build-machine paths out of the binary: assimp, tinyusdz,
@@ -37,7 +47,7 @@ if(EMSCRIPTEN)
   # caught as /__w/libassimp/libassimp/... inside the wasm. Both directories are
   # named because a preset may put the binary dir outside the source tree.
   set(LIBASSIMP_COMMON_FLAGS
-      "${LIBASSIMP_OPTIMIZE} -DNDEBUG -fwasm-exceptions -msimd128 -ffile-prefix-map=${CMAKE_BINARY_DIR}=. -ffile-prefix-map=${CMAKE_SOURCE_DIR}=."
+      "${LIBASSIMP_COMPILE_OPTIMIZE} -DNDEBUG -fwasm-exceptions -msimd128 -ffile-prefix-map=${CMAKE_BINARY_DIR}=. -ffile-prefix-map=${CMAKE_SOURCE_DIR}=."
   )
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBASSIMP_COMMON_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBASSIMP_COMMON_FLAGS}")
@@ -54,7 +64,7 @@ if(EMSCRIPTEN)
   target_link_options(
     ${LIBASSIMP_TARGET}
     PRIVATE
-    ${LIBASSIMP_OPTIMIZE}
+    ${LIBASSIMP_LINK_OPTIMIZE}
     -fwasm-exceptions
     -msimd128
     -sMODULARIZE=1
