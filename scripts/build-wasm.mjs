@@ -143,20 +143,24 @@ for (const variant of names) {
     { stdio: 'inherit' },
   );
 
+  let wasmArtifact = `${buildDir}/${target}.wasm`;
   if (!fast) {
     build(
       `${wasmOpt} ${buildPath}/${target}.wasm ${wasmOptFlags.join(' ')} ` +
         `--output=${buildPath}/${target}.optimized.wasm`,
       { stdio: 'inherit' },
     );
-    renameSync(`${buildDir}/${target}.optimized.wasm`, `${buildDir}/${target}.wasm`);
+    wasmArtifact = `${buildDir}/${target}.optimized.wasm`;
   }
 
   const linkFlags = /^ *LINK_FLAGS = (.*)$/m.exec(readFileSync(`${buildDir}/build.ninja`, 'utf8'));
   const emccVersion = build('emcc --version').split('\n')[0].trim();
 
   for (const suffix of ['.js', '.wasm', '.d.ts', '.js.symbols']) {
-    copyArtifact(`${buildDir}/${target}${suffix}`, `${wasmDir}/${target}${suffix}`);
+    copyArtifact(
+      suffix === '.wasm' ? wasmArtifact : `${buildDir}/${target}${suffix}`,
+      `${wasmDir}/${target}${suffix}`,
+    );
   }
 
   const wasm = readFileSync(`${wasmDir}/${target}.wasm`);
