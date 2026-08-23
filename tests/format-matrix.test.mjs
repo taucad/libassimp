@@ -4,7 +4,7 @@
 // output is fingerprinted in `determinism.json`, so an engine or flag change
 // that alters bytes fails here instead of downstream. Re-record deliberate
 // changes with LIBASSIMP_RECORD_DETERMINISM=1 (see CONTRIBUTING.md).
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
@@ -45,7 +45,7 @@ const IMPORTS = [
   ['glTF', ['glTF/BoxTextured-glTF/BoxTextured.gltf', 'glTF/BoxTextured-glTF/BoxTextured.bin']],
   ['glTF2', ['glTF2/BoxTextured-glTF-Binary/BoxTextured.glb']],
   ['HMP', ['HMP/terrain.hmp']],
-  ['IFC', ['IFC/cube-blender-IFC4.ifc']],
+  ['IFC', ['IFC/cube-blender-ifc4.ifc']],
   ['IQM', ['IQM/mrfixit.iqm']],
   ['LWO', ['LWO/LWO2/hierarchy.lwo']],
   ['LWS', ['LWS/move_x.lws']],
@@ -88,6 +88,23 @@ const IMPORTS = [
   ['glTF2 Draco', ['glTF2/draco/robot.glb'], 'error'],
   ['not a model', ['3DS/test.png'], 'error'],
 ];
+
+it('names every fixture path with exact case', () => {
+  for (const [, files] of IMPORTS) {
+    for (const relative of files) {
+      expect(existsSync(join(MODELS, relative)), relative).toBe(true);
+      expect(
+        relative
+          .split('/')
+          .every(
+            (part, index, parts) =>
+              part === '..' || readdirSync(join(MODELS, ...parts.slice(0, index))).includes(part),
+          ),
+        relative,
+      ).toBe(true);
+    }
+  }
+});
 
 const EXPORT_SOURCE = 'glTF2/simple_skin/quad_skin.glb';
 const TEXTURED_SOURCE = 'glTF2/BoxTextured-glTF-Binary/BoxTextured.glb';
