@@ -119,6 +119,7 @@ elseif(LIBASSIMP_NATIVE_TESTS)
           collada-to-glb
           stl-to-glb
           ply-to-glb
+          ply-pointcloud-to-glb
           alias-step-writes-stp
           alias-dae-writes-dae
           no-files
@@ -127,4 +128,8 @@ elseif(LIBASSIMP_NATIVE_TESTS)
   )
     add_test(NAME ${case} COMMAND libassimp-native-test ${case})
   endforeach()
+  # Engine null dereference in the glTF2 exporter on face-less scenes (upstream issue filing
+  # pending operator approval): SIGSEGV natively, corrupt `"buffers":[]` GLB on wasm; enable at
+  # the engine bump that carries the fix.
+  set_tests_properties(ply-pointcloud-to-glb PROPERTIES DISABLED TRUE)
 endif()

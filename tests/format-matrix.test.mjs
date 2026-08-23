@@ -194,6 +194,8 @@ afterAll(() => {
 });
 
 describe('importers', () => {
+  it.todo('exports a point-cloud PLY as a valid GLB — upstream issue filing pending operator approval');
+
   it.each(IMPORTS)('reads %s', async (id, files, outcome) => {
     const inputs = files.map(load);
     if (outcome === 'error') {

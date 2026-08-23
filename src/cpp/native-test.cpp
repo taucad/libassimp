@@ -53,6 +53,7 @@ const Case kCases[] = {
     {"collada-to-glb", "Collada/cube_triangulate.dae", "glb", "", "glTF", "result.glb"},
     {"stl-to-glb", "STL/triangle.stl", "glb", "", "glTF", "result.glb"},
     {"ply-to-glb", "PLY/cube.ply", "glb", "", "glTF", "result.glb"},
+    {"ply-pointcloud-to-glb", "PLY/points.ply", "glb", "", "glTF", "result.glb"},
     // Aliases resolve to assimp ids, and the output extension comes from the exporter table.
     {"alias-step-writes-stp", "OBJ/box.obj", "step", "", "ISO-10303-21", "result.stp"},
     {"alias-dae-writes-dae", "OBJ/box.obj", "dae", "", "<?xml", "result.dae"},
