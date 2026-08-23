@@ -3,19 +3,29 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+const THRESHOLD = 0.1;
 const MARKER = '<!-- libassimp-benchmark -->';
 
 export const compareBenchmark = (current, base) => {
   if (!base || current.name !== base.name) {
-    return `${MARKER}\n### Benchmark\n\nNew benchmark: \`${current.name}\` (${current.medianMs} ms median).`;
+    return {
+      failed: false,
+      markdown: `${MARKER}\n### Benchmark\n\nNew benchmark admitted: \`${current.name}\` (${current.medianMs} ms median).`,
+    };
   }
   if (current.outputBytes !== base.outputBytes || current.outputFnv !== base.outputFnv) {
-    return `${MARKER}\n### Benchmark\n\nByte fingerprints changed for \`${current.name}\`.`;
+    return {
+      failed: true,
+      markdown: `${MARKER}\n### Benchmark\n\nByte fingerprints changed for \`${current.name}\`. Rename the benchmark only when the semantic change is intentional.`,
+    };
   }
 
   const change = (current.medianMs - base.medianMs) / base.medianMs;
   const percentage = `${change >= 0 ? '+' : ''}${(change * 100).toFixed(1)}%`;
-  return `${MARKER}\n### Benchmark\n\n| Benchmark | main | PR | Change |\n| --- | ---: | ---: | ---: |\n| \`${current.name}\` | ${base.medianMs} ms | ${current.medianMs} ms | ${percentage} |\n| \`createAssimp\` | ${base.initMs} ms | ${current.initMs} ms | |`;
+  return {
+    failed: change > THRESHOLD,
+    markdown: `${MARKER}\n### Benchmark\n\n| Benchmark | main | PR | Change | Limit |\n| --- | ---: | ---: | ---: | ---: |\n| \`${current.name}\` | ${base.medianMs} ms | ${current.medianMs} ms | ${percentage} | +10.0% |\n| \`createAssimp\` | ${base.initMs} ms | ${current.initMs} ms | | |`,
+  };
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -27,7 +37,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
   const current = JSON.parse(readFileSync(currentPath, 'utf8'));
   const base = basePath && basePath !== '-' ? JSON.parse(readFileSync(basePath, 'utf8')) : undefined;
-  const markdown = compareBenchmark(current, base);
-  writeFileSync(outputPath, `${markdown}\n`);
-  process.stdout.write(`${markdown}\n`);
+  const result = compareBenchmark(current, base);
+  writeFileSync(outputPath, `${result.markdown}\n`);
+  process.stdout.write(`${result.markdown}\n`);
+  if (result.failed) process.exitCode = 1;
 }

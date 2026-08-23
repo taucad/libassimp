@@ -10,13 +10,14 @@ permissions:
   issues: write
 
 jobs:
-  # Exploratory runs need the same artifacts as `ci.yml`, and wasm is never
+  # Exploratory runs need the same artifacts `ci.yml` gates, and wasm is never
   # committed. The benchmark measures the root entry, and the package build
   # stages all three variants, so the drift run builds all three.
   build-wasm:
     runs-on: ubuntu-24.04
-    # Origin: about 3x the measured cold job: compile takes roughly 25 minutes
-    # on 4 vCPU and the `-O3` link skips the pathological code-folding pass.
+    # Origin: about 3x the measured cold job after the -O2 link: compile takes
+    # roughly 25 minutes on 4 vCPU and link takes less than 1 minute. The prior
+    # 180-minute ceiling matched the -O3 link.
     timeout-minutes: 90
     container:
       image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
@@ -66,7 +67,13 @@ jobs:
           path: src/wasm
           merge-multiple: true
       - id: benchmark
-        continue-on-error: true # An execution failure opens an issue; timing is observational.
+        continue-on-error: true # Origin: exploratory drift opens an issue; PR gate remains fail-closed in ci.yml.
+        env:
+          # Origin: four times the workstation medians `bench/gated.mjs` records,
+          # the allowance a shared runner needs. The fail-closed comparison
+          # against the base branch runs in `ci.yml`.
+          MAX_MEDIAN_MS: '1.8'
+          MAX_INIT_MS: '100'
         run: |
           pnpm run build
           pnpm run benchmark

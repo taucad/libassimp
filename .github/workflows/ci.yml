@@ -52,8 +52,9 @@ jobs:
   build-wasm:
     needs: preflight
     runs-on: ubuntu-24.04
-    # Origin: about 3x the measured cold job: compile takes roughly 25 minutes
-    # on 4 vCPU and the `-O3` link skips the pathological code-folding pass.
+    # Origin: about 3x the measured cold job after the -O2 link: compile takes
+    # roughly 25 minutes on 4 vCPU and link takes less than 1 minute. The prior
+    # 240-minute ceiling matched the -O3 link measured on run 32583934372.
     timeout-minutes: 90
     container:
       image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
@@ -332,13 +333,13 @@ jobs:
       - name: Benchmark the pull request
         run: |
           pnpm run build
-          node bench/report.mjs > /tmp/current-benchmark.json
+          node bench/gated.mjs > /tmp/current-benchmark.json
       - name: Benchmark main on the same runner
         shell: bash
         run: |
           base_directory="$(mktemp -d)"
           git worktree add --detach "$base_directory" 'origin/${{ github.base_ref }}'
-          if [[ -f "$base_directory/bench/report.mjs" ]]; then
+          if [[ -f "$base_directory/bench/gated.mjs" ]]; then
             # wasm is CI-built and never committed, so the base tree reuses this
             # run's binaries and the timing column isolates the TypeScript
             # facade. An engine or build-flag change shows up in the byte
@@ -347,10 +348,10 @@ jobs:
             cd "$base_directory"
             pnpm install --frozen-lockfile
             pnpm run build
-            node bench/report.mjs > /tmp/base-benchmark.json
+            node bench/gated.mjs > /tmp/base-benchmark.json
           fi
       - id: compare
-        continue-on-error: true # The following always-run step publishes any completed comparison.
+        continue-on-error: true # Origin: the following always-run comment must report the failed comparison before the gate closes.
         run: |
           base=/tmp/base-benchmark.json
           [[ -f "$base" ]] || base=-
@@ -374,6 +375,9 @@ jobs:
             } else {
               await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
             }
+      - if: steps.compare.outcome == 'failure'
+        run: exit 1
+
   security:
     needs: preflight
     runs-on: ubuntu-24.04
