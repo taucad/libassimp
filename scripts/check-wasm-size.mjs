@@ -6,16 +6,16 @@
 import { readFile } from 'node:fs/promises';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
-// Origin: production emsdk 6.0.8 build at compile `-O3` / link `-O2` (see
-// CMakeLists.txt), engine 24c936c1, measured 2026-08-23 on macOS arm64; 1%
-// headroom. Raw is +6% because `-O2` omits `code-folding` and `wasm-metadce`;
-// brotli is -2.6%; link is 214x faster.
+// Origin: production emsdk 6.0.8 build at compile `-O3` / link `-O2` with
+// mimalloc (see CMakeLists.txt), engine 24c936c1, measured 2026-08-23 on macOS
+// arm64; 1% headroom. Versus the initial `-O2` artifacts, mimalloc adds 0.5%
+// raw / 1.0% brotli to full and cuts the measured IFC median by 13.7%.
 const CEILINGS = {
-  exporter: { raw: 7_738_049, gzip9: 1_859_084, brotli11: 1_258_009 },
-  importer: { raw: 10_901_302, gzip9: 2_710_971, brotli11: 1_834_748 },
-  full: { raw: 12_324_380, gzip9: 3_054_180, brotli11: 2_060_636 },
+  exporter: { raw: 7_797_252, gzip9: 1_885_055, brotli11: 1_278_940 },
+  importer: { raw: 10_960_251, gzip9: 2_736_327, brotli11: 1_856_002 },
+  full: { raw: 12_383_344, gzip9: 3_079_741, brotli11: 2_082_020 },
 };
-// Closure keeps every glue under 36 kB; above 50 kB it silently stopped.
+// Closure keeps every glue under 39 kB; above 50 kB it silently stopped.
 const GLUE_CEILING = 50_000;
 
 const decodeVaruint = (bytes, at) => {
