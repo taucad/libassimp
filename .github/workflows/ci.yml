@@ -237,7 +237,9 @@ jobs:
       - run: pnpm run build
       - run: pnpm run pkgcheck
       - run: pnpm run check:size
-      - run: npm pack --ignore-scripts --pack-destination candidate
+      - run: |
+          mkdir candidate
+          npm pack --ignore-scripts --pack-destination candidate
       - id: manifest
         run: node scripts/candidate-manifest.mjs candidate
       - name: Clean-room candidate consumer
