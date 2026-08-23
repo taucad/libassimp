@@ -1,7 +1,7 @@
 // The size strip quotes measured bytes, never hand-typed ones. This compresses the three binaries
 // the package ships and the built JavaScript entrypoint, then writes lib/sizes.json, which is
 // checked in so drift shows up as a diff. The wasm figures cover the same bytes
-// ../../scripts/check-wasm-size.mjs ratchets, so a ceiling move lands here too.
+// ../../scripts/check-wasm-size.mjs validates.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

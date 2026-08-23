@@ -1,4 +1,4 @@
-/** FNV-1a over 64 bits, the fingerprint the determinism and benchmark gates pin. */
+/** FNV-1a over 64 bits, the fingerprint the determinism check and benchmark report pin. */
 export const fnv64 = (input) => {
   let hash = 0xcbf2_9ce4_8422_2325n;
   for (const byte of input) {

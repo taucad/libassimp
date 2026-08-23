@@ -81,7 +81,6 @@ across hosts for speed, and identical output on every host is worth more than
 the difference. Threads would demand cross-origin isolation headers from every
 page that loads the module, for an engine that parses one file at a time.
 
-Every binary carries a byte ceiling in continuous integration: raw, gzip and
-brotli sizes are asserted on each build, and a ceiling only moves in the change
-that causes it to move. The sizes on the [home page](/) are measured from the
-same artifacts, not typed in by hand.
+Continuous integration reports every binary's raw, gzip and brotli sizes and
+validates its WebAssembly section shape. The sizes on the [home page](/) are
+measured from the same artifacts, not typed in by hand.

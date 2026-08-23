@@ -24,7 +24,7 @@ describe('published size figures', () => {
 
   // Raw lengths are compared rather than recompressed: brotli-11 over 29 MB of binaries costs a
   // minute, scripts/measure-sizes.mjs writes the compressed figures on every build, and
-  // scripts/check-wasm-size.mjs is the gate that recompresses and ratchets them.
+  // scripts/check-wasm-size.mjs reports the compressed sizes and validates the module shape.
   wasmTest('quotes the binaries the package ships, when src/wasm holds them', () => {
     for (const variant of VARIANTS) {
       const { raw, gzip, brotli } = sizes.wasm[variant];
