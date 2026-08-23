@@ -73,7 +73,7 @@ const importEntry = /from\s+['"]libassimp(?:\/(importer|exporter))?['"]/u;
 const targetLiteral = /\bto\s*:\s*(['"])([^'"]+)\1/u;
 
 /** Which published entry the example imports. */
-export const readDemoEntry = (code: string): keyof typeof targets => {
+const readDemoEntry = (code: string): keyof typeof targets => {
   const entry = importEntry.exec(code)?.[1];
   return entry === 'importer' || entry === 'exporter' ? entry : 'full';
 };
