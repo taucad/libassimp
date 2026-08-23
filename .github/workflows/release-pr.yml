@@ -1,6 +1,6 @@
 # Maintains the standing release pull request (head `release/next`, base `main`).
 #
-# On every push to `main` with pending Version Plans:
+# After every successful `main` CI run with pending Version Plans:
 #   1. Regenerate the release commit with `release:prepare --from-plans` — the
 #      plans dictate the version, and the same validations gate it as a manual
 #      `release:prepare -- <version>` run.
@@ -25,11 +25,19 @@
 name: Release PR
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
     branches: [main]
+    types: [completed]
   workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful main CI run whose WASM artifacts should be reused
+        required: true
+        type: string
 
-permissions: {}
+permissions:
+  actions: read
 
 concurrency:
   group: release-pr
@@ -37,6 +45,7 @@ concurrency:
 
 jobs:
   prepare:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -51,7 +60,8 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-          ref: main
+          ref: ${{ github.event.workflow_run.head_sha || 'main' }}
+          submodules: true
           persist-credentials: true
           token: ${{ steps.bot.outputs.token }}
 
@@ -78,6 +88,16 @@ jobs:
         uses: ./.github/actions/setup
         with:
           node-version: '26'
+
+      - name: Download the validated WASM artifacts
+        if: steps.plans.outputs.pending == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: wasm-*
+          path: src/wasm
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id || inputs.ci_run_id }}
 
       - name: Generate the release commit
         id: generate
@@ -119,7 +139,11 @@ jobs:
             echo "version=$version"
             echo "previous_version=$previous_version"
             echo 'commit_log<<LOGEOF'
-            git log "v$previous_version..main" --pretty='- %h %s' | head -100
+            if git rev-parse --verify --quiet "refs/tags/v$previous_version" >/dev/null; then
+              git log -100 "v$previous_version..main" --pretty='- %h %s'
+            else
+              git log -100 main --pretty='- %h %s'
+            fi
             echo 'LOGEOF'
           } >> "$GITHUB_OUTPUT"
 
