@@ -59,8 +59,12 @@ const gltf = await convertToGltf({ name: 'cube.obj', bytes }, { to: 'glb' });
 const stl = await convertFromGltf({ name: 'model.glb', bytes: gltf.files[0].bytes }, { to: 'stl' });
 assert.equal(stl.files[0].name, 'result.stl');
 
-using assimp = await createAssimp();
-assert.ok(assimp.formats.export.some((format) => format.id === 'stl'));
+const assimp = await createAssimp();
+try {
+  assert.ok(assimp.formats.export.some((format) => format.id === 'stl'));
+} finally {
+  assimp.dispose();
+}
 
 for (const specifier of ['libassimp/wasm', 'libassimp/importer/wasm', 'libassimp/exporter/wasm']) {
   const wasm = await readFile(new URL(import.meta.resolve(specifier)));
