@@ -120,9 +120,9 @@ jobs:
           # Stage the release files explicitly: the quality gate inside
           # release:prepare can regenerate committed artifacts that must stay
           # out of the release commit.
-          git add CHANGELOG.md package.json pnpm-lock.yaml
+          git add CHANGELOG.md package.json
           staged=$(git diff --cached --name-only)
-          allowed='^(CHANGELOG\.md|package\.json|pnpm-lock\.yaml|\.nx/version-plans/.+\.md)$'
+          allowed='^(CHANGELOG\.md|package\.json|\.nx/version-plans/.+\.md)$'
           unexpected=$(grep -Ev "$allowed" <<< "$staged" || true)
           if [ -n "$unexpected" ]; then
             echo "::error::release generation changed unexpected files: $unexpected"

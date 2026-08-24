@@ -14,7 +14,7 @@ const platformManifests = existsSync(npmDirectory)
       )
       .map((entry) => `npm/${entry.name}/package.json`)
   : [];
-const RELEASE_FILES = new Set(['CHANGELOG.md', ...platformManifests, 'package.json', 'pnpm-lock.yaml']);
+const RELEASE_FILES = new Set(['CHANGELOG.md', ...platformManifests, 'package.json']);
 
 export const releaseFiles = [...RELEASE_FILES];
 
