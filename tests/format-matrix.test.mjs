@@ -217,8 +217,14 @@ describe('exporters', () => {
       const { files } = await assimp.convert(source, { to: id });
       const [plural] = await assimp.convertFormats(source, { targets: [{ to: id }] });
       expect(files[0].name, `${id} output name`).toBe(`result.${extension}`);
-      expect(plural.files, `${id} singular/plural parity`).toEqual(files);
-      if (TIMESTAMPED.has(id)) continue;
+      if (TIMESTAMPED.has(id)) {
+        expect(
+          plural.files.map(({ name, bytes }) => ({ name, size: bytes.byteLength })),
+          `${id} singular/plural shape parity`,
+        ).toEqual(files.map(({ name, bytes }) => ({ name, size: bytes.byteLength })));
+        continue;
+      }
+      expect(plural.files, `${id} singular/plural byte parity`).toEqual(files);
       pin(`export ${id}`, files[0].bytes);
     }
   });
