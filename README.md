@@ -1,8 +1,12 @@
-# libassimp
+<h1 align="center">
+  <img src="images/banner.svg" alt="libassimp" width="100%">
+</h1>
 
-[![npm](https://img.shields.io/npm/v/libassimp)](https://www.npmjs.com/package/libassimp)
-[![CI](https://github.com/taucad/libassimp/actions/workflows/ci.yml/badge.svg)](https://github.com/taucad/libassimp/actions/workflows/ci.yml)
-[![Part of the Tau ecosystem](https://img.shields.io/badge/Tau-ecosystem-6d28d9)](https://tau.new)
+<p align="center">
+  <a href="https://www.npmjs.com/package/libassimp"><img src="https://img.shields.io/npm/v/libassimp?logo=npm&logoColor=white&label=npm&color=cb3837" alt="npm version"></a>
+  <a href="https://github.com/taucad/libassimp/actions/workflows/ci.yml"><img src="https://github.com/taucad/libassimp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://tau.new"><img src="https://img.shields.io/badge/Tau-ecosystem-6d28d9" alt="Part of the Tau ecosystem"></a>
+</p>
 
 Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.
 
