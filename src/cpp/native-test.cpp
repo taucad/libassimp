@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Host-native ctest driver: the same libassimp::convert the wasm module calls,
+// Host-native ctest driver: the same libassimp::Plan the wasm module calls,
 // against a subset of the engine's own fixtures. Catches engine regressions
 // without paying for an Emscripten link. Run with no arguments for every case,
 // or with a case name for one; the exit code is the number of failures.
@@ -22,6 +22,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include <assimp/postprocess.h>
 
 #include "libassimp.hpp"
 
@@ -62,7 +64,19 @@ const Case kCases[] = {
     {"no-files", "", "glb", "NO_FILES", "", ""},
     {"unsupported-format", "OBJ/box.obj", "nonesuch", "UNSUPPORTED_FORMAT", "", ""},
     {"garbage-input", "@garbage", "glb", "IMPORT_FAILED", "", ""},
+    {"gltf1-rejected", "glTF/BoxTextured-glTF-Binary/BoxTextured.glb", "glb", "IMPORT_FAILED", "", ""},
 };
+
+constexpr unsigned int kPostProcess = aiProcess_Triangulate | aiProcess_GenUVCoords |
+                                      aiProcess_JoinIdenticalVertices | aiProcess_SortByPType;
+
+std::string nativeId(const std::string& format) {
+  if (format == "glb") return "glb2";
+  if (format == "gltf") return "gltf2";
+  if (format == "step") return "stp";
+  if (format == "dae") return "collada";
+  return format;
+}
 
 std::string modelsDir() { return LIBASSIMP_MODELS_DIR; }
 
@@ -95,10 +109,19 @@ bool run(const Case& item) {
 
   // Sidecars (spider.mtl, glTF .bin) are deliberately not preloaded: this is the resolve path.
   const libassimp::Resolver resolve = [&directory](const std::string& name, libassimp::Bytes& out) {
-    return !directory.empty() && readFile(directory + libassimp::MemoryFiles::basename(name), out);
+    return !directory.empty() && readFile(directory + libassimp::MemoryFiles::basename(name), out)
+               ? libassimp::ResolveStatus::Found
+               : libassimp::ResolveStatus::Missing;
   };
 
-  const libassimp::Result result = libassimp::convert(entry, std::move(files), item.format, {}, resolve);
+  libassimp::Plan plan(entry, std::move(files), {}, kPostProcess,
+                       {{item.format, nativeId(item.format), {}}}, resolve);
+  const libassimp::PlanStatus status = plan.run();
+  const libassimp::Result& result = plan.result();
+  if (status == libassimp::PlanStatus::Pending) {
+    std::cerr << item.name << ": native resolver unexpectedly pending\n";
+    return false;
+  }
 
   if (item.code[0] != '\0') {
     if (result.ok || result.code != item.code) {
@@ -117,27 +140,65 @@ bool run(const Case& item) {
     std::cerr << item.name << ": " << result.code << ": " << result.message << "\n";
     return false;
   }
-  if (result.files.empty() || result.files[0].bytes.empty()) {
+  if (result.formats.empty() || result.formats[0].files.empty() || result.formats[0].files[0].bytes.empty()) {
     std::cerr << item.name << ": no output bytes\n";
     return false;
   }
-  if (item.output[0] != '\0' && result.files[0].name != item.output) {
-    std::cerr << item.name << ": expected " << item.output << ", got " << result.files[0].name << "\n";
+  const std::vector<libassimp::NamedBytes>& outputs = result.formats[0].files;
+  if (item.output[0] != '\0' && outputs[0].name != item.output) {
+    std::cerr << item.name << ": expected " << item.output << ", got " << outputs[0].name << "\n";
     return false;
   }
   const std::string magic(item.magic);
-  const libassimp::Bytes& bytes = result.files[0].bytes;
+  const libassimp::Bytes& bytes = outputs[0].bytes;
   if (bytes.size() < magic.size() || std::memcmp(bytes.data(), magic.data(), magic.size()) != 0) {
     std::cerr << item.name << ": output does not start with '" << magic << "'\n";
     return false;
   }
-  std::cout << item.name << ": ok, " << result.files.size() << " file(s), " << bytes.size() << " bytes\n";
+  std::cout << item.name << ": ok, " << outputs.size() << " file(s), " << bytes.size() << " bytes\n";
+  return true;
+}
+
+bool runPlanCase(const std::string& name) {
+  libassimp::Bytes bytes;
+  const std::string path = modelsDir() + "/OBJ/box.obj";
+  if (!readFile(path, bytes)) return false;
+  std::vector<libassimp::NamedBytes> files{{"box.obj", std::move(bytes)}};
+  std::vector<libassimp::Target> targets;
+  if (name == "import-once-three-targets") {
+    targets = {{"glb", "glb2", {}}, {"stl", "stl", {}}, {"ply", "ply", {}}};
+  } else if (name == "repeated-stl-targets") {
+    targets = {{"stl", "stl", {}}, {"stl", "stlb", {}}};
+  } else if (name == "later-target-atomic") {
+    targets = {{"glb", "glb2", {}}, {"3mf", "3mf", {}}};
+  } else {
+    return false;
+  }
+  libassimp::Plan plan("box.obj", std::move(files), {}, kPostProcess, std::move(targets), {});
+  const libassimp::PlanStatus status = plan.run();
+  const libassimp::Result& result = plan.result();
+  if (name == "later-target-atomic") {
+    return status == libassimp::PlanStatus::Failed && result.code == "EXPORT_FAILED" &&
+           result.formatIndex == 1 && result.format == "3mf" && result.formats.empty();
+  }
+  if (status != libassimp::PlanStatus::Completed || !result.ok || plan.importAttempts() != 1 ||
+      result.formats.size() != 2 + (name == "import-once-three-targets")) {
+    return false;
+  }
+  if (name == "repeated-stl-targets") {
+    return result.formats[0].files[0].bytes != result.formats[1].files[0].bytes;
+  }
   return true;
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
+  if (argc > 1 && (std::strcmp(argv[1], "import-once-three-targets") == 0 ||
+                   std::strcmp(argv[1], "repeated-stl-targets") == 0 ||
+                   std::strcmp(argv[1], "later-target-atomic") == 0)) {
+    return runPlanCase(argv[1]) ? 0 : 1;
+  }
   int failures = 0;
   bool matched = false;
   for (const Case& item : kCases) {

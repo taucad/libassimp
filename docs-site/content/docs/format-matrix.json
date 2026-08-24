@@ -349,109 +349,375 @@
     ],
     "export": [
       {
-        "id": "collada",
-        "extension": "dae",
-        "description": "COLLADA - Digital Asset Exchange Schema"
-      },
-      {
-        "id": "x",
-        "extension": "x",
-        "description": "X Files"
-      },
-      {
-        "id": "stp",
-        "extension": "stp",
-        "description": "Step Files"
-      },
-      {
-        "id": "obj",
-        "extension": "obj",
-        "description": "Wavefront OBJ format"
-      },
-      {
-        "id": "objnomtl",
-        "extension": "obj",
-        "description": "Wavefront OBJ format without material file"
-      },
-      {
-        "id": "stl",
-        "extension": "stl",
-        "description": "Stereolithography"
-      },
-      {
-        "id": "stlb",
-        "extension": "stl",
-        "description": "Stereolithography (binary)"
-      },
-      {
-        "id": "ply",
-        "extension": "ply",
-        "description": "Stanford Polygon Library"
-      },
-      {
-        "id": "plyb",
-        "extension": "ply",
-        "description": "Stanford Polygon Library (binary)"
-      },
-      {
         "id": "3ds",
         "extension": "3ds",
-        "description": "Autodesk 3DS (legacy)"
-      },
-      {
-        "id": "gltf2",
-        "extension": "gltf",
-        "description": "GL Transmission Format v. 2"
-      },
-      {
-        "id": "glb2",
-        "extension": "glb",
-        "description": "GL Transmission Format v. 2 (binary)"
-      },
-      {
-        "id": "gltf",
-        "extension": "gltf",
-        "description": "GL Transmission Format"
-      },
-      {
-        "id": "glb",
-        "extension": "glb",
-        "description": "GL Transmission Format (binary)"
-      },
-      {
-        "id": "x3d",
-        "extension": "x3d",
-        "description": "Extensible 3D"
-      },
-      {
-        "id": "fbx",
-        "extension": "fbx",
-        "description": "Autodesk FBX (binary)"
-      },
-      {
-        "id": "fbxa",
-        "extension": "fbx",
-        "description": "Autodesk FBX (ascii)"
+        "description": "Autodesk 3DS (legacy)",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
       },
       {
         "id": "3mf",
         "extension": "3mf",
-        "description": "The 3MF-File-Format"
+        "description": "3D Manufacturing Format",
+        "exportOptions": {
+          "application": {
+            "kind": "string",
+            "default": "",
+            "description": "3MF_EXPORT_APPLICATION"
+          },
+          "decimalPrecision": {
+            "kind": "integer",
+            "default": 9,
+            "minimum": 1,
+            "maximum": 16,
+            "description": "3MF_EXPORT_DECIMAL_PRECISION"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "unit": {
+            "kind": "string",
+            "default": "millimeter",
+            "values": ["micron", "millimeter", "centimeter", "inch", "foot", "meter"],
+            "description": "3MF_EXPORT_UNIT"
+          },
+          "upAxis": {
+            "kind": "string",
+            "default": "z",
+            "values": ["x", "y", "z"],
+            "description": "3MF_EXPORT_UPAXIS"
+          }
+        }
       },
       {
         "id": "assjson",
         "extension": "json",
-        "description": "Assimp JSON Document"
+        "description": "Assimp JSON scene",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "skipWhitespaces": {
+            "kind": "boolean",
+            "default": true,
+            "description": "JSON_SKIP_WHITESPACES"
+          }
+        }
+      },
+      {
+        "id": "dae",
+        "extension": "dae",
+        "description": "COLLADA Digital Asset Exchange",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "fbx",
+        "extension": "fbx",
+        "description": "Autodesk FBX",
+        "exportOptions": {
+          "binary": {
+            "kind": "boolean",
+            "default": true,
+            "description": "Write binary FBX when true and ASCII FBX when false."
+          },
+          "joinIdenticalVertices": {
+            "kind": "boolean",
+            "default": true,
+            "description": "bJoinIdenticalVertices"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "transparencyFactorRefersToOpacity": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to write the value referenced to opacity in TransparencyFactor of each material. When this flag is not defined, the TransparencyFactor value of each meterial is 1.0. By enabling this flag, the value is 1.0 - opacity; Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "glb",
+        "extension": "glb",
+        "description": "glTF 2 binary container",
+        "exportOptions": {
+          "identityMatrixEpsilon": {
+            "kind": "number",
+            "default": 0.00999999977,
+            "minimum": 0,
+            "description": "Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code. Property type: Float."
+          },
+          "includeTargetNames": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGETNAMES_EXP"
+          },
+          "includeTargetNormals": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGET_NORMAL_EXP"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "sparseAccessors": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_SPARSE_ACCESSOR_EXP"
+          },
+          "unlimitedSkinningBonesPerVertex": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…"
+          },
+          "useGltfPbrSpecularGlossiness": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "gltf",
+        "extension": "gltf",
+        "description": "glTF 2 JSON with sidecars",
+        "exportOptions": {
+          "identityMatrixEpsilon": {
+            "kind": "number",
+            "default": 0.00999999977,
+            "minimum": 0,
+            "description": "Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code. Property type: Float."
+          },
+          "includeTargetNames": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGETNAMES_EXP"
+          },
+          "includeTargetNormals": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGET_NORMAL_EXP"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "sparseAccessors": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_SPARSE_ACCESSOR_EXP"
+          },
+          "unlimitedSkinningBonesPerVertex": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…"
+          },
+          "useGltfPbrSpecularGlossiness": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "obj",
+        "extension": "obj",
+        "description": "Wavefront OBJ",
+        "exportOptions": {
+          "joinIdenticalVertices": {
+            "kind": "boolean",
+            "default": true,
+            "description": "bJoinIdenticalVertices"
+          },
+          "materials": {
+            "kind": "boolean",
+            "default": true,
+            "description": "Write an MTL sidecar when the scene has materials."
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "ply",
+        "extension": "ply",
+        "description": "Stanford Polygon Library",
+        "exportOptions": {
+          "binary": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Write binary PLY when true and ASCII PLY when false."
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "step",
+        "extension": "stp",
+        "description": "ISO 10303 STEP",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "stl",
+        "extension": "stl",
+        "description": "Stereolithography",
+        "exportOptions": {
+          "binary": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Write binary STL when true and ASCII STL when false."
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
       },
       {
         "id": "usda",
         "extension": "usda",
-        "description": "Universal Scene Description (ASCII)"
+        "description": "Universal Scene Description ASCII",
+        "exportOptions": {
+          "animations": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_EXPORT_ANIMATIONS"
+          },
+          "clearcoat": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_EXPORT_CLEARCOAT"
+          },
+          "materialX": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_MATERIALX"
+          },
+          "optimizeForMobile": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_OPTIMIZE_FOR_MOBILE"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "subdivision": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_SUBDIVISION"
+          },
+          "volumes": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_VOLUMES"
+          }
+        }
       },
       {
         "id": "usdz",
         "extension": "usdz",
-        "description": "Universal Scene Description (USDZ)"
+        "description": "Universal Scene Description ZIP container",
+        "exportOptions": {
+          "animations": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_EXPORT_ANIMATIONS"
+          },
+          "clearcoat": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_EXPORT_CLEARCOAT"
+          },
+          "materialX": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_MATERIALX"
+          },
+          "optimizeForMobile": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_OPTIMIZE_FOR_MOBILE"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "subdivision": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_SUBDIVISION"
+          },
+          "volumes": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_VOLUMES"
+          }
+        }
+      },
+      {
+        "id": "x",
+        "extension": "x",
+        "description": "DirectX X file",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "use64Bit": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies the xfile use double for real values of float Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "x3d",
+        "extension": "x3d",
+        "description": "Extensible 3D",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
       }
     ]
   },
@@ -805,29 +1071,107 @@
     ],
     "export": [
       {
-        "id": "gltf2",
-        "extension": "gltf",
-        "description": "GL Transmission Format v. 2"
-      },
-      {
-        "id": "glb2",
-        "extension": "glb",
-        "description": "GL Transmission Format v. 2 (binary)"
-      },
-      {
-        "id": "gltf",
-        "extension": "gltf",
-        "description": "GL Transmission Format"
+        "id": "assjson",
+        "extension": "json",
+        "description": "Assimp JSON scene",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "skipWhitespaces": {
+            "kind": "boolean",
+            "default": true,
+            "description": "JSON_SKIP_WHITESPACES"
+          }
+        }
       },
       {
         "id": "glb",
         "extension": "glb",
-        "description": "GL Transmission Format (binary)"
+        "description": "glTF 2 binary container",
+        "exportOptions": {
+          "identityMatrixEpsilon": {
+            "kind": "number",
+            "default": 0.00999999977,
+            "minimum": 0,
+            "description": "Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code. Property type: Float."
+          },
+          "includeTargetNames": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGETNAMES_EXP"
+          },
+          "includeTargetNormals": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGET_NORMAL_EXP"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "sparseAccessors": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_SPARSE_ACCESSOR_EXP"
+          },
+          "unlimitedSkinningBonesPerVertex": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…"
+          },
+          "useGltfPbrSpecularGlossiness": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec. Property type: Bool. Default value: false."
+          }
+        }
       },
       {
-        "id": "assjson",
-        "extension": "json",
-        "description": "Assimp JSON Document"
+        "id": "gltf",
+        "extension": "gltf",
+        "description": "glTF 2 JSON with sidecars",
+        "exportOptions": {
+          "identityMatrixEpsilon": {
+            "kind": "number",
+            "default": 0.00999999977,
+            "minimum": 0,
+            "description": "Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code. Property type: Float."
+          },
+          "includeTargetNames": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGETNAMES_EXP"
+          },
+          "includeTargetNormals": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGET_NORMAL_EXP"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "sparseAccessors": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_SPARSE_ACCESSOR_EXP"
+          },
+          "unlimitedSkinningBonesPerVertex": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…"
+          },
+          "useGltfPbrSpecularGlossiness": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec. Property type: Bool. Default value: false."
+          }
+        }
       }
     ]
   },
@@ -871,109 +1215,375 @@
     ],
     "export": [
       {
-        "id": "collada",
-        "extension": "dae",
-        "description": "COLLADA - Digital Asset Exchange Schema"
-      },
-      {
-        "id": "x",
-        "extension": "x",
-        "description": "X Files"
-      },
-      {
-        "id": "stp",
-        "extension": "stp",
-        "description": "Step Files"
-      },
-      {
-        "id": "obj",
-        "extension": "obj",
-        "description": "Wavefront OBJ format"
-      },
-      {
-        "id": "objnomtl",
-        "extension": "obj",
-        "description": "Wavefront OBJ format without material file"
-      },
-      {
-        "id": "stl",
-        "extension": "stl",
-        "description": "Stereolithography"
-      },
-      {
-        "id": "stlb",
-        "extension": "stl",
-        "description": "Stereolithography (binary)"
-      },
-      {
-        "id": "ply",
-        "extension": "ply",
-        "description": "Stanford Polygon Library"
-      },
-      {
-        "id": "plyb",
-        "extension": "ply",
-        "description": "Stanford Polygon Library (binary)"
-      },
-      {
         "id": "3ds",
         "extension": "3ds",
-        "description": "Autodesk 3DS (legacy)"
-      },
-      {
-        "id": "gltf2",
-        "extension": "gltf",
-        "description": "GL Transmission Format v. 2"
-      },
-      {
-        "id": "glb2",
-        "extension": "glb",
-        "description": "GL Transmission Format v. 2 (binary)"
-      },
-      {
-        "id": "gltf",
-        "extension": "gltf",
-        "description": "GL Transmission Format"
-      },
-      {
-        "id": "glb",
-        "extension": "glb",
-        "description": "GL Transmission Format (binary)"
-      },
-      {
-        "id": "x3d",
-        "extension": "x3d",
-        "description": "Extensible 3D"
-      },
-      {
-        "id": "fbx",
-        "extension": "fbx",
-        "description": "Autodesk FBX (binary)"
-      },
-      {
-        "id": "fbxa",
-        "extension": "fbx",
-        "description": "Autodesk FBX (ascii)"
+        "description": "Autodesk 3DS (legacy)",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
       },
       {
         "id": "3mf",
         "extension": "3mf",
-        "description": "The 3MF-File-Format"
+        "description": "3D Manufacturing Format",
+        "exportOptions": {
+          "application": {
+            "kind": "string",
+            "default": "",
+            "description": "3MF_EXPORT_APPLICATION"
+          },
+          "decimalPrecision": {
+            "kind": "integer",
+            "default": 9,
+            "minimum": 1,
+            "maximum": 16,
+            "description": "3MF_EXPORT_DECIMAL_PRECISION"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "unit": {
+            "kind": "string",
+            "default": "millimeter",
+            "values": ["micron", "millimeter", "centimeter", "inch", "foot", "meter"],
+            "description": "3MF_EXPORT_UNIT"
+          },
+          "upAxis": {
+            "kind": "string",
+            "default": "z",
+            "values": ["x", "y", "z"],
+            "description": "3MF_EXPORT_UPAXIS"
+          }
+        }
       },
       {
         "id": "assjson",
         "extension": "json",
-        "description": "Assimp JSON Document"
+        "description": "Assimp JSON scene",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "skipWhitespaces": {
+            "kind": "boolean",
+            "default": true,
+            "description": "JSON_SKIP_WHITESPACES"
+          }
+        }
+      },
+      {
+        "id": "dae",
+        "extension": "dae",
+        "description": "COLLADA Digital Asset Exchange",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "fbx",
+        "extension": "fbx",
+        "description": "Autodesk FBX",
+        "exportOptions": {
+          "binary": {
+            "kind": "boolean",
+            "default": true,
+            "description": "Write binary FBX when true and ASCII FBX when false."
+          },
+          "joinIdenticalVertices": {
+            "kind": "boolean",
+            "default": true,
+            "description": "bJoinIdenticalVertices"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "transparencyFactorRefersToOpacity": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to write the value referenced to opacity in TransparencyFactor of each material. When this flag is not defined, the TransparencyFactor value of each meterial is 1.0. By enabling this flag, the value is 1.0 - opacity; Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "glb",
+        "extension": "glb",
+        "description": "glTF 2 binary container",
+        "exportOptions": {
+          "identityMatrixEpsilon": {
+            "kind": "number",
+            "default": 0.00999999977,
+            "minimum": 0,
+            "description": "Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code. Property type: Float."
+          },
+          "includeTargetNames": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGETNAMES_EXP"
+          },
+          "includeTargetNormals": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGET_NORMAL_EXP"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "sparseAccessors": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_SPARSE_ACCESSOR_EXP"
+          },
+          "unlimitedSkinningBonesPerVertex": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…"
+          },
+          "useGltfPbrSpecularGlossiness": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "gltf",
+        "extension": "gltf",
+        "description": "glTF 2 JSON with sidecars",
+        "exportOptions": {
+          "identityMatrixEpsilon": {
+            "kind": "number",
+            "default": 0.00999999977,
+            "minimum": 0,
+            "description": "Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code. Property type: Float."
+          },
+          "includeTargetNames": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGETNAMES_EXP"
+          },
+          "includeTargetNormals": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_TARGET_NORMAL_EXP"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "sparseAccessors": {
+            "kind": "boolean",
+            "default": false,
+            "description": "GLTF2_SPARSE_ACCESSOR_EXP"
+          },
+          "unlimitedSkinningBonesPerVertex": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…"
+          },
+          "useGltfPbrSpecularGlossiness": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "obj",
+        "extension": "obj",
+        "description": "Wavefront OBJ",
+        "exportOptions": {
+          "joinIdenticalVertices": {
+            "kind": "boolean",
+            "default": true,
+            "description": "bJoinIdenticalVertices"
+          },
+          "materials": {
+            "kind": "boolean",
+            "default": true,
+            "description": "Write an MTL sidecar when the scene has materials."
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "ply",
+        "extension": "ply",
+        "description": "Stanford Polygon Library",
+        "exportOptions": {
+          "binary": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Write binary PLY when true and ASCII PLY when false."
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "step",
+        "extension": "stp",
+        "description": "ISO 10303 STEP",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "stl",
+        "extension": "stl",
+        "description": "Stereolithography",
+        "exportOptions": {
+          "binary": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Write binary STL when true and ASCII STL when false."
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
       },
       {
         "id": "usda",
         "extension": "usda",
-        "description": "Universal Scene Description (ASCII)"
+        "description": "Universal Scene Description ASCII",
+        "exportOptions": {
+          "animations": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_EXPORT_ANIMATIONS"
+          },
+          "clearcoat": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_EXPORT_CLEARCOAT"
+          },
+          "materialX": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_MATERIALX"
+          },
+          "optimizeForMobile": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_OPTIMIZE_FOR_MOBILE"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "subdivision": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_SUBDIVISION"
+          },
+          "volumes": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_VOLUMES"
+          }
+        }
       },
       {
         "id": "usdz",
         "extension": "usdz",
-        "description": "Universal Scene Description (USDZ)"
+        "description": "Universal Scene Description ZIP container",
+        "exportOptions": {
+          "animations": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_EXPORT_ANIMATIONS"
+          },
+          "clearcoat": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_EXPORT_CLEARCOAT"
+          },
+          "materialX": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_MATERIALX"
+          },
+          "optimizeForMobile": {
+            "kind": "boolean",
+            "default": true,
+            "description": "USDZ_OPTIMIZE_FOR_MOBILE"
+          },
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "subdivision": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_SUBDIVISION"
+          },
+          "volumes": {
+            "kind": "boolean",
+            "default": false,
+            "description": "USDZ_EXPORT_VOLUMES"
+          }
+        }
+      },
+      {
+        "id": "x",
+        "extension": "x",
+        "description": "DirectX X file",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          },
+          "use64Bit": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies the xfile use double for real values of float Property type: Bool. Default value: false."
+          }
+        }
+      },
+      {
+        "id": "x3d",
+        "extension": "x3d",
+        "description": "Extensible 3D",
+        "exportOptions": {
+          "pointClouds": {
+            "kind": "boolean",
+            "default": false,
+            "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          }
+        }
       }
     ]
   }

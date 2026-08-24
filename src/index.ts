@@ -1,68 +1,73 @@
-/**
- * `libassimp` — Assimp compiled to WebAssembly.
- *
- * This entry carries every importer and exporter the engine builds cleanly.
- * Import `libassimp/importer` or `libassimp/exporter` when one direction is
- * enough: the binary is smaller and the accepted target ids narrow with it.
- */
+/** `libassimp` — the full canonical importer/exporter build. */
 
-import type { ConvertOptions as SharedConvertOptions } from './convert.js';
+import type {
+  ConvertFormatsOptions as SharedConvertFormatsOptions,
+  ConvertFormatsResult as SharedConvertFormatsResult,
+  ConvertOptions as SharedConvertOptions,
+  ConvertTarget as SharedConvertTarget,
+  ConvertedFormat as SharedConvertedFormat,
+} from './convert.js';
 import { createEntry } from './create-assimp.js';
 import type { Assimp as SharedAssimp } from './create-assimp.js';
-import type { AllExportFormat } from './formats.js';
+import {
+  allExportFormats,
+  defaultPostProcess,
+  fullAssimpCapabilities,
+  fullConversionEdges,
+  fullImportFormats,
+} from './generated/assimp-capabilities.js';
+import type {
+  AllExportFormat,
+  ConversionEdgeFor,
+  ExportFormatInfo as SharedExportFormatInfo,
+  FullImportFormat,
+  ImportFormatInfo as SharedImportFormatInfo,
+} from './generated/assimp-capabilities.js';
 
 export { AssimpError } from './assimp-error.js';
-export type { AssimpFailureCode } from './assimp-error.js';
-export type { AssimpFile, ConvertResult } from './convert.js';
+export type { AssimpErrorContext, AssimpFailureCode } from './assimp-error.js';
+export type { AssimpFile, ConvertResult, ResolveFile } from './convert.js';
 export type { CreateAssimpOptions } from './create-assimp.js';
-export type { FormatInfo } from './formats.js';
+export type {
+  ExportOptionDescriptorsFor,
+  ExportOptionsByFormat,
+  ExportOptionsFor,
+  FormatInfo,
+  ImportOptions,
+  OptionDescriptor,
+  PostProcessDescriptor,
+  PostProcessStep,
+} from './generated/assimp-capabilities.js';
 
-/** Export targets this entry accepts. @public */
+export type ImportFormat = FullImportFormat;
 export type ExportFormat = AllExportFormat;
+export type ImportFormatInfo<Format extends ImportFormat = ImportFormat> = SharedImportFormatInfo<Format>;
+export type ExportFormatInfo<Format extends ExportFormat = ExportFormat> = SharedExportFormatInfo<Format>;
+export type ConversionEdge = ConversionEdgeFor<ImportFormat, ExportFormat>;
+export type ConvertTarget<Format extends ExportFormat = ExportFormat> = SharedConvertTarget<Format>;
+export type ConvertedFormat<Format extends ExportFormat = ExportFormat> = SharedConvertedFormat<Format>;
+export type ConvertOptions<Format extends ExportFormat = ExportFormat> = SharedConvertOptions<Format>;
+export type ConvertFormatsOptions<Targets extends readonly [ConvertTarget, ...ConvertTarget[]]> =
+  SharedConvertFormatsOptions<Targets>;
+export type ConvertFormatsResult<Targets extends readonly [ConvertTarget, ...ConvertTarget[]]> =
+  SharedConvertFormatsResult<Targets>;
+export type Assimp = SharedAssimp<ImportFormat, ExportFormat>;
 
-/** Settings for one conversion through this entry. @public */
-export type ConvertOptions = SharedConvertOptions<ExportFormat>;
+/** Static generated capabilities; importing this value never loads Wasm. @public */
+export const assimpCapabilities = fullAssimpCapabilities;
+/** Exact canonical import/export cross-product without identity pairs. @public */
+export const conversionEdges: readonly ConversionEdge[] = fullConversionEdges;
+export { defaultPostProcess };
 
-/** A conversion instance holding this entry's compiled module. @public */
-export type Assimp = SharedAssimp<ExportFormat>;
-
-const entry = createEntry<ExportFormat>(
+const entry = createEntry<ImportFormat, ExportFormat>(
   new URL('./wasm/libassimp-full.js', import.meta.url),
   new URL('./wasm/libassimp-full.wasm', import.meta.url),
+  { import: fullImportFormats, export: allExportFormats },
 );
 
-/**
- * Convert one model, or a model and the files it references, to another format.
- * Calls share one lazily loaded module, so the first call pays for loading it.
- *
- * @public
- * @param files - The model, or files whose first element is the entry file.
- * @param options - Target format and per-call settings.
- * @returns The output files, primary output first.
- * @throws AssimpError when the format is unavailable or a conversion phase fails.
- * @example
- * ```typescript
- * import { convert } from 'libassimp';
- *
- * const { files } = await convert({ name: 'model.obj', bytes }, { to: 'glb' });
- * console.log(files[0].name); // result.glb
- * ```
- */
+/** Convert one source to one canonical target. @public */
 export const convert = entry.convert;
-
-/**
- * Create a conversion instance whose lifetime you control, with its own binary
- * location and diagnostic sink. Dispose it when the work is done.
- *
- * @public
- * @param options - Binary location and diagnostics.
- * @returns The instance.
- * @example
- * ```typescript
- * import { createAssimp } from 'libassimp';
- *
- * using assimp = await createAssimp();
- * const { files } = await assimp.convert({ name: 'model.dae', bytes }, { to: '3mf' });
- * ```
- */
+/** Import once and export an ordered non-empty target tuple. @public */
+export const convertFormats = entry.convertFormats;
+/** Create an independently queued conversion instance. @public */
 export const createAssimp = entry.createAssimp;

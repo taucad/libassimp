@@ -1,6 +1,7 @@
 'use client';
 
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock';
+import { AssimpError, type ExportFormat, type ExportOptionsFor } from 'libassimp';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { hasQuickLook, hasWebAssembly, isAssimpLoaded, launchQuickLook, loadAssimp } from '@/lib/assimp-demo';
@@ -115,13 +116,12 @@ export const ConvertDemo = ({
       const loadMs = cold ? Math.round(performance.now() - loadStarted) : 0;
       const started = performance.now();
       const target = String(current['to'] ?? 'glb');
-      const properties = Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'to'));
-      const result = assimp.convert(inputs[0]?.name ?? 'cube.obj', inputs, target, properties, undefined);
+      const exportOptions = Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'to'));
+      const result = await assimp.convert(inputs, {
+        to: target as ExportFormat,
+        exportOptions: exportOptions as ExportOptionsFor<ExportFormat>,
+      });
       const ms = Math.round(performance.now() - started);
-      if (!result.ok) {
-        setOutcome({ code: result.code, kind: 'failed', message: result.message });
-        return;
-      }
 
       for (const url of urlsRef.current) URL.revokeObjectURL(url);
       const files = result.files.map((file) => {
@@ -143,7 +143,11 @@ export const ConvertDemo = ({
         ms,
       });
     } catch (error: unknown) {
-      setOutcome({ kind: 'failed', message: error instanceof Error ? error.message : String(error) });
+      setOutcome({
+        ...(error instanceof AssimpError ? { code: error.code } : {}),
+        kind: 'failed',
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 

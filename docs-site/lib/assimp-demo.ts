@@ -1,43 +1,13 @@
-import type { AssimpFile } from 'libassimp/importer';
+import { createAssimp, type Assimp } from 'libassimp';
 
-/**
- * The compiled full binding, as the demo calls it. The docs self-host the same
- * checked-in glue and binary nanoraster uses for its live pages, so demos work
- * before an npm release and remain pinned to the commit being documented.
- */
-export type NativeModule = {
-  // oxlint-disable-next-line max-params -- the embind signature this type describes.
-  readonly convert: (
-    entryName: string,
-    files: readonly AssimpFile[],
-    format: string,
-    properties: Record<string, boolean | number | string>,
-    resolve: ((name: string) => Uint8Array | undefined) | undefined,
-  ) => {
-    readonly ok: boolean;
-    readonly code: string;
-    readonly message: string;
-    readonly files: AssimpFile[];
-  };
-};
-
-type ModuleFactory = (options: { readonly locateFile: () => string }) => Promise<NativeModule>;
-
-const demoRoot = '/demo/';
-
-let loaded: Promise<NativeModule> | undefined;
+let loaded: Promise<Assimp> | undefined;
 
 /** Whether this document has already started or completed module loading. */
 export const isAssimpLoaded = (): boolean => loaded !== undefined;
 
-/** Load the self-hosted full build once per document, clearing a failed attempt so retry works. */
-export const loadAssimp = async (): Promise<NativeModule> => {
-  loaded ??= (async () => {
-    const glue = (await import(/* webpackIgnore: true */ `${demoRoot}libassimp-full.js`)) as {
-      default: ModuleFactory;
-    };
-    return glue.default({ locateFile: () => `${demoRoot}libassimp-full.wasm` });
-  })().catch((error: unknown) => {
+/** Load the self-hosted full build once per document, clearing failed attempts for retry. */
+export const loadAssimp = async (): Promise<Assimp> => {
+  loaded ??= createAssimp({ wasmUrl: '/demo/libassimp-full.wasm' }).catch((error: unknown) => {
     loaded = undefined;
     throw error;
   });

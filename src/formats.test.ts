@@ -1,114 +1,93 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { AssimpError } from './assimp-error.js';
-import { createAssimp as createFull, type ExportFormat as FullFormat } from './index.js';
-import { createAssimp as createImporter } from './importer.js';
-import { createAssimp as createExporter } from './exporter.js';
+import {
+  allExportFormats,
+  fullConversionEdges,
+  fullImportFormats,
+  importerConversionEdges,
+  importerExportFormats,
+  importerImportFormats,
+  exporterConversionEdges,
+  exporterImportFormats,
+} from './generated/assimp-capabilities.js';
 
-/** Mirrors `AllExportFormat`; the type test binds the two together. */
-export const allExportFormats = [
+export const canonicalExports = [
   '3ds',
   '3mf',
   'assjson',
-  'collada',
   'dae',
   'fbx',
-  'fbxa',
   'glb',
-  'glb1',
-  'glb2',
   'gltf',
-  'gltf1',
-  'gltf2',
   'obj',
-  'objnomtl',
   'ply',
-  'plyb',
   'step',
   'stl',
-  'stlb',
-  'stp',
   'usda',
   'usdz',
   'x',
   'x3d',
 ] as const;
 
-/** Mirrors `GltfExportFormat`. */
-export const gltfExportFormats = ['assjson', 'glb', 'glb1', 'glb2', 'gltf', 'gltf1', 'gltf2'] as const;
+const cross = (imports: readonly { readonly id: string }[], exports: readonly { readonly id: string }[]) =>
+  imports.flatMap(({ id: from }) => exports.flatMap(({ id: to }) => (from === to ? [] : [{ from, to }])));
 
-/** The aliases `src/cpp/libassimp.cpp` resolves, and what each resolves to. */
-const aliases = {
-  glb: 'glb2',
-  gltf: 'gltf2',
-  glb1: 'glb',
-  gltf1: 'gltf',
-  step: 'stp',
-  dae: 'collada',
-};
-
-const entries = [
-  ['libassimp', createFull, allExportFormats],
-  ['libassimp/importer', createImporter, gltfExportFormats],
-  ['libassimp/exporter', createExporter, allExportFormats],
-] as const;
-
-/** Every id the build exports, plus the aliases that resolve to one of them. */
-const accepted = (ids: readonly string[]): string[] =>
-  [
-    ...new Set([
-      ...ids,
-      ...Object.entries(aliases)
-        .filter(([, id]) => ids.includes(id))
-        .map(([alias]) => alias),
-    ]),
-  ].sort();
-
-describe.each(entries)('%s formats', (_name, create, declared) => {
-  it('declares exactly the export ids the build carries plus its aliases', async () => {
-    using assimp = await create();
-    const ids = assimp.formats.export.map(({ id }) => id);
-    expect([...declared].sort()).toEqual(accepted(ids));
+describe('generated format catalogs', () => {
+  it('publishes the exact canonical 15/3 export roots', () => {
+    expect(allExportFormats.map(({ id }) => id)).toEqual(canonicalExports);
+    expect(importerExportFormats.map(({ id }) => id)).toEqual(['assjson', 'glb', 'gltf']);
   });
 
-  it('reports one entry per format id', async () => {
-    using assimp = await create();
-    for (const table of [assimp.formats.import, assimp.formats.export]) {
-      const ids = table.map(({ id }) => id);
-      expect(ids).toEqual([...new Set(ids)]);
-      expect(table.every(({ extension, description }) => extension !== '' && description !== '')).toBe(true);
+  it.each([
+    { entry: 'full', imports: fullImportFormats, exports: allExportFormats, edges: fullConversionEdges },
+    {
+      entry: 'importer',
+      imports: importerImportFormats,
+      exports: importerExportFormats,
+      edges: importerConversionEdges,
+    },
+    {
+      entry: 'exporter',
+      imports: exporterImportFormats,
+      exports: allExportFormats,
+      edges: exporterConversionEdges,
+    },
+  ] as const)('$entry edges are exactly the non-identity cross-product', ({ imports, exports, edges }) => {
+    expect(edges).toEqual(cross(imports, exports));
+  });
+
+  it('contains no native aliases or glTF 1 names', () => {
+    const publicIds = [
+      ...allExportFormats.map(({ id }) => id),
+      ...importerExportFormats.map(({ id }) => id),
+      ...fullConversionEdges.flatMap(({ from, to }) => [from, to]),
+    ];
+    for (const native of [
+      'collada',
+      'fbxa',
+      'glb1',
+      'glb2',
+      'gltf1',
+      'gltf2',
+      'objnomtl',
+      'plyb',
+      'stlb',
+      'stp',
+    ]) {
+      expect(publicIds).not.toContain(native);
     }
-  });
-});
-
-describe('format tables', () => {
-  it('deduplicates importer extensions shared by two importers', async () => {
-    using assimp = await createFull();
-    const ids = assimp.formats.import.map(({ id }) => id);
-    // glTF 1 and glTF 2 both register `gltf` and `glb`.
-    expect(ids.filter((id) => id === 'gltf')).toEqual(['gltf']);
-    expect(ids).toContain('obj');
-    expect(ids.length).toBeGreaterThan(40);
+    expect(JSON.stringify({ allExportFormats, importerExportFormats })).not.toMatch(
+      /native(?:Id|Name|Kind|Values)/u,
+    );
   });
 
-  it('narrows the import table to glTF and USD on the exporter entry', async () => {
-    using assimp = await createExporter();
-    expect(assimp.formats.import.map(({ id }) => id).sort()).toEqual([
-      'glb',
-      'gltf',
-      'usd',
-      'usda',
-      'usdc',
-      'usdz',
-      'vrm',
-    ]);
-  });
-
-  it('lists the alias vocabulary in the unsupported-format message', async () => {
-    using assimp = await createFull();
-    const error = (await assimp
-      .convert({ name: 'cube.obj', bytes: new Uint8Array() }, { to: 'nope' as FullFormat })
-      .catch((thrown: unknown) => thrown)) as AssimpError;
-    expect(error.message).toContain(`Aliases: ${Object.keys(aliases).join(', ')}.`);
+  it('loads static catalogs without fetching or compiling Wasm', async () => {
+    const fetch = vi.spyOn(globalThis, 'fetch');
+    const compile = vi.spyOn(WebAssembly, 'compile');
+    await import('./exporter.js');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(compile).not.toHaveBeenCalled();
+    fetch.mockRestore();
+    compile.mockRestore();
   });
 });

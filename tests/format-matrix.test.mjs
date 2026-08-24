@@ -42,7 +42,6 @@ const IMPORTS = [
   ['DXF', ['DXF/PinkEggFromLW.dxf']],
   ['FBX', ['FBX/box.fbx']],
   ['FBX ascii', ['FBX/embedded_ascii/box.FBX']],
-  ['glTF', ['glTF/BoxTextured-glTF/BoxTextured.gltf', 'glTF/BoxTextured-glTF/BoxTextured.bin']],
   ['glTF2', ['glTF2/BoxTextured-glTF-Binary/BoxTextured.glb']],
   ['HMP', ['HMP/terrain.hmp']],
   ['IFC', ['IFC/cube-blender-ifc4.ifc']],
@@ -111,20 +110,7 @@ const TEXTURED_SOURCE = 'glTF2/BoxTextured-glTF-Binary/BoxTextured.glb';
 
 // Exporters that stamp the wall-clock time into their output: their bytes are
 // never equal twice, so the matrix asserts their shape instead of a hash.
-const TIMESTAMPED = new Set(['3mf', 'collada', 'fbx', 'fbxa', 'stp']);
-
-// Binary glTF, whose BIN chunk is not reproducible: when an accessor needs
-// alignment padding, `ExportData` grows the buffer over that padding without
-// initialising it (assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:417-422 calls
-// Buffer::Grow, and glTF2Asset.inl:749 allocates with `new uint8_t[capacity]`),
-// so the gap carries whatever the heap last held — stable within one build,
-// different across builds and call orders. The fix is to value-initialise that
-// allocation or memset the gap, upstream in taucad/assimp: an R9 follow-up,
-// because the engine pin 24c936c16 is a ruling. Until then these two pin the
-// JSON chunk, which is deterministic, and assert the container shape around it.
-// The `importer <fixture>` glb pins below stay whole-file: none of those scenes
-// has a byte-sized accessor, so none of them reaches the padding path.
-const BINARY_GLTF = new Set(['glb', 'glb2']);
+const TIMESTAMPED = new Set(['3mf', 'dae', 'fbx', 'step']);
 
 const fingerprints = fileURLToPath(new URL('./determinism.json', import.meta.url));
 const recorded = JSON.parse(readFileSync(fingerprints, 'utf8'));
@@ -137,15 +123,6 @@ const pin = (id, bytes) => {
   observed[id] = hash;
   if (recording) return;
   expect(hash, `${id} output bytes changed; re-record deliberately`).toBe(recorded[id]);
-};
-
-/** The JSON chunk of a GLB: the half of the container that is reproducible. */
-const jsonChunk = (glb) => {
-  const buffer = Buffer.from(glb);
-  expect(buffer.toString('ascii', 0, 4), 'glb magic').toBe('glTF');
-  expect(buffer.readUInt32LE(8), 'glb declared length').toBe(buffer.length);
-  expect(buffer.toString('ascii', 16, 20), 'first glb chunk').toBe('JSON');
-  return buffer.subarray(20, 20 + buffer.readUInt32LE(12));
 };
 
 /** Read `3D/3dmodel.model` out of a 3MF, which is a ZIP of local file entries. */
@@ -196,6 +173,16 @@ afterAll(() => {
 describe('importers', () => {
   it.todo('exports a point-cloud PLY as a valid GLB — upstream issue filing pending operator approval');
 
+  it('rejects glTF 1', async () => {
+    const inputs = [
+      load('glTF/BoxTextured-glTF/BoxTextured.gltf'),
+      load('glTF/BoxTextured-glTF/BoxTextured.bin'),
+    ];
+    await expect(assimp.convert(inputs, { to: 'assjson' })).rejects.toMatchObject({
+      code: 'IMPORT_FAILED',
+    });
+  });
+
   it.each(IMPORTS)('reads %s', async (id, files, outcome) => {
     const inputs = files.map(load);
     if (outcome === 'error') {
@@ -228,11 +215,11 @@ describe('exporters', () => {
     const source = load(EXPORT_SOURCE);
     for (const { id, extension } of assimp.formats.export) {
       const { files } = await assimp.convert(source, { to: id });
+      const [plural] = await assimp.convertFormats(source, { targets: [{ to: id }] });
       expect(files[0].name, `${id} output name`).toBe(`result.${extension}`);
-      expect(files[0].bytes.byteLength, `${id} output size`).toBeGreaterThan(0);
+      expect(plural.files, `${id} singular/plural parity`).toEqual(files);
       if (TIMESTAMPED.has(id)) continue;
-      if (BINARY_GLTF.has(id)) pin(`export ${id} json chunk`, jsonChunk(files[0].bytes));
-      else pin(`export ${id}`, files[0].bytes);
+      pin(`export ${id}`, files[0].bytes);
     }
   });
 
@@ -285,7 +272,7 @@ describe('export properties', () => {
     const compact = await assimp.convert(source(), { to: 'assjson' });
     const pretty = await assimp.convert(source(), {
       to: 'assjson',
-      properties: { JSON_SKIP_WHITESPACES: false },
+      exportOptions: { skipWhitespaces: false },
     });
     expect(pretty.files[0].bytes.byteLength).toBeGreaterThan(compact.files[0].bytes.byteLength);
     expect(text(compact.files[0].bytes)).not.toContain('\n');
@@ -294,25 +281,25 @@ describe('export properties', () => {
 
   it('switches the X file header with EXPORT_XFILE_64BIT', async () => {
     const plain = await assimp.convert(source(), { to: 'x' });
-    const wide = await assimp.convert(source(), { to: 'x', properties: { EXPORT_XFILE_64BIT: true } });
+    const wide = await assimp.convert(source(), { to: 'x', exportOptions: { use64Bit: true } });
     expect(text(plain.files[0].bytes)).toContain('xof 0303txt 0032');
     expect(text(wide.files[0].bytes)).toContain('xof 0303txt 0064');
   });
 
-  it('ignores unknown property keys', async () => {
-    const plain = await assimp.convert(source(), { to: 'assjson' });
-    const noisy = await assimp.convert(source(), {
-      to: 'assjson',
-      properties: { NONEXISTENT_PROPERTY: true, FAKE_COUNT: 42, FAKE_NAME: 'x' },
-    });
-    expect(noisy.files[0].bytes).toEqual(plain.files[0].bytes);
+  it('rejects unknown export options before native work', async () => {
+    await expect(
+      assimp.convert(source(), {
+        to: 'assjson',
+        exportOptions: { nonexistent: true },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_OPTIONS' });
   });
 
   it('defaults 3MF to millimeter and takes the unit from 3MF_EXPORT_UNIT', async () => {
     const fallback = await assimp.convert(source(), { to: '3mf' });
     expect(modelXml(fallback.files[0].bytes)).toContain('unit="millimeter"');
     for (const unit of ['micron', 'millimeter', 'centimeter', 'inch', 'foot', 'meter']) {
-      const result = await assimp.convert(source(), { to: '3mf', properties: { '3MF_EXPORT_UNIT': unit } });
+      const result = await assimp.convert(source(), { to: '3mf', exportOptions: { unit } });
       expect(modelXml(result.files[0].bytes)).toContain(`unit="${unit}"`);
     }
   });
@@ -322,7 +309,7 @@ describe('export properties', () => {
     expect(modelXml(fallback.files[0].bytes)).not.toContain('name="Application"');
     const named = await assimp.convert(source(), {
       to: '3mf',
-      properties: { '3MF_EXPORT_APPLICATION': 'TestSlicer 1.0' },
+      exportOptions: { application: 'TestSlicer 1.0' },
     });
     const xml = modelXml(named.files[0].bytes);
     expect(xml).toContain('name="Application"');
@@ -335,12 +322,12 @@ describe('export properties', () => {
     expect(maxVertexDigits(modelXml(fallback.files[0].bytes))).toBeGreaterThanOrEqual(9);
     const wide = await assimp.convert(cylinders, {
       to: '3mf',
-      properties: { '3MF_EXPORT_DECIMAL_PRECISION': 12 },
+      exportOptions: { decimalPrecision: 12 },
     });
     expect(maxVertexDigits(modelXml(wide.files[0].bytes))).toBeGreaterThanOrEqual(10);
     const narrow = await assimp.convert(cylinders, {
       to: '3mf',
-      properties: { '3MF_EXPORT_DECIMAL_PRECISION': 3 },
+      exportOptions: { decimalPrecision: 3 },
     });
     expect(maxVertexDigits(modelXml(narrow.files[0].bytes))).toBeLessThanOrEqual(3);
   });
@@ -348,8 +335,8 @@ describe('export properties', () => {
   it('fails the export when 3MF_EXPORT_DECIMAL_PRECISION is out of range', async () => {
     for (const precision of [0, 17]) {
       await expect(
-        assimp.convert(source(), { to: '3mf', properties: { '3MF_EXPORT_DECIMAL_PRECISION': precision } }),
-      ).rejects.toMatchObject({ code: 'EXPORT_FAILED' });
+        assimp.convert(source(), { to: '3mf', exportOptions: { decimalPrecision: precision } }),
+      ).rejects.toMatchObject({ code: 'INVALID_OPTIONS' });
     }
   });
 });

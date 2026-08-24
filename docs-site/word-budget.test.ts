@@ -15,6 +15,7 @@ const pageCeilings: Readonly<Record<string, number>> = {
   'api.mdx': 620,
   'guides/choose-an-entry.mdx': 440,
   'guides/convert-a-model.mdx': 440,
+  'guides/convert-to-multiple-formats.mdx': 260,
   'guides/apple-quick-look.mdx': 460,
   // Live 3MF controls document four authored properties in the runnable request.
   'guides/export-properties.mdx': 430,

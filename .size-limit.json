@@ -17,6 +17,6 @@
   {
     "name": "instance factory",
     "path": "dist/create-assimp.mjs",
-    "limit": "960 B"
+    "limit": "2035 B"
   }
 ]

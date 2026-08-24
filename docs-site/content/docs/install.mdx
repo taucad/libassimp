@@ -1,11 +1,7 @@
 ---
 title: Install libassimp
-description: Add the package, pick an entry, and let a bundler or a worker find the binary.
+description: Add the ESM package, choose one entry, and load its single Wasm artifact.
 ---
-
-libassimp is one package with three entries. Each entry ships its own
-WebAssembly binary and its Emscripten glue beside the JavaScript, and loads
-them on the first conversion.
 
 ```bash tab="npm"
 npm install libassimp
@@ -15,98 +11,39 @@ npm install libassimp
 pnpm add libassimp
 ```
 
-```bash tab="yarn"
-yarn add libassimp
-```
+libassimp requires Node.js 22.14 or newer and is ESM-only. CommonJS callers use dynamic `import()`.
 
-Node.js 22.14 or newer, and the package is ESM-only: `require('libassimp')`
-throws with the message `libassimp is ESM-only; use import("libassimp") from
-CommonJS`. Use a dynamic `import()` from CommonJS code.
+## Entries
 
-## Pick an entry
+| Import               | Reads                      | Writes                   |
+| -------------------- | -------------------------- | ------------------------ |
+| `libassimp`          | all 69 compiled extensions | all 15 canonical formats |
+| `libassimp/importer` | all 69 compiled extensions | `assjson`, `glb`, `gltf` |
+| `libassimp/exporter` | glTF/USD-family input      | all 15 canonical formats |
 
-| Import               | Reads                  | Writes                           |
-| -------------------- | ---------------------- | -------------------------------- |
-| `libassimp`          | every importer         | every exporter                   |
-| `libassimp/importer` | every importer         | glTF, GLB and assimp's JSON dump |
-| `libassimp/exporter` | glTF, GLB, USD and VRM | every exporter                   |
-
-The API is identical on all three; only the accepted `to` ids and the binary
-size differ. [Choose an entry](/docs/guides/choose-an-entry) covers the
-trade-off, and [How it works](/docs/how-it-works) lists every format each build
-carries.
-
-## Verify the install
-
-Run one conversion rather than checking a version string: it proves the
-JavaScript entry, glue, binary, importer and exporter all meet in this host.
-
-<ConvertDemo>
+The API shape is the same; format unions, metadata, and `conversionEdges` narrow per entry.
 
 ```typescript
-import { convert } from 'libassimp';
+import { conversionEdges } from 'libassimp/exporter';
 
-import { readFile } from 'node:fs/promises';
-
-const bytes = new Uint8Array(await readFile('cube.obj'));
-const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'glb' });
-
-console.log(files[0].name, files[0].bytes.byteLength);
+console.log(conversionEdges.some(({ from, to }) => from === 'glb' && to === 'stl'));
 ```
 
-</ConvertDemo>
+This import reads static JavaScript data and does not fetch or compile Wasm.
 
-Every instance also reports the tables it was compiled with:
+## Loading
 
-```typescript
-import { createAssimp } from 'libassimp';
-
-using assimp = await createAssimp();
-
-console.log(assimp.formats.import.length, assimp.formats.export.length);
-```
-
-```console
-69 21
-```
-
-The two numbers are the extensions this build reads and the ids it writes. A
-different pair means a different entry, not a broken install.
-
-## Bundlers
-
-The entry resolves its binary through `new URL('./wasm/…', import.meta.url)`,
-which Vite and webpack 5 understand as an asset reference: the binary
-is emitted into your build output and fetched from there, with no plugin and no
-configuration. The Emscripten glue is imported through the same URL behind
-`webpackIgnore` and `@vite-ignore` pragmas, so bundlers copy it instead of
-pulling an Emscripten runtime into your application graph.
-
-When your host serves the binary from somewhere else — a CDN, a hashed asset
-directory, a Cloudflare Worker — pass its location:
+Vite and webpack 5 can emit the entry-relative glue and Wasm assets. To control the location or provide already-fetched bytes, create an instance:
 
 ```typescript
 import { createAssimp } from 'libassimp/importer';
 
-const assimp = await createAssimp({ wasmUrl: 'https://cdn.example.com/libassimp-importer.wasm' });
+const response = await fetch('/assets/libassimp-importer.wasm');
+using assimp = await createAssimp({ wasmBinary: await response.arrayBuffer() });
+
+console.log(assimp.formats.export.map(({ id }) => id));
 ```
 
-Each entry also publishes its binary on a subpath — `libassimp/wasm`,
-`libassimp/importer/wasm`, `libassimp/exporter/wasm` — so a build step can copy
-the exact file the entry expects. [Use in the browser](/docs/guides/use-in-the-browser)
-covers fetching and caching it.
+`CreateAssimpOptions` remains `wasmUrl`, `wasmBinary`, and `onLog`. There is no async-mode selector: each entry ships one artifact and automatically uses JSPI when available or replay otherwise. Published binary subpaths remain `libassimp/wasm`, `libassimp/importer/wasm`, and `libassimp/exporter/wasm`.
 
-## Workers
-
-The binaries are built without pthreads, so a worker needs no cross-origin
-isolation headers and no extra bootstrap: import the entry inside the worker
-and call it. A conversion holds the thread it runs on, which is the reason to
-put one there.
-
-## Hosts
-
-Node.js 22.14, 24 and 26, plus Chromium, Firefox and WebKit, each have a job in
-continuous integration. The binaries come from Emscripten 6.0, whose browser
-floors are Chrome 91, Firefox 89 and Safari 16.4. The
-[compatibility table](https://github.com/taucad/libassimp/blob/main/compatibility.md)
-maps every claim to the job that proves it.
+Workers require no pthread bootstrap or cross-origin isolation. See the canonical [compatibility matrix](https://github.com/taucad/libassimp/blob/main/compatibility.md) for host floors and feature routing.

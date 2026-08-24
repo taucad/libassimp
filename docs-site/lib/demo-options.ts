@@ -44,26 +44,26 @@ const properties = [
       { label: 'Foot', value: 'foot' },
       { label: 'Metre', value: 'meter' },
     ],
-    key: '3MF_EXPORT_UNIT',
+    key: 'unit',
     kind: 'choice',
     label: '3MF unit',
   },
   {
-    key: '3MF_EXPORT_DECIMAL_PRECISION',
+    key: 'decimalPrecision',
     kind: 'range',
     label: 'Decimal digits',
     max: 16,
     min: 1,
     step: 1,
   },
-  { key: '3MF_EXPORT_APPLICATION', kind: 'text', label: 'Application' },
+  { key: 'application', kind: 'text', label: 'Application' },
   {
     choices: [
-      { label: 'X up', value: 0 },
-      { label: 'Y up', value: 1 },
-      { label: 'Z up', value: 2 },
+      { label: 'X up', value: 'x' },
+      { label: 'Y up', value: 'y' },
+      { label: 'Z up', value: 'z' },
     ],
-    key: '3MF_EXPORT_UPAXIS',
+    key: 'upAxis',
     kind: 'choice',
     label: 'Up axis',
   },
@@ -86,7 +86,9 @@ export const readDemoOptions = (code: string): Record<string, DemoValue> => {
 
   for (const control of properties) {
     const escaped = control.key.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const literal = new RegExp(`(['"])${escaped}\\1\\s*:\\s*([^,\\n}]+)`, 'u').exec(code)?.[2]?.trim();
+    const literal = new RegExp(`(?:['"])?${escaped}(?:['"])?\\s*:\\s*([^,\\n}]+)`, 'u')
+      .exec(code)?.[1]
+      ?.trim();
     if (literal === undefined) continue;
     if (/^['"].*['"]$/u.test(literal)) values[control.key] = literal.slice(1, -1);
     else if (literal === 'true' || literal === 'false') values[control.key] = literal === 'true';
@@ -137,10 +139,10 @@ export const substituteDemoValues = (
     const value = values[control.key];
     if (value === undefined) continue;
     const escaped = control.key.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const literal = new RegExp(`((['"])${escaped}\\2\\s*:\\s*)([^,\\n}]+)`, 'u');
-    rewritten = rewritten.replace(literal, (match, prefix: string, quote: string) => {
+    const literal = new RegExp(`((?:['"])?${escaped}(?:['"])?\\s*:\\s*)([^,\\n}]+)`, 'u');
+    rewritten = rewritten.replace(literal, (match, prefix: string) => {
       const current = match.slice(prefix.length);
-      const next = formatLiteral(value, typeof value === 'string' ? quote : "'");
+      const next = formatLiteral(value, "'");
       return current.trim() === next ? match : `${prefix}${next}`;
     });
   }

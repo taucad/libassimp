@@ -1,96 +1,90 @@
 ---
-title: Configure 3MF output
-description: Set units, precision, up-axis and application metadata on a live 3MF conversion.
+title: Configure import and export
+description: Use generated import options, named post-process steps, exact target options, and runtime capability metadata.
 ---
 
-Some exporters read settings that have no place in a cross-format API. The 3MF
-writer exposes its declared unit, decimal precision, up-axis and application
-metadata through `properties`; the controls below change the same object the
-example sends and rerun the conversion.
-
-### 1. Name the property the exporter documents
+## Target-specific export options
 
 <ConvertDemo>
 
 ```typescript
 import { convert } from 'libassimp';
 
-import { readFile } from 'node:fs/promises';
-
-const bytes = new Uint8Array(await readFile('cube.obj'));
-
+const bytes = new Uint8Array();
 const { files } = await convert(
-  { name: 'cube.obj', bytes },
+  { name: 'part.glb', bytes },
   {
     to: '3mf',
-    properties: {
-      '3MF_EXPORT_UNIT': 'millimeter',
-      '3MF_EXPORT_DECIMAL_PRECISION': 9,
-      '3MF_EXPORT_APPLICATION': 'libassimp docs',
-      '3MF_EXPORT_UPAXIS': 2,
+    exportOptions: {
+      unit: 'millimeter',
+      decimalPrecision: 9,
+      application: 'libassimp',
+      upAxis: 'z',
     },
   },
 );
 
-console.log(files[0].name, files[0].bytes.byteLength);
+console.log(files[0].name);
 ```
 
 </ConvertDemo>
 
-`3MF_EXPORT_UNIT` accepts `micron`, `millimeter`, `centimeter`, `inch`,
-`foot` or `meter`. Precision is 1–16 digits, and up-axis is 0 (X), 1 (Y) or
-2 (Z). The writer defaults to millimetres, 9 digits and Z-up.
+`ExportOptionsFor<'3mf'>` offers only 3MF fields. Runtime validation applies the same generated enum values, numeric bounds, and defaults before native work. Invalid configuration rejects with `INVALID_OPTIONS` and deterministic field paths.
 
-Values are booleans, numbers or strings, and each goes to the exporter with
-its own type. Keys the exporter does not recognise are ignored, so a property
-meant for one target is harmless when another runs.
-
-### 2. Expect silence, not validation
-
-The engine has no schema for these names. A misspelled key changes nothing,
-and a value outside what an exporter accepts — `3MF_EXPORT_DECIMAL_PRECISION`
-below its floor, say — fails the call with `EXPORT_FAILED` and the exporter's
-own message. Assert on the output rather than trusting a setting took:
+Binary and material variants are options rather than extra format names:
 
 ```typescript
-import { convert } from 'libassimp';
+import { convertFormats } from 'libassimp';
 
 const bytes = new Uint8Array();
-const asText = async (unit: string): Promise<string> => {
-  const { files } = await convert(
-    { name: 'part.stl', bytes },
-    { to: 'assjson', properties: { '3MF_EXPORT_UNIT': unit } },
-  );
-  return new TextDecoder().decode(files[0].bytes);
-};
-
-console.log((await asText('meter')).length);
-```
-
-### 3. Know the one property already set
-
-Assimp's JSON dump is written without whitespace: `JSON_SKIP_WHITESPACES` is
-on by default, because a scene dump is machine input. Pass it as `false` to get
-an indented file.
-
-```typescript
-import { convert } from 'libassimp';
-
-const bytes = new Uint8Array();
-
-const { files } = await convert(
-  { name: 'part.stl', bytes },
-  { to: 'assjson', properties: { JSON_SKIP_WHITESPACES: false } },
+const results = await convertFormats(
+  { name: 'part.glb', bytes },
+  {
+    targets: [
+      { to: 'fbx', exportOptions: { binary: false } },
+      { to: 'ply', exportOptions: { binary: true } },
+      { to: 'stl', exportOptions: { binary: true } },
+      { to: 'obj', exportOptions: { materials: false } },
+    ],
+  },
 );
 
-console.log(files[0].name, files[0].bytes.byteLength);
+console.log(results.map(({ format }) => format));
 ```
 
-## Variations
+FBX defaults to binary, PLY and STL default to ASCII, and OBJ defaults to writing materials when present.
 
-**Per-call, not per-instance.** Properties belong to one conversion; two calls
-on one instance never share them.
+## Import and post-process options
 
-**Post-processing steps.** Import-side behaviour is fixed in 0.1.0 and is not
-reachable through `properties`; see
-[How it works](../how-it-works#post-processing).
+```typescript
+import { convert, defaultPostProcess } from 'libassimp';
+
+const bytes = new Uint8Array();
+await convert(
+  { name: 'part.obj', bytes },
+  {
+    to: 'glb',
+    importOptions: { objUnitScaleToMeters: 0.001 },
+    postProcess: [...defaultPostProcess, 'flipUvs'],
+  },
+);
+```
+
+`importOptions` configures importer and processing properties. `postProcess` is an exact replacement list, not an additive list. Named conflicts and duplicate steps are rejected.
+
+## Build dynamic UI from metadata
+
+```typescript
+import { assimpCapabilities } from 'libassimp';
+
+for (const [name, descriptor] of Object.entries(assimpCapabilities.export['3mf'].exportOptions)) {
+  console.log(
+    name,
+    descriptor.kind,
+    descriptor.default,
+    'values' in descriptor ? descriptor.values : undefined,
+  );
+}
+```
+
+The serializable registry supplies descriptions, kinds, defaults, ranges, enum values, and applicability. It contains public camelCase names only; native Assimp keys and raw escape bags are private.

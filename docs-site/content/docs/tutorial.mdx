@@ -1,81 +1,37 @@
 ---
-title: Convert a model to GLB
-description: Take an OBJ and its material library to GLB, run the same conversion in your browser, and read what came back.
+title: Convert an OBJ to GLB
+description: Load an OBJ and its material asynchronously, configure processing, and write a GLB.
 ---
 
-An OBJ file names its colours in a second file, a `.mtl` material library, and
-a GLB carries everything in one binary. Turning the first into the second is
-the conversion this page builds, and the button below runs it in this tab.
-
-## Step 1: Convert one file
-
-`convert` takes the model and the target format, and resolves to the files the
-exporter wrote.
+## 1. Read the entry file
 
 ```typescript
 import { convert } from 'libassimp/importer';
-
 import { readFile, writeFile } from 'node:fs/promises';
 
 const bytes = new Uint8Array(await readFile('cube.obj'));
 const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'glb' });
-
 await writeFile(files[0].name, files[0].bytes);
-console.log(files[0].name, files[0].bytes.byteLength);
 ```
 
-**Verify**: `result.glb` is written, and its first four bytes are `glTF`. The
-output is named after the format, not after the input.
+The name selects the importer and establishes the base path for references.
 
-## Step 2: Bring the material library along
-
-The OBJ above starts with `mtllib cube.mtl`. Without those bytes the geometry
-still imports and the materials fall back to a default, so pass both files:
-the first element is the entry file, and the rest are there to be referenced.
+## 2. Resolve the MTL only if Assimp requests it
 
 <ConvertDemo>
 
 ```typescript
 import { convert } from 'libassimp/importer';
-
-import { readFile, writeFile } from 'node:fs/promises';
-
-const read = async (name: string) => ({ name, bytes: new Uint8Array(await readFile(name)) });
-
-const { files } = await convert([await read('cube.obj'), await read('cube.mtl')], { to: 'glb' });
-
-await writeFile(files[0].name, files[0].bytes);
-console.log(`${files[0].name} — ${files[0].bytes.byteLength} bytes`);
-```
-
-</ConvertDemo>
-
-**Verify**: press the button. The panel reports the file name, the byte count
-and the time the conversion took; the first press also downloads the 10 MB
-importer build from the registry CDN, which every later press reuses.
-
-## Step 3: Load sidecars on demand
-
-A directory of models references far more files than one conversion needs. The
-`resolve` callback hands assimp only what it asks for, by name. It is
-synchronous, because assimp asks in the middle of parsing, so read or cache
-the bytes before the call.
-
-```typescript
-import { convert } from 'libassimp/importer';
-
-import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 
 const bytes = new Uint8Array(await readFile('cube.obj'));
-
 const { files } = await convert(
   { name: 'cube.obj', bytes },
   {
     to: 'glb',
-    resolve: (name) => {
+    resolve: async (name) => {
       try {
-        return new Uint8Array(readFileSync(name));
+        return new Uint8Array(await readFile(name));
       } catch {
         return undefined;
       }
@@ -86,31 +42,27 @@ const { files } = await convert(
 console.log(files[0].name);
 ```
 
-**Verify**: the same `result.glb` as step 2.
-[Resolve sidecar files](/docs/guides/resolve-sidecar-files) covers the
-prefetching a browser or an object store needs.
+</ConvertDemo>
 
-## Step 4: Write a format that produces sidecars
+The callback may return bytes, absence, or a Promise of either. It is called once per exact requested name within the conversion.
 
-GLB packs its buffers inside the file; `gltf` writes JSON plus an external
-`.bin`. Both come back in `files`, primary output first.
+## 3. Configure the typed pipeline
 
 ```typescript
-import { convert } from 'libassimp/importer';
+import { convert, defaultPostProcess } from 'libassimp/importer';
 
-import { readFile, writeFile } from 'node:fs/promises';
+const bytes = new Uint8Array();
+const { files } = await convert(
+  { name: 'cube.obj', bytes },
+  {
+    to: 'gltf',
+    importOptions: { objUnitScaleToMeters: 1 },
+    postProcess: [...defaultPostProcess, 'flipUvs'],
+    exportOptions: { includeTargetNames: true },
+  },
+);
 
-const bytes = new Uint8Array(await readFile('cube.obj'));
-const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'gltf' });
-
-for (const file of files) await writeFile(file.name, file.bytes);
-console.log(files.map((file) => file.name).join(' '));
+console.log(files.map(({ name }) => name));
 ```
 
-```console
-result.gltf result.bin
-```
-
-**Verify**: two files, and the JSON references the second by name. Every byte
-array is a copy you own, so writing, uploading or discarding them is your
-call and nothing needs freeing.
+Supplying `postProcess` replaces the default list; an empty array deliberately requests no steps. glTF output returns `result.gltf` followed by its sidecars. Every byte array is an owned copy.

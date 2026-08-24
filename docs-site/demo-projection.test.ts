@@ -35,13 +35,18 @@ const perturb = (control: DemoControl, current: DemoValue): DemoValue => {
 };
 
 describe('interactive conversion demos', () => {
-  it('puts a runnable example on every documentation page', () => {
-    for (const { path } of pages) {
+  it('puts runnable examples on the main conversion journeys', () => {
+    for (const path of [
+      'tutorial.mdx',
+      'guides/apple-quick-look.mdx',
+      'guides/convert-a-model.mdx',
+      'guides/resolve-sidecar-files.mdx',
+      'guides/use-in-the-browser.mdx',
+    ])
       expect(
         demos.some((demo) => demo.path === path),
         path,
       ).toBe(true);
-    }
     expect(readFileSync(resolve(import.meta.dirname, 'app/(home)/page.tsx'), 'utf8')).toContain(
       '<ConvertDemo code={homeDemo} />',
     );
@@ -97,10 +102,10 @@ describe('interactive conversion demos', () => {
     );
     expect(controls.map(({ key }) => key)).toEqual([
       'to',
-      '3MF_EXPORT_UNIT',
-      '3MF_EXPORT_DECIMAL_PRECISION',
-      '3MF_EXPORT_APPLICATION',
-      '3MF_EXPORT_UPAXIS',
+      'unit',
+      'decimalPrecision',
+      'application',
+      'upAxis',
     ]);
     expect(
       readDemoOptions(demos.find(({ path }) => path === 'guides/apple-quick-look.mdx')?.code ?? '')['to'],

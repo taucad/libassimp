@@ -1,106 +1,64 @@
 ---
 title: How it works
-description: The three builds, the path one conversion takes, the formats each build carries, and the compiler flags behind the binary sizes.
+description: Import-once plans, random-access byte IO, canonical formats, async resolution, and production Wasm flags.
 ---
 
-libassimp is a thin TypeScript surface over the Open Asset Import Library
-compiled to WebAssembly. Everything that decides a byte happens inside that
-engine; the JavaScript loads the binary, hands over the files, and copies the
-result back out.
+## One plan
 
-## One conversion, end to end
+```mermaid
+flowchart LR
+  A["Entry bytes + supplied sidecars"] --> B["Random-access byte IOSystem"]
+  R["Promise-capable resolve(name)"] -. "missing file" .-> B
+  B --> C["Import + post-process once"]
+  C --> D["Export target 0"]
+  C --> E["Export target 1"]
+  C --> F["Export target N"]
+  D --> G["Atomic positional results"]
+  E --> G
+  F --> G
+```
+
+The custom IOSystem exposes named in-memory byte arrays through Assimp's random-access `Read`, `Seek`, and `Tell` contract. It is not Emscripten MEMFS: there is no path mount, duplicate filesystem copy, or public filesystem lifetime. A generic stream cannot replace it because importers seek, probe, and reopen sidecars.
+
+`convertFormats` validates the whole request, copies inputs once, imports and post-processes one scene, then exports targets sequentially into isolated output stores. A later failure destroys all native output state and rejects with positional context. Singular `convert` creates a one-target plan and unwraps the same result path.
+
+## Async resolution with one artifact
+
+Every entry ships one baseline-compatible Wasm artifact:
 
 ```mermaid
 flowchart TD
-  A([Your files]) --> B[In-memory file system]
-  R[[resolve callback]] -.-> B
-  B --> C[Importer reads the entry file]
-  C --> D[Post-processing]
-  D --> E[Exporter writes result.ext]
-  E --> F([Copied byte arrays])
+  A["Instantiate finalized artifact"] --> B{"Suspending + promising exist?"}
+  B -- yes --> C["Wrap dispatch import and raw plan export with JSPI"]
+  B -- no --> D["Plain import/export + pending abort"]
+  D --> E["Await cached resolver promises"]
+  E --> F["Replay staged plan"]
+  C --> G["Same Promise API"]
+  F --> G
 ```
 
-The files you pass become an in-memory file system inside the module — no
-temporary directory, no disk. Anything the importer asks for that is not in
-that set goes to your `resolve` callback, which is why the callback is
-synchronous: assimp asks for a reference in the middle of parsing and cannot
-wait for a promise.
+The replay cache is per conversion and invokes the consumer resolver once per exact name. Each pending attempt stops host callbacks immediately, awaits newly discovered work, and reuses settled bytes on the next attempt. JSPI-capable Chromium suspends inside parsing instead. Both paths use the same final SHA and have exact output, resolver-trace, and error parity tests.
 
-The importer that matches the entry file reads it, post-processing normalises
-the scene, and the exporter for the `to` id writes into the same in-memory
-file system. Its output is copied into fresh `Uint8Array`s before it crosses
-into JavaScript, so the result stays valid after the module grows its heap and
-holds no handle back into WebAssembly.
+Each `Assimp` instance serializes singular and plural work through one rejection-safe FIFO queue. Separate instances are the parallelism boundary. `dispose()` rejects new calls and releases the runtime after queued work settles.
 
-<ConvertDemo>
+## Canonical formats
 
-```typescript
-import { convert } from 'libassimp';
-
-import { readFile } from 'node:fs/promises';
-
-const bytes = new Uint8Array(await readFile('cube.obj'));
-const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'assjson' });
-
-console.log(files[0].name, files[0].bytes.byteLength);
-```
-
-</ConvertDemo>
-
-## Post-processing
-
-Every conversion runs the same four assimp steps: `Triangulate`,
-`GenUVCoords`, `JoinIdenticalVertices` and `SortByPType`. Together they turn
-arbitrary polygon soup into indexed triangles with usable texture
-coordinates, which is what the exporters and downstream viewers expect. The
-set is fixed in 0.1.0; a `postProcess` option is an additive 0.2.0 change.
-
-## What each build carries
-
-Three entries wrap the same binding around a different set of compiled-in
-formats. Read the tables as the answer to one question: can this import
-specifier do my conversion?
-
-### Exporters
-
-A `to` id from this table is what `convert` accepts. The output file is named
-after the extension, so `step` writes `result.stp` and `assjson` writes
-`result.json`.
+Public targets are not Assimp exporter IDs. `glb` and `gltf` always route to glTF 2; `dae` and `step` are canonical names; FBX/PLY/STL encoding uses `exportOptions.binary`; OBJ sidecar behavior uses `exportOptions.materials` and defaults to materials.
 
 <ExportMatrix />
 
-Six friendly aliases sit on top: `glb` and `gltf` name glTF 2.0 (assimp's
-`glb2` and `gltf2`), `glb1` and `gltf1` reach glTF 1.0, `step` resolves to
-`stp`, and `dae` to `collada`. Naming an id the build does not carry fails
-with `UNSUPPORTED_FORMAT`, and the message lists the ids it does.
-
-### Importers
-
-The entry file's extension picks the importer, so this table is a list of what
-each build can read.
+The import table is directional: it lists extensions each entry can read, not targets it can write.
 
 <ImportMatrix />
 
-## Why the binaries are the size they are
+`assimpCapabilities`, the instance `formats` tables, `conversionEdges`, TypeScript unions, validation, and these matrices come from one checked-in compiler-derived registry. Native names never enter the public catalog.
 
-The engine is compiled and linked with `-O3 -DNDEBUG`, then the module goes
-through standalone `wasm-opt -O4 --converge --traps-never-happen`. Binaryen's
-size-only `code-folding` pass is skipped because it consumed 99.4% of a
-measured 4,348-second full link on web-ifc's generated schema function without
-adding a runtime optimisation. The build also uses mimalloc, Closure-compiled
-glue (`--closure=1`), `-sEVAL_CTORS=2` to run static constructors at build time,
-and `-fwasm-exceptions`, which is native WebAssembly exception handling rather
-than the JavaScript-based emulation assimp's error paths would otherwise pay
-for on every call. `-msimd128` turns on the fixed-width SIMD every supported
-browser and Node.js release implements.
+## Post-processing
 
-Three things are deliberately off. Link-time optimisation costs size on this
-codebase for no measured gain. Relaxed SIMD would trade byte-exact results
-across hosts for speed, and identical output on every host is worth more than
-the difference. Threads would demand cross-origin isolation headers from every
-page that loads the module, for an engine that parses one file at a time.
+`defaultPostProcess` is `Triangulate`, `GenUVCoords`, `JoinIdenticalVertices`, and `SortByPType`. Supplying `postProcess` is an exact replacement. `assimpCapabilities.postProcess` publishes every supported named step, bit value, description, and conflict.
 
-Every binary carries a byte ceiling in continuous integration: raw, gzip and
-brotli sizes are asserted on each build, and a ceiling only moves in the change
-that causes it to move. The sizes on the [home page](/) are measured from the
-same artifacts, not typed in by hand.
+## Production build
+
+All three variants compile and link with `-O3 -DNDEBUG`, fixed SIMD, mimalloc, Wasm exceptions, Closure-compiled glue, constructor evaluation, and standalone `wasm-opt -O4 --converge --traps-never-happen --skip-pass=code-folding`. The build explicitly pins `WASM_LEGACY_EXCEPTIONS=1`; exnref waits until every documented host floor supports it. LTO, relaxed SIMD, pthreads, Asyncify, and mode-specific JSPI artifacts remain absent.
+
+Build manifests record exact definitions, compile/link/optimizer flags, import/export inventory, and raw/gzip/brotli size for each artifact. CI ratchets those measured files rather than estimating them.

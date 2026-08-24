@@ -64,6 +64,10 @@
       "executor": "nx:run-commands",
       "options": { "command": "pnpm run check:dead-code" }
     },
+    "check:capabilities": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm run check:capabilities" }
+    },
     "docs": {
       "executor": "nx:run-commands",
       "dependsOn": ["build"],
@@ -73,6 +77,7 @@
       "executor": "nx:noop",
       "dependsOn": [
         "build",
+        "check:capabilities",
         "check:dead-code",
         "check:size",
         "docs",
