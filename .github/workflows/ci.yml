@@ -353,6 +353,7 @@ jobs:
         run: |
           base_directory="$(mktemp -d)"
           git worktree add --detach "$base_directory" 'origin/${{ github.base_ref }}'
+          git -C "$base_directory" submodule update --init --recursive
           if [[ -f "$base_directory/bench/gated.mjs" ]]; then
             # wasm is CI-built and never committed, so the base tree reuses this
             # run's binaries and the timing column isolates the TypeScript
