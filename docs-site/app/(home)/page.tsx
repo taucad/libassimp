@@ -20,8 +20,9 @@ const Page = (): React.JSX.Element => (
       </p>
       <h1 className="mt-4 text-5xl font-semibold tracking-tight">Model in, model out.</h1>
       <p className="mt-5 text-lg text-fd-muted-foreground">
-        libassimp reads 44 model formats and writes 21, in Node.js, the browser and workers. Hand it the bytes
-        of a model, name the format you want back, and it returns the converted bytes.
+        libassimp reads 69 model-file extensions and writes 15 canonical formats, in Node.js, the browser and
+        workers. Hand it the bytes of a model, name the format you want back, and it returns the converted
+        bytes.
       </p>
     </div>
 
