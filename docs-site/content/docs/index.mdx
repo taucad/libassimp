@@ -1,27 +1,17 @@
 ---
 title: Overview
-description: 'Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.'
+description: Typed, import-once 3D format conversion in Node.js, browsers, and workers.
 ---
 
-libassimp converts 3D model files in Node.js, in the browser and in a worker.
-It is the Open Asset Import Library compiled to WebAssembly behind a small
-TypeScript API: hand it the bytes of a model, name the format you want back,
-and it returns the converted bytes.
-
-It is for the code that sits between a file and a viewer, a printer or a
-kernel — an upload endpoint that normalises whatever a customer sends, a build
-step that turns authoring files into GLB, a browser tool that writes 3MF for a
-printer. It parses and writes files; it does not give you a scene graph.
+libassimp compiles the Open Asset Import Library to WebAssembly behind a typed TypeScript API. It converts files; it does not expose a retained scene graph or a Wasm handle.
 
 ## What it costs to ship
 
 <SizeStrip />
 
-Three entries ship the same API and differ only in the formats compiled in, so
-importing the narrowest one that covers your conversion is the whole size
-story. [Choose an entry](/docs/guides/choose-an-entry) walks the decision.
+Choose among the full, importer, and exporter entries. Each entry has one glue file and one Wasm file, and publishes its exact static format graph without loading either artifact.
 
-## The smallest example
+## Import once, export many
 
 ```bash tab="npm"
 npm install libassimp
@@ -32,28 +22,29 @@ pnpm add libassimp
 ```
 
 ```typescript
-import { convert } from 'libassimp';
-
+import { convertFormats } from 'libassimp';
 import { readFile, writeFile } from 'node:fs/promises';
 
-const bytes = new Uint8Array(await readFile('model.obj'));
-const { files } = await convert({ name: 'model.obj', bytes }, { to: 'glb' });
+const bytes = new Uint8Array(await readFile('cube.obj'));
+const [glb, stl] = await convertFormats(
+  { name: 'cube.obj', bytes },
+  {
+    targets: [{ to: 'glb' }, { to: 'stl', exportOptions: { binary: true } }],
+  },
+);
 
-await writeFile(files[0].name, files[0].bytes);
-console.log(files[0].name, files[0].bytes.byteLength);
+await writeFile(glb.files[0].name, glb.files[0].bytes);
+await writeFile(stl.files[0].name, stl.files[0].bytes);
 ```
 
-```console
-result.glb 4820
-```
+The source is imported and post-processed once. Results map positionally to the target tuple, exports run sequentially, and any failure rejects without exposing partial output. Use singular `convert` when only one output is needed or when you want to persist and release outputs one at a time.
 
-The result is plain data: each file is a name and a copied `Uint8Array` that
-belongs to you. Nothing is a handle, and nothing has to be freed.
+Typed `importOptions`, `postProcess`, and format-specific `exportOptions` reject invalid configuration before Wasm work. A Promise-returning `resolve` callback can fetch sidecars on demand on every supported host.
 
-## Where to go next
+## Next
 
-- [Install libassimp](/docs/install) — hosts, entries, bundlers and workers.
-- [Convert a model in the browser](/docs/tutorial) — an OBJ and its material
-  library to GLB, running in this tab.
-- [API reference](/docs/api) — every export, with its types.
-- [How it works](/docs/how-it-works) — the format matrix and the build.
+- [Convert one model](/docs/guides/convert-a-model)
+- [Convert to multiple formats](/docs/guides/convert-to-multiple-formats)
+- [Resolve sidecars asynchronously](/docs/guides/resolve-sidecar-files)
+- [API reference](/docs/api)
+- [Compatibility](https://github.com/taucad/libassimp/blob/main/compatibility.md)

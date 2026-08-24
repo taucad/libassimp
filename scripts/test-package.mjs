@@ -42,28 +42,70 @@ try {
     },
   );
 
+  writeFileSync(
+    join(work, 'static.mjs'),
+    `import assert from 'node:assert/strict';
+
+let compilations = 0;
+const compile = WebAssembly.compile;
+WebAssembly.compile = async (...args) => {
+  compilations += 1;
+  return compile(...args);
+};
+const entries = await Promise.all([
+  import('libassimp'),
+  import('libassimp/importer'),
+  import('libassimp/exporter'),
+]);
+assert.equal(compilations, 0, 'static capability imports initialized Wasm');
+assert.deepEqual(entries.map(({ assimpCapabilities }) => Object.keys(assimpCapabilities.export).length), [15, 3, 15]);
+for (const { assimpCapabilities, conversionEdges } of entries) {
+  const expected = Object.keys(assimpCapabilities.import).flatMap((from) =>
+    Object.keys(assimpCapabilities.export).flatMap((to) => from === to ? [] : [{ from, to }]),
+  );
+  assert.deepEqual(conversionEdges, expected);
+  assert.doesNotMatch(JSON.stringify({ assimpCapabilities, conversionEdges }), /gl(?:b|tf)1|objnomtl|stlb|plyb|fbxa/u);
+}
+`,
+  );
+  execFileSync(process.execPath, ['static.mjs'], { cwd: work, stdio: 'inherit' });
+
   const fixture = fileURLToPath(new URL('./tests/fixtures/cube.obj', root));
   writeFileSync(
     join(work, 'consumer.mjs'),
     `import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { convert } from 'libassimp';
+import { convert, convertFormats, createAssimp as createFull } from 'libassimp';
 import { convert as convertToGltf } from 'libassimp/importer';
 import { convert as convertFromGltf, createAssimp } from 'libassimp/exporter';
 
 const bytes = new Uint8Array(await readFile(process.argv[2]));
 const { files } = await convert({ name: 'cube.obj', bytes }, { to: 'glb' });
 assert.equal(Buffer.from(files[0].bytes.subarray(0, 4)).toString('latin1'), 'glTF');
+const [plural] = await convertFormats({ name: 'cube.obj', bytes }, { targets: [{ to: 'glb' }] });
+assert.deepEqual(plural.files, files);
 
 const gltf = await convertToGltf({ name: 'cube.obj', bytes }, { to: 'glb' });
 const stl = await convertFromGltf({ name: 'model.glb', bytes: gltf.files[0].bytes }, { to: 'stl' });
 assert.equal(stl.files[0].name, 'result.stl');
+const roundTrip = await convertToGltf({ name: stl.files[0].name, bytes: stl.files[0].bytes }, { to: 'glb' });
+assert.equal(Buffer.from(roundTrip.files[0].bytes.subarray(0, 4)).toString('latin1'), 'glTF');
 
 const assimp = await createAssimp();
 try {
   assert.ok(assimp.formats.export.some((format) => format.id === 'stl'));
 } finally {
   assimp.dispose();
+}
+
+const fullWasm = new URL(import.meta.resolve('libassimp/wasm'));
+for (const options of [{ wasmUrl: fullWasm }, { wasmBinary: new Uint8Array(await readFile(fullWasm)) }]) {
+  const loaded = await createFull(options);
+  try {
+    assert.equal(loaded.formats.export.length, 15);
+  } finally {
+    loaded.dispose();
+  }
 }
 
 for (const specifier of ['libassimp/wasm', 'libassimp/importer/wasm', 'libassimp/exporter/wasm']) {

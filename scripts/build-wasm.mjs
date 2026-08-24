@@ -29,12 +29,14 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { brotliCompressSync, gzipSync } from 'node:zlib';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const wasmDir = `${root}src/wasm`;
 const emsdk = process.env.LIBASSIMP_EMSDK === 'host' ? process.env.EMSDK : '/emsdk';
 const wasmOpt = emsdk ? `${emsdk}/upstream/bin/wasm-opt` : 'wasm-opt';
+const wasmDis = emsdk ? `${emsdk}/upstream/bin/wasm-dis` : 'wasm-dis';
 const wasmOptFlags = [
   '-O4',
   '--strip-debug',
@@ -129,6 +131,52 @@ function copyArtifact(from, to) {
   renameSync(temporary, to);
 }
 
+async function inspectArtifact(wasmPath, gluePath) {
+  const bytes = readFileSync(wasmPath);
+  const compiled = await WebAssembly.compile(bytes);
+  let missing;
+  let resolveInstantiation;
+  const instantiationRequested = new Promise((resolve) => {
+    resolveInstantiation = resolve;
+  });
+  const factory = (await import(`${pathToFileURL(gluePath).href}?built=${Date.now()}`)).default;
+  const nativePromise = factory({
+    instantiateWasm(imports, receive) {
+      missing = WebAssembly.Module.imports(compiled).filter(({ kind, module, name }) => {
+        const supplied = imports[module]?.[name];
+        return kind === 'function' ? typeof supplied !== 'function' : supplied === undefined;
+      });
+      if (missing.length !== 1 || missing[0].kind !== 'function') {
+        throw new Error(`expected one missing dispatch function, found ${missing.length}`);
+      }
+      imports[missing[0].module] ??= {};
+      imports[missing[0].module][missing[0].name] = () => 0;
+      const instantiation = WebAssembly.instantiate(compiled, imports).then((instance) => {
+        receive(instance);
+        return instance;
+      });
+      resolveInstantiation(instantiation);
+      return {};
+    },
+  });
+  await Promise.race([
+    instantiationRequested,
+    Promise.resolve(nativePromise).then(() => {
+      throw new Error('generated glue did not request Wasm instantiation');
+    }),
+  ]);
+  const native = await nativePromise;
+  if (typeof native._libassimp_run_plan !== 'function') {
+    throw new Error('generated glue does not preserve _libassimp_run_plan');
+  }
+  return {
+    missingImport: missing[0],
+    rawPlanExport: true,
+    imports: WebAssembly.Module.imports(compiled),
+    exports: WebAssembly.Module.exports(compiled),
+  };
+}
+
 mkdirSync(wasmDir, { recursive: true });
 
 for (const variant of names) {
@@ -143,6 +191,14 @@ for (const variant of names) {
     { stdio: 'inherit' },
   );
 
+  // `--emit-tsd` executes the module during link and cannot instantiate the
+  // intentionally host-supplied dispatch import. The glue is private, so its
+  // declaration only needs to describe the modularized factory boundary.
+  writeFileSync(
+    `${buildDir}/${target}.d.ts`,
+    'declare const factory: (options?: Record<string, unknown>) => Promise<unknown>;\nexport default factory;\n',
+  );
+
   let wasmArtifact = `${buildDir}/${target}.wasm`;
   if (!fast) {
     build(
@@ -153,7 +209,32 @@ for (const variant of names) {
     wasmArtifact = `${buildDir}/${target}.optimized.wasm`;
   }
 
-  const linkFlags = /^ *LINK_FLAGS = (.*)$/m.exec(readFileSync(`${buildDir}/build.ninja`, 'utf8'));
+  const opcodeInspection = build(
+    `set -o pipefail; ${wasmDis} ${wasmArtifact.slice(root.length)} -o - | ` +
+      `awk -v target=${target} '` +
+      `/try_table/{table++} /\\(try /{legacy++} {line=tolower($0); if(line ~ /asyncify/) asyncify++} ` +
+      `END{printf "%s legacy_try=%d try_table=%d asyncify=%d\\n",target,legacy,table,asyncify; ` +
+      `exit(table != 0 || asyncify != 0 || legacy == 0)}'`,
+  ).trim();
+  console.log(opcodeInspection);
+
+  const ninja = readFileSync(`${buildDir}/build.ninja`, 'utf8');
+  const compileFlags = /^ *FLAGS = (.*)$/m.exec(ninja)?.[1].trim().split(/\s+/u) ?? [];
+  const linkFlags = /^ *LINK_FLAGS = (.*)$/m.exec(ninja)?.[1].trim().split(/\s+/u) ?? [];
+  if (!fast) {
+    for (const flag of ['-O3', '-fwasm-exceptions', '-msimd128']) {
+      if (!compileFlags.includes(flag)) throw new Error(`${target} compile flags omit ${flag}`);
+      if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
+    }
+    for (const flag of ['--closure=1', '-sEVAL_CTORS=2', '-sMALLOC=mimalloc', '-sWASM_LEGACY_EXCEPTIONS=1']) {
+      if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
+    }
+  }
+  const forbiddenFlags = [...compileFlags, ...linkFlags, ...wasmOptFlags].filter((flag) =>
+    /(?:ASYNCIFY|JSPI)/u.test(flag),
+  );
+  if (forbiddenFlags.length > 0)
+    throw new Error(`${target} contains forbidden flags: ${forbiddenFlags.join(', ')}`);
   const emccVersion = build('emcc --version').split('\n')[0].trim();
 
   for (const suffix of ['.js', '.wasm', '.d.ts', '.js.symbols']) {
@@ -165,6 +246,7 @@ for (const variant of names) {
 
   const wasm = readFileSync(`${wasmDir}/${target}.wasm`);
   const glue = readFileSync(`${wasmDir}/${target}.js`);
+  const inventory = await inspectArtifact(`${wasmDir}/${target}.wasm`, `${wasmDir}/${target}.js`);
   for (const [name, bytes] of [
     ['wasm', wasm],
     ['glue', glue],
@@ -188,10 +270,17 @@ for (const variant of names) {
         image,
         engineSha,
         variantsSha256,
-        flags: linkFlags === null ? [] : linkFlags[1].trim().split(/\s+/),
-        wasmOptFlags: fast ? [] : wasmOptFlags,
+        compileFlags,
+        linkFlags,
+        definitions: ['ASSIMP_BUILD_NO_GLTF1_IMPORTER', 'ASSIMP_BUILD_NO_GLTF1_EXPORTER'],
+        wasmSettings: ['WASM_LEGACY_EXCEPTIONS=1'],
+        finalOptimizerFlags: fast ? [] : wasmOptFlags,
         fast,
-        sizes: { wasm: wasm.length, js: glue.length },
+        inventory,
+        sizes: {
+          wasm: { raw: wasm.length, gzip: gzipSync(wasm).length, brotli: brotliCompressSync(wasm).length },
+          js: { raw: glue.length, gzip: gzipSync(glue).length, brotli: brotliCompressSync(glue).length },
+        },
         sourceDateEpoch,
         emccVersion,
         builtAt: new Date().toISOString(),

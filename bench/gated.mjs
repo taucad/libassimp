@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import { fnv64 } from '../tests/fnv64.mjs';
@@ -7,6 +8,12 @@ import { fnv64 } from '../tests/fnv64.mjs';
 import { convert, createAssimp } from 'libassimp';
 
 const bytes = new Uint8Array(readFileSync(new URL('../tests/fixtures/cube.obj', import.meta.url)));
+const materialCube = new Uint8Array(
+  readFileSync(new URL('../tests/fixtures/cube-material.obj', import.meta.url)),
+);
+const material = new Uint8Array(
+  readFileSync(new URL('../tests/fixtures/cube-material.mtl', import.meta.url)),
+);
 const iterations = 15;
 
 const median = (durations) => {
@@ -38,6 +45,89 @@ for (let index = 0; index < iterations; index += 1) {
   assimp.dispose();
 }
 
+const batchTargets = [{ to: 'glb' }, { to: 'stl', exportOptions: { binary: true } }, { to: 'assjson' }];
+const batchAssimp = await createAssimp();
+const singularDurations = [];
+const pluralDurations = [];
+let pluralOutputs;
+try {
+  for (let index = 0; index < iterations; index += 1) {
+    const [singularDuration, singular] = await time(async () =>
+      Promise.all(
+        batchTargets.map(async ({ to, exportOptions }) => ({
+          format: to,
+          ...(await batchAssimp.convert(
+            { name: 'cube.obj', bytes },
+            exportOptions === undefined ? { to } : { to, exportOptions },
+          )),
+        })),
+      ),
+    );
+    const [pluralDuration, plural] = await time(() =>
+      batchAssimp.convertFormats({ name: 'cube.obj', bytes }, { targets: batchTargets }),
+    );
+    assert.deepEqual(plural, singular);
+    singularDurations.push(singularDuration);
+    pluralDurations.push(pluralDuration);
+    pluralOutputs = plural;
+  }
+} finally {
+  batchAssimp.dispose();
+}
+
+const restore = (name, descriptor) => {
+  if (descriptor === undefined) delete WebAssembly[name];
+  else Object.defineProperty(WebAssembly, name, descriptor);
+};
+
+const measureAsyncRoute = async (forceReplay) => {
+  const suspending = Object.getOwnPropertyDescriptor(WebAssembly, 'Suspending');
+  const promising = Object.getOwnPropertyDescriptor(WebAssembly, 'promising');
+  if (forceReplay) {
+    Object.defineProperty(WebAssembly, 'Suspending', { configurable: true, value: undefined });
+    Object.defineProperty(WebAssembly, 'promising', { configurable: true, value: undefined });
+  }
+  let assimp;
+  try {
+    assimp = await createAssimp();
+    let calls = 0;
+    const [duration, result] = await time(() =>
+      assimp.convert(
+        { name: 'cube-material.obj', bytes: materialCube },
+        {
+          to: 'glb',
+          resolve: async (name) => {
+            calls += 1;
+            await Promise.resolve();
+            return name === 'cube-material.mtl' ? material : undefined;
+          },
+        },
+      ),
+    );
+    assert.equal(calls, 1);
+    return {
+      durationMs: Math.round(duration * 1_000) / 1_000,
+      resolverCalls: calls,
+      outputFnv: fnv64(result.files[0].bytes),
+    };
+  } finally {
+    assimp?.dispose();
+    if (forceReplay) {
+      restore('Suspending', suspending);
+      restore('promising', promising);
+    }
+  }
+};
+
+const hasJspi = typeof WebAssembly.Suspending === 'function' && typeof WebAssembly.promising === 'function';
+const asyncResolver = {
+  jspi: hasJspi ? await measureAsyncRoute(false) : null,
+  replay: await measureAsyncRoute(true),
+};
+if (asyncResolver.jspi !== null) {
+  assert.equal(asyncResolver.jspi.outputFnv, asyncResolver.replay.outputFnv);
+}
+
 const report = {
   name: 'cube-obj-to-glb-v1',
   iterations,
@@ -45,6 +135,13 @@ const report = {
   initMs: median(initializations),
   outputBytes: output.length,
   outputFnv: fnv64(output),
+  batch: {
+    targets: batchTargets.length,
+    singularMedianMs: median(singularDurations),
+    pluralMedianMs: median(pluralDurations),
+    outputFnvs: pluralOutputs.map(({ files }) => files.map(({ bytes: contents }) => fnv64(contents))),
+  },
+  asyncResolver,
 };
 
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

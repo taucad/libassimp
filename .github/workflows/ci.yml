@@ -225,6 +225,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          submodules: true
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
@@ -291,6 +292,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          submodules: true
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
@@ -328,6 +330,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          submodules: true
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
@@ -359,13 +362,15 @@ jobs:
             cd "$base_directory"
             pnpm install --frozen-lockfile
             pnpm run build
-            node bench/gated.mjs > /tmp/base-benchmark.json
+            node bench/gated.mjs > /tmp/base-benchmark.json || true
           fi
       - id: compare
         continue-on-error: true # Origin: the following always-run comment must report the failed comparison before the gate closes.
         run: |
           base=/tmp/base-benchmark.json
-          [[ -f "$base" ]] || base=-
+          if [[ ! -f "$base" ]] || ! node -e "try { JSON.parse(require('node:fs').readFileSync(process.argv[1], 'utf8')); } catch { process.exitCode = 1; }" "$base"; then
+            base=-
+          fi
           node scripts/compare-benchmark.mjs /tmp/current-benchmark.json "$base" /tmp/benchmark.md
       - name: Upsert benchmark comment
         if: always()

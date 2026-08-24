@@ -1,73 +1,40 @@
 ---
 title: Choose an entry
-description: Trade binary size against the formats you can name, and pick the import specifier that covers your conversion.
+description: Pick the narrowest artifact whose static conversion graph contains every edge you need.
 ---
-
-The three entries are the same API over three binaries. Picking one is a size
-decision, and the only one the package asks you to make.
 
 <SizeStrip />
 
-### 1. Start from the direction you convert
+| Need                                              | Import               |
+| ------------------------------------------------- | -------------------- |
+| Any compiled input to `assjson`, `glb`, or `gltf` | `libassimp/importer` |
+| glTF/USD-family input to any canonical output     | `libassimp/exporter` |
+| Any compiled input to any canonical output        | `libassimp`          |
 
-| You need                               | Import               |
-| -------------------------------------- | -------------------- |
-| Anything in, glTF or GLB out           | `libassimp/importer` |
-| glTF, GLB, USD or VRM in, anything out | `libassimp/exporter` |
-| Anything in, anything out              | `libassimp`          |
+The full and exporter entries write exactly `3ds`, `3mf`, `assjson`, `dae`, `fbx`, `glb`, `gltf`, `obj`, `ply`, `step`, `stl`, `usda`, `usdz`, `x`, and `x3d`. The importer entry writes exactly `assjson`, `glb`, and `gltf`.
 
-Most pipelines are one of the first two. An upload endpoint normalising
-customer files into GLB reads everything and writes one format; a viewer
-exporting its own glTF scene to 3MF or STEP reads one format and writes
-everything.
+Binary/ASCII variants do not add rows: use `exportOptions.binary` for FBX, PLY, or STL. Use `exportOptions.materials: false` for OBJ without MTL. glTF 1 is not compiled; `glb` and `gltf` always mean glTF 2.
 
-```typescript
-import { convert } from 'libassimp/importer';
-
-const bytes = new Uint8Array();
-const { files } = await convert({ name: 'model.fbx', bytes }, { to: 'glb' });
-
-console.log(files[0].name);
-```
-
-### 2. Chain two entries rather than reaching for the third
-
-A conversion whose ends are both exotic — FBX to STEP, say — can go through
-glTF, and two narrow binaries can still be smaller than one wide one. The
-intermediate never touches disk.
+## Query edges without loading Wasm
 
 ```typescript
-import { convert as toGltf } from 'libassimp/importer';
-import { convert as fromGltf } from 'libassimp/exporter';
+import { assimpCapabilities, conversionEdges } from 'libassimp/exporter';
 
-const bytes = new Uint8Array();
-const { files: gltf } = await toGltf({ name: 'model.fbx', bytes }, { to: 'glb' });
-const { files } = await fromGltf({ name: 'model.glb', bytes: gltf[0].bytes }, { to: 'step' });
-
-console.log(files[0].name);
+const useful = conversionEdges.filter(({ from }) => from === 'glb');
+for (const edge of useful) {
+  console.log(edge.from, edge.to, assimpCapabilities.export[edge.to].extension);
+}
 ```
 
-Each hop is a full import and export, so a scene loses anything glTF cannot
-carry. Reach for the root entry when that matters more than the megabytes.
+`conversionEdges` contains exact valid import/export pairs minus identities. It has no MIME, schema, fidelity, native ID, or loader state; integrations attach their own policy metadata.
 
-### 3. Confirm the build at runtime
-
-Every instance reports the tables it was compiled with.
+## Keep one instance warm
 
 ```typescript
 import { createAssimp } from 'libassimp/exporter';
 
 using assimp = await createAssimp();
-
-console.log(assimp.formats.export.map((format) => format.id).join(' '));
+console.log(assimp.formats.import, assimp.formats.export);
 ```
 
-A `to` id absent from that list fails with `UNSUPPORTED_FORMAT` rather than
-silently writing something else. The full tables are on
-[How it works](../how-it-works).
-
-## Variations
-
-**Loading both entries in one process.** Each holds its own module and heap, so
-the cost is the sum of the binaries. Loading is lazy: an entry you import but
-never call costs nothing at runtime.
+Instance format tables equal the generated static catalog. Each instance owns one module, heap, and FIFO queue; two entries or instances add their memory costs.

@@ -1,66 +1,68 @@
-/**
- * `libassimp/exporter` — every exporter the engine builds cleanly, reading
- * glTF, GLB, and USD. Import this entry to write a glTF pipeline's output to
- * another format.
- */
+/** `libassimp/exporter` — glTF/USD import with every canonical exporter. */
 
-import type { ConvertOptions as SharedConvertOptions } from './convert.js';
+import type {
+  ConvertFormatsOptions as SharedConvertFormatsOptions,
+  ConvertFormatsResult as SharedConvertFormatsResult,
+  ConvertOptions as SharedConvertOptions,
+  ConvertTarget as SharedConvertTarget,
+  ConvertedFormat as SharedConvertedFormat,
+} from './convert.js';
 import { createEntry } from './create-assimp.js';
 import type { Assimp as SharedAssimp } from './create-assimp.js';
-import type { AllExportFormat } from './formats.js';
+import {
+  allExportFormats,
+  defaultPostProcess,
+  exporterAssimpCapabilities,
+  exporterConversionEdges,
+  exporterImportFormats,
+} from './generated/assimp-capabilities.js';
+import type {
+  AllExportFormat,
+  ConversionEdgeFor,
+  ExporterImportFormat,
+  ExportFormatInfo as SharedExportFormatInfo,
+  ImportFormatInfo as SharedImportFormatInfo,
+} from './generated/assimp-capabilities.js';
 
 export { AssimpError } from './assimp-error.js';
-export type { AssimpFailureCode } from './assimp-error.js';
-export type { AssimpFile, ConvertResult } from './convert.js';
+export type { AssimpErrorContext, AssimpFailureCode } from './assimp-error.js';
+export type { AssimpFile, ConvertResult, ResolveFile } from './convert.js';
 export type { CreateAssimpOptions } from './create-assimp.js';
-export type { FormatInfo } from './formats.js';
+export type {
+  ExportOptionDescriptorsFor,
+  ExportOptionsByFormat,
+  ExportOptionsFor,
+  FormatInfo,
+  ImportOptions,
+  OptionDescriptor,
+  PostProcessDescriptor,
+  PostProcessStep,
+} from './generated/assimp-capabilities.js';
 
-/** Export targets this entry accepts. @public */
+export type ImportFormat = ExporterImportFormat;
 export type ExportFormat = AllExportFormat;
+export type ImportFormatInfo<Format extends ImportFormat = ImportFormat> = SharedImportFormatInfo<Format>;
+export type ExportFormatInfo<Format extends ExportFormat = ExportFormat> = SharedExportFormatInfo<Format>;
+export type ConversionEdge = ConversionEdgeFor<ImportFormat, ExportFormat>;
+export type ConvertTarget<Format extends ExportFormat = ExportFormat> = SharedConvertTarget<Format>;
+export type ConvertedFormat<Format extends ExportFormat = ExportFormat> = SharedConvertedFormat<Format>;
+export type ConvertOptions<Format extends ExportFormat = ExportFormat> = SharedConvertOptions<Format>;
+export type ConvertFormatsOptions<Targets extends readonly [ConvertTarget, ...ConvertTarget[]]> =
+  SharedConvertFormatsOptions<Targets>;
+export type ConvertFormatsResult<Targets extends readonly [ConvertTarget, ...ConvertTarget[]]> =
+  SharedConvertFormatsResult<Targets>;
+export type Assimp = SharedAssimp<ImportFormat, ExportFormat>;
 
-/** Settings for one conversion through this entry. @public */
-export type ConvertOptions = SharedConvertOptions<ExportFormat>;
+export const assimpCapabilities = exporterAssimpCapabilities;
+export const conversionEdges: readonly ConversionEdge[] = exporterConversionEdges;
+export { defaultPostProcess };
 
-/** A conversion instance holding this entry's compiled module. @public */
-export type Assimp = SharedAssimp<ExportFormat>;
-
-const entry = createEntry<ExportFormat>(
+const entry = createEntry<ImportFormat, ExportFormat>(
   new URL('./wasm/libassimp-exporter.js', import.meta.url),
   new URL('./wasm/libassimp-exporter.wasm', import.meta.url),
+  { import: exporterImportFormats, export: allExportFormats },
 );
 
-/**
- * Convert a glTF, GLB, or USD model to another format. Calls share one lazily
- * loaded module, so the first call pays for loading it.
- *
- * @public
- * @param files - The model, or files whose first element is the entry file.
- * @param options - Target format and per-call settings.
- * @returns The output files, primary output first.
- * @throws AssimpError when the format is unavailable or a conversion phase fails.
- * @example
- * ```typescript
- * import { convert } from 'libassimp/exporter';
- *
- * const { files } = await convert({ name: 'model.glb', bytes }, { to: 'stl' });
- * console.log(files[0].name); // result.stl
- * ```
- */
 export const convert = entry.convert;
-
-/**
- * Create a conversion instance whose lifetime you control, with its own binary
- * location and diagnostic sink. Dispose it when the work is done.
- *
- * @public
- * @param options - Binary location and diagnostics.
- * @returns The instance.
- * @example
- * ```typescript
- * import { createAssimp } from 'libassimp/exporter';
- *
- * using assimp = await createAssimp();
- * const { files } = await assimp.convert({ name: 'model.glb', bytes }, { to: '3mf' });
- * ```
- */
+export const convertFormats = entry.convertFormats;
 export const createAssimp = entry.createAssimp;

@@ -1,12 +1,11 @@
 ---
 title: Use in the browser
-description: Load a build in a page or a worker, control where its binary comes from, and hand the result back to the user.
+description: Load one artifact, resolve remote sidecars asynchronously, and move CPU work to a worker.
 ---
 
-The browser story is the Node.js story with two extra questions: where the
-binary comes from, and which thread the conversion runs on.
+## Convert picked bytes
 
-### 1. Convert bytes a user picked
+<ConvertDemo>
 
 ```typescript
 import { convert } from 'libassimp/importer';
@@ -18,65 +17,54 @@ const toGlb = async (file: File): Promise<Uint8Array> => {
 };
 ```
 
-The file's own name carries the extension the importer needs, so pass it
-through rather than renaming to something generic.
+</ConvertDemo>
 
-### 2. Let the bundler place the binary, or place it yourself
+## One artifact, automatic async route
 
-Vite and webpack 5 emit the binary as an asset from the `new URL` reference
-inside the entry, which needs no configuration. When you serve it from a CDN
-or a hashed directory, name the location and keep the instance:
+Each package entry ships one Wasm artifact. During instantiation, libassimp checks for both `WebAssembly.Suspending` and `WebAssembly.promising`. A capable host uses JSPI to suspend Assimp parsing around an async resolver; every other supported host uses promise-cache replay. There is no user-agent test, alternate URL, or public mode option.
 
 ```typescript
 import { createAssimp } from 'libassimp/importer';
 
-const assimp = await createAssimp({
-  wasmUrl: new URL('/assets/libassimp-importer.wasm', window.location.href),
+using assimp = await createAssimp({
+  wasmUrl: new URL('/assets/libassimp-importer.wasm', location.href),
 });
 
-console.log(assimp.formats.export.length);
+const bytes = new Uint8Array();
+const { files } = await assimp.convert(
+  { name: 'scene.gltf', bytes },
+  {
+    to: 'glb',
+    resolve: async (name) => {
+      const response = await fetch(`/models/${name}`);
+      return response.ok ? new Uint8Array(await response.arrayBuffer()) : undefined;
+    },
+  },
+);
+
+console.log(files[0].name);
 ```
 
-The binary is several megabytes, so serve it with a long-lived cache header
-and a content hash in the name. Compressed transfer matters more than the raw
-figure: the exporter build is under 1.3 MB over brotli. The live demo in these
-docs loads the published package from a registry CDN, which suits a
-documentation page; an application should bundle the binary it ships.
+Serve Wasm with `application/wasm`, content-hashed immutable caching, and compression. Streaming compilation falls back to buffered compilation when MIME or host behavior requires it.
 
-### 3. Move the work off the main thread
+## Use a worker
 
-A conversion holds its thread until it finishes, which on a large model is
-long enough for a page to drop frames. Import the entry inside a worker
-module and post the bytes in:
+A conversion is CPU-heavy even when resolution suspends. Import libassimp inside a module worker and transfer input/output buffers. The artifact has no pthreads, so no cross-origin isolation headers are required.
 
 ```typescript
 const worker = new Worker(new URL('./convert-worker.js', import.meta.url), { type: 'module' });
-
 worker.postMessage({ name: 'model.fbx', bytes: new Uint8Array() });
 ```
 
-The worker imports `libassimp/importer`, calls `convert`, and posts the result
-back. Nothing else is needed: the binaries carry no threads, so no
-cross-origin isolation headers are involved.
-
-### 4. Hand the result to the user
-
-The result is plain bytes, so a download is a blob and a link.
+## Download output
 
 ```typescript
 const download = (name: string, bytes: Uint8Array<ArrayBuffer>): void => {
-  const url = URL.createObjectURL(new Blob([bytes], { type: 'model/gltf-binary' }));
+  const url = URL.createObjectURL(new Blob([bytes]));
   const anchor = Object.assign(document.createElement('a'), { download: name, href: url });
   anchor.click();
   URL.revokeObjectURL(url);
 };
 ```
 
-## Variations
-
-**Loading eagerly.** The first `convert` fetches and instantiates the binary.
-Call `createAssimp()` while the user is still choosing a file to move that
-cost off the conversion.
-
-**Hosts without WebAssembly.** There is nothing to fall back to in the
-package; feature-detect and route the work to a server.
+The canonical [compatibility matrix](https://github.com/taucad/libassimp/blob/main/compatibility.md) records browser floors and which current hosts accelerate through JSPI.

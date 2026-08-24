@@ -1,18 +1,17 @@
 # Compatibility
 
-| Host             | Supported | CI evidence          |
-| ---------------- | --------- | -------------------- |
-| Node 22.14.0     | ✅        | `node (22.14.0)`     |
-| Node 24          | ✅        | `node (24)`          |
-| Node 26          | ✅        | `node (26)`          |
-| Chromium         | ✅        | `browser (chromium)` |
-| Firefox          | ✅        | `browser (firefox)`  |
-| WebKit           | ✅        | `browser (webkit)`   |
-| Linux x64 native | ✅        | `native`             |
+This file is the canonical host and WebAssembly feature matrix. Other docs link here rather than duplicating floors.
 
-The wasm is built with Emscripten 6.0. Its SIMD and legacy WebAssembly
-exception-handling features set the browser floors at Chrome 95, Firefox 100,
-and Safari 16.4. Exnref is not used because Node 22 and Safari before 18.4 do
-not support it. The `native` row is not a shipped host: it is the same C++
-binding built with the host toolchain and exercised by `ctest`, so an engine
-regression is caught without waiting for an Emscripten build.
+| Host             | Supported floor | CI evidence                                | Async resolver route                             |
+| ---------------- | --------------- | ------------------------------------------ | ------------------------------------------------ |
+| Node.js          | 22.14.0         | `node (22.14.0)`, `node (24)`, `node (26)` | replay on 22/24; JSPI when APIs exist on 26      |
+| Chromium         | Chrome 95       | `browser (chromium)`                       | JSPI when both host APIs exist; replay otherwise |
+| Firefox          | Firefox 100     | `browser (firefox)`                        | replay until JSPI is available                   |
+| WebKit           | Safari 16.4     | `browser (webkit)`                         | replay until JSPI is available                   |
+| Linux x64 native | test-only       | `native`                                   | native resolver harness                          |
+
+Every entry ships one Wasm artifact. At instantiation, libassimp detects `WebAssembly.Suspending` and `WebAssembly.promising`; when both exist it uses JSPI, and otherwise uses an immediate-abort, promise-cache replay path. Both routes expose the same Promise API and are byte-for-byte parity tested on the same finalized artifact.
+
+Artifacts use Emscripten 6.0, fixed SIMD (`-msimd128`), Wasm exceptions (`-fwasm-exceptions`), and the explicit legacy-EH pin `-sWASM_LEGACY_EXCEPTIONS=1`. Exnref is intentionally deferred until every supported floor reaches Chrome 137, Firefox 131, Safari 18.4, and Node 24.15. Asyncify, pthreads, relaxed SIMD, and JSPI-specific artifacts are not shipped.
+
+The native row is not a published runtime: it compiles the same C++ binding with the host toolchain so engine and lifetime regressions fail before Emscripten packaging.

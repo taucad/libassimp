@@ -1,0 +1,1182 @@
+{
+  "$comment": "Semantic additions only. Native keys, storage kinds, defaults, owners, and source locations come from checked Clang evidence unless explicitly overridden here.",
+  "astFilters": {
+    "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": ["exportToLib3MF"],
+    "assimp/code/AssetLib/AC/ACLoader.cpp": ["AC3DImporter"],
+    "assimp/code/AssetLib/ASE/ASELoader.cpp": ["ASEImporter"],
+    "assimp/code/AssetLib/Assjson/json_exporter.cpp": ["ExportAssimp2Json"],
+    "assimp/code/AssetLib/CSM/CSMLoader.cpp": ["CSMImporter"],
+    "assimp/code/AssetLib/LWO/LWOLoader.cpp": ["LWOImporter"],
+    "assimp/code/AssetLib/LWS/LWSLoader.cpp": ["LWSImporter"],
+    "assimp/code/AssetLib/MD2/MD2Loader.cpp": ["MD2Importer"],
+    "assimp/code/AssetLib/MD3/MD3Loader.cpp": ["MD3Importer"],
+    "assimp/code/AssetLib/MD5/MD5Loader.cpp": ["MD5Importer"],
+    "assimp/code/AssetLib/MDC/MDCLoader.cpp": ["MDCImporter"],
+    "assimp/code/AssetLib/MDL/MDLLoader.cpp": ["MDLImporter"],
+    "assimp/code/AssetLib/SMD/SMDLoader.cpp": ["SMDImporter"],
+    "assimp/code/AssetLib/Unreal/UnrealLoader.cpp": ["UnrealImporter"],
+    "assimp/code/Common/UnitAxisContract.cpp": [],
+    "assimp/code/PostProcessing/RemoveRedundantMaterials.cpp": ["RemoveRedundantMatsProcess"]
+  },
+  "unitAxis": {
+    "stl": {
+      "unit": 0.001,
+      "axis": "z"
+    },
+    "ply": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "3mf": {
+      "unit": null,
+      "unitDefault": "the unit declared by the file",
+      "axis": "z"
+    },
+    "off": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "amf": {
+      "unit": null,
+      "unitDefault": "the unit declared by the file",
+      "axis": "z"
+    },
+    "x3d": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "xgl": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "nff": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "ogex": {
+      "unit": null,
+      "unitDefault": "the file distance metric, otherwise 1",
+      "axis": "z"
+    },
+    "ogre": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "cob": {
+      "unit": null,
+      "unitDefault": "the file unit, otherwise 1",
+      "axis": "y"
+    },
+    "md5": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "ac": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "obj": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "collada": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "3ds": {
+      "unit": 1,
+      "axis": "z"
+    },
+    "dxf": {
+      "unit": 0.001,
+      "axis": "y"
+    },
+    "ase": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "lwo": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "x": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "smd": {
+      "unit": 1,
+      "axis": "z"
+    },
+    "bvh": {
+      "unit": 1,
+      "axis": "y"
+    },
+    "ifc": {
+      "unit": 1,
+      "axis": "z"
+    },
+    "usd": {
+      "unit": 1,
+      "axis": "y"
+    }
+  },
+  "booleanProperties": [
+    "FAVOUR_SPEED",
+    "GLOB_MEASURE_TIME",
+    "IMPORT_AC_EVAL_SUBDIVISION",
+    "IMPORT_AC_SEPARATE_BFCULL",
+    "IMPORT_ASE_RECONSTRUCT_NORMALS",
+    "IMPORT_COLLADA_IGNORE_UNIT_SIZE",
+    "IMPORT_COLLADA_IGNORE_UP_DIRECTION",
+    "IMPORT_COLLADA_USE_COLLADA_NAMES",
+    "IMPORT_MD3_HANDLE_MULTIPART",
+    "IMPORT_MD5_NO_ANIM_AUTOLOAD",
+    "PP_DB_ALL_OR_NONE",
+    "PP_FD_CHECKAREA",
+    "PP_FD_REMOVE",
+    "PP_PTV_ADD_ROOT_TRANSFORMATION",
+    "PP_PTV_KEEP_HIERARCHY",
+    "PP_PTV_NORMALIZE",
+    "UNREAL_HANDLE_FLAGS"
+  ],
+  "formats": {
+    "order": [
+      "3ds",
+      "3mf",
+      "assjson",
+      "dae",
+      "fbx",
+      "glb",
+      "gltf",
+      "obj",
+      "ply",
+      "step",
+      "stl",
+      "usda",
+      "usdz",
+      "x",
+      "x3d"
+    ],
+    "importer": ["assjson", "glb", "gltf"],
+    "routes": {
+      "3ds": {
+        "extension": "3ds",
+        "description": "Autodesk 3DS (legacy)",
+        "nativeId": "3ds"
+      },
+      "3mf": {
+        "extension": "3mf",
+        "description": "3D Manufacturing Format",
+        "nativeId": "3mf"
+      },
+      "assjson": {
+        "extension": "json",
+        "description": "Assimp JSON scene",
+        "nativeId": "assjson"
+      },
+      "dae": {
+        "extension": "dae",
+        "description": "COLLADA Digital Asset Exchange",
+        "nativeId": "collada"
+      },
+      "fbx": {
+        "extension": "fbx",
+        "description": "Autodesk FBX",
+        "nativeId": "fbx",
+        "options": [
+          {
+            "publicName": "binary",
+            "nativeName": "@route/fbx-binary",
+            "kind": "boolean",
+            "default": true,
+            "owners": ["FBX"],
+            "description": "Write binary FBX when true and ASCII FBX when false.",
+            "source": "assimp/code/Common/Exporter.cpp"
+          }
+        ],
+        "routes": {
+          "binary": {
+            "true": "fbx",
+            "false": "fbxa"
+          }
+        }
+      },
+      "glb": {
+        "extension": "glb",
+        "description": "glTF 2 binary container",
+        "nativeId": "glb2"
+      },
+      "gltf": {
+        "extension": "gltf",
+        "description": "glTF 2 JSON with sidecars",
+        "nativeId": "gltf2"
+      },
+      "obj": {
+        "extension": "obj",
+        "description": "Wavefront OBJ",
+        "nativeId": "obj",
+        "options": [
+          {
+            "publicName": "materials",
+            "nativeName": "@route/obj-materials",
+            "kind": "boolean",
+            "default": true,
+            "owners": ["Obj"],
+            "description": "Write an MTL sidecar when the scene has materials.",
+            "source": "assimp/code/Common/Exporter.cpp"
+          }
+        ],
+        "routes": {
+          "materials": {
+            "true": "obj",
+            "false": "objnomtl"
+          }
+        }
+      },
+      "ply": {
+        "extension": "ply",
+        "description": "Stanford Polygon Library",
+        "nativeId": "ply",
+        "options": [
+          {
+            "publicName": "binary",
+            "nativeName": "@route/ply-binary",
+            "kind": "boolean",
+            "default": false,
+            "owners": ["Ply"],
+            "description": "Write binary PLY when true and ASCII PLY when false.",
+            "source": "assimp/code/Common/Exporter.cpp"
+          }
+        ],
+        "routes": {
+          "binary": {
+            "true": "plyb",
+            "false": "ply"
+          }
+        }
+      },
+      "step": {
+        "extension": "stp",
+        "description": "ISO 10303 STEP",
+        "nativeId": "stp"
+      },
+      "stl": {
+        "extension": "stl",
+        "description": "Stereolithography",
+        "nativeId": "stl",
+        "options": [
+          {
+            "publicName": "binary",
+            "nativeName": "@route/stl-binary",
+            "kind": "boolean",
+            "default": false,
+            "owners": ["STL"],
+            "description": "Write binary STL when true and ASCII STL when false.",
+            "source": "assimp/code/Common/Exporter.cpp"
+          }
+        ],
+        "routes": {
+          "binary": {
+            "true": "stlb",
+            "false": "stl"
+          }
+        }
+      },
+      "usda": {
+        "extension": "usda",
+        "description": "Universal Scene Description ASCII",
+        "nativeId": "usda"
+      },
+      "usdz": {
+        "extension": "usdz",
+        "description": "Universal Scene Description ZIP container",
+        "nativeId": "usdz"
+      },
+      "x": {
+        "extension": "x",
+        "description": "DirectX X file",
+        "nativeId": "x"
+      },
+      "x3d": {
+        "extension": "x3d",
+        "description": "Extensible 3D",
+        "nativeId": "x3d"
+      }
+    }
+  },
+  "properties": {
+    "3MF_EXPORT_APPLICATION": {
+      "publicName": "application",
+      "supported": true,
+      "formats": ["3mf"]
+    },
+    "3MF_EXPORT_DECIMAL_PRECISION": {
+      "publicName": "decimalPrecision",
+      "supported": true,
+      "formats": ["3mf"],
+      "minimum": 1,
+      "maximum": 16
+    },
+    "3MF_EXPORT_UNIT": {
+      "publicName": "unit",
+      "supported": true,
+      "formats": ["3mf"],
+      "values": ["micron", "millimeter", "centimeter", "inch", "foot", "meter"]
+    },
+    "3MF_EXPORT_UPAXIS": {
+      "publicName": "upAxis",
+      "supported": true,
+      "formats": ["3mf"],
+      "kind": "string",
+      "nativeKind": "integer",
+      "default": "z",
+      "values": ["x", "y", "z"],
+      "nativeValues": { "x": 0, "y": 1, "z": 2 }
+    },
+    "AI_CONFIG_ANDROID_JNI_ASSIMP_MANAGER_SUPPORT": {
+      "publicName": "androidJniAssimpManagerSupport",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "AI_CONFIG_FBX_CONVERT_TO_M": {
+      "publicName": "fbxConvertToM",
+      "supported": true
+    },
+    "AI_CONFIG_FBX_USE_SKELETON_BONE_CONTAINER": {
+      "publicName": "fbxUseSkeletonBoneContainer",
+      "supported": true
+    },
+    "AI_CONFIG_IMPORT_FBX_EMBEDDED_TEXTURES_LEGACY_NAMING": {
+      "publicName": "importFbxEmbeddedTexturesLegacyNaming",
+      "supported": true
+    },
+    "AI_CONFIG_IMPORT_FBX_IGNORE_UP_DIRECTION": {
+      "publicName": "importFbxIgnoreUpDirection",
+      "supported": true
+    },
+    "AI_CONFIG_IMPORT_REMOVE_EMPTY_BONES": {
+      "publicName": "importRemoveEmptyBones",
+      "supported": true,
+      "kind": "boolean",
+      "nativeKind": "boolean",
+      "default": true
+    },
+    "APP_SCALE_FACTOR": {
+      "publicName": "appScaleKey",
+      "supported": true
+    },
+    "bJoinIdenticalVertices": {
+      "publicName": "joinIdenticalVertices",
+      "supported": true,
+      "formats": ["obj", "fbx"]
+    },
+    "CHECK_IDENTITY_MATRIX_EPSILON": {
+      "publicName": "identityMatrixEpsilon",
+      "supported": true,
+      "formats": ["glb", "gltf"],
+      "minimum": 0
+    },
+    "EXPORT_BLOB_NAME": {
+      "publicName": "exportBlobName",
+      "supported": false,
+      "reason": "Only used by Assimp ExportToBlob; libassimp exports through its IOSystem."
+    },
+    "EXPORT_FBX_TRANSPARENCY_FACTOR_REFER_TO_OPACITY": {
+      "publicName": "transparencyFactorRefersToOpacity",
+      "supported": true,
+      "formats": ["fbx"]
+    },
+    "EXPORT_POINT_CLOUDS": {
+      "publicName": "pointClouds",
+      "supported": true,
+      "formats": [
+        "3ds",
+        "3mf",
+        "assjson",
+        "dae",
+        "fbx",
+        "glb",
+        "gltf",
+        "obj",
+        "ply",
+        "step",
+        "stl",
+        "usda",
+        "usdz",
+        "x",
+        "x3d"
+      ]
+    },
+    "EXPORT_XFILE_64BIT": {
+      "publicName": "use64Bit",
+      "supported": true,
+      "formats": ["x"]
+    },
+    "extras": {
+      "publicName": "extras",
+      "supported": false,
+      "reason": "Pointer and callback properties require a purpose-built safe bridge."
+    },
+    "FAVOUR_SPEED": {
+      "publicName": "favourSpeed",
+      "supported": true
+    },
+    "GLOB_MEASURE_TIME": {
+      "publicName": "globMeasureTime",
+      "supported": true
+    },
+    "GLOBAL_SCALE_FACTOR": {
+      "publicName": "globalScaleFactorKey",
+      "supported": true
+    },
+    "GLTF2_SPARSE_ACCESSOR_EXP": {
+      "publicName": "sparseAccessors",
+      "supported": true,
+      "formats": ["glb", "gltf"]
+    },
+    "GLTF2_TARGET_NORMAL_EXP": {
+      "publicName": "includeTargetNormals",
+      "supported": true,
+      "formats": ["glb", "gltf"]
+    },
+    "GLTF2_TARGETNAMES_EXP": {
+      "publicName": "includeTargetNames",
+      "supported": true,
+      "formats": ["glb", "gltf"]
+    },
+    "IMPORT_3DS_UNIT_SCALE_TO_METERS": {
+      "publicName": "import3DsUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_3DS_UP_AXIS": {
+      "publicName": "import3DsUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_3MF_UNIT_SCALE_TO_METERS": {
+      "publicName": "import3MfUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_3MF_UP_AXIS": {
+      "publicName": "import3MfUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_AC_EVAL_SUBDIVISION": {
+      "publicName": "importAcEvalSubdivision",
+      "supported": true
+    },
+    "IMPORT_AC_SEPARATE_BFCULL": {
+      "publicName": "importAcSeparateBfcull",
+      "supported": true
+    },
+    "IMPORT_AC_UNIT_SCALE_TO_METERS": {
+      "publicName": "importAcUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_AC_UP_AXIS": {
+      "publicName": "importAcUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_AMF_UNIT_SCALE_TO_METERS": {
+      "publicName": "importAmfUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_AMF_UP_AXIS": {
+      "publicName": "importAmfUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_ASE_RECONSTRUCT_NORMALS": {
+      "publicName": "importAseReconstructNormals",
+      "supported": true
+    },
+    "IMPORT_ASE_UNIT_SCALE_TO_METERS": {
+      "publicName": "importAseUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_ASE_UP_AXIS": {
+      "publicName": "importAseUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_BVH_UNIT_SCALE_TO_METERS": {
+      "publicName": "importBvhUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_BVH_UP_AXIS": {
+      "publicName": "importBvhUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_COB_UNIT_SCALE_TO_METERS": {
+      "publicName": "importCobUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_COB_UP_AXIS": {
+      "publicName": "importCobUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_COLLADA_IGNORE_UNIT_SIZE": {
+      "publicName": "importColladaIgnoreUnitSize",
+      "supported": true
+    },
+    "IMPORT_COLLADA_IGNORE_UP_DIRECTION": {
+      "publicName": "importColladaIgnoreUpDirection",
+      "supported": true
+    },
+    "IMPORT_COLLADA_UNIT_SCALE_TO_METERS": {
+      "publicName": "importColladaUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_COLLADA_UP_AXIS": {
+      "publicName": "importColladaUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_COLLADA_USE_COLLADA_NAMES": {
+      "publicName": "importColladaUseColladaNames",
+      "supported": true
+    },
+    "IMPORT_DXF_UNIT_SCALE_TO_METERS": {
+      "publicName": "importDxfUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_DXF_UP_AXIS": {
+      "publicName": "importDxfUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_FBX_OPTIMIZE_EMPTY_ANIMATION_CURVES": {
+      "publicName": "importFbxOptimizeEmptyAnimationCurves",
+      "supported": true
+    },
+    "IMPORT_FBX_PRESERVE_PIVOTS": {
+      "publicName": "importFbxPreservePivots",
+      "supported": true
+    },
+    "IMPORT_FBX_READ_ALL_GEOMETRY_LAYERS": {
+      "publicName": "importFbxReadAllGeometryLayers",
+      "supported": true
+    },
+    "IMPORT_FBX_READ_ALL_MATERIALS": {
+      "publicName": "importFbxReadAllMaterials",
+      "supported": true
+    },
+    "IMPORT_FBX_READ_ANIMATIONS": {
+      "publicName": "importFbxReadAnimations",
+      "supported": true
+    },
+    "IMPORT_FBX_READ_CAMERAS": {
+      "publicName": "importFbxReadCameras",
+      "supported": true
+    },
+    "IMPORT_FBX_READ_LIGHTS": {
+      "publicName": "importFbxReadLights",
+      "supported": true
+    },
+    "IMPORT_FBX_READ_MATERIALS": {
+      "publicName": "importFbxReadMaterials",
+      "supported": true
+    },
+    "IMPORT_FBX_READ_TEXTURES": {
+      "publicName": "importFbxReadTextures",
+      "supported": true
+    },
+    "IMPORT_FBX_READ_WEIGHTS": {
+      "publicName": "importFbxReadWeights",
+      "supported": true
+    },
+    "IMPORT_FBX_STRICT_MODE": {
+      "publicName": "importFbxStrictMode",
+      "supported": true
+    },
+    "IMPORT_GLOBAL_KEYFRAME": {
+      "publicName": "importGlobalKeyframe",
+      "supported": true
+    },
+    "IMPORT_IFC_CUSTOM_TRIANGULATION": {
+      "publicName": "importIfcCustomTriangulation",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_IFC_CYLINDRICAL_TESSELLATION": {
+      "publicName": "importIfcCylindricalTessellation",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_IFC_SKIP_SPACE_REPRESENTATIONS": {
+      "publicName": "importIfcSkipSpaceRepresentations",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_IFC_SMOOTHING_ANGLE": {
+      "publicName": "importIfcSmoothingAngle",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_IFC_UNIT_SCALE_TO_METERS": {
+      "publicName": "importIfcUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_IFC_UP_AXIS": {
+      "publicName": "importIfcUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_IRR_ANIM_FPS": {
+      "publicName": "importIrrAnimFps",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_LWO_ONE_LAYER_ONLY": {
+      "publicName": "importLwoLayer",
+      "supported": true,
+      "variants": [
+        {
+          "publicName": "importLwoLayerIndex",
+          "kind": "integer",
+          "nativeKind": "integer",
+          "default": 2147483647,
+          "minimum": 1
+        },
+        {
+          "publicName": "importLwoLayerName",
+          "kind": "string",
+          "nativeKind": "string",
+          "default": ""
+        }
+      ]
+    },
+    "IMPORT_LWO_UNIT_SCALE_TO_METERS": {
+      "publicName": "importLwoUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_LWO_UP_AXIS": {
+      "publicName": "importLwoUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_LWS_ANIM_END": {
+      "publicName": "importLwsAnimEnd",
+      "supported": true,
+      "default": 150392
+    },
+    "IMPORT_LWS_ANIM_START": {
+      "publicName": "importLwsAnimStart",
+      "supported": true,
+      "default": 150392
+    },
+    "IMPORT_MD2_KEYFRAME": {
+      "publicName": "importMd2Keyframe",
+      "supported": true
+    },
+    "IMPORT_MD3_HANDLE_MULTIPART": {
+      "publicName": "importMd3HandleMultipart",
+      "supported": true
+    },
+    "IMPORT_MD3_KEYFRAME": {
+      "publicName": "importMd3Keyframe",
+      "supported": true
+    },
+    "IMPORT_MD3_LOAD_SHADERS": {
+      "publicName": "importMd3LoadShaders",
+      "supported": true
+    },
+    "IMPORT_MD3_SHADER_SRC": {
+      "publicName": "importMd3ShaderSrc",
+      "supported": true
+    },
+    "IMPORT_MD3_SKIN_NAME": {
+      "publicName": "importMd3SkinName",
+      "supported": true
+    },
+    "IMPORT_MD5_NO_ANIM_AUTOLOAD": {
+      "publicName": "importMd5NoAnimAutoload",
+      "supported": true
+    },
+    "IMPORT_MD5_UNIT_SCALE_TO_METERS": {
+      "publicName": "importMd5UnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_MD5_UP_AXIS": {
+      "publicName": "importMd5UpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_MDC_KEYFRAME": {
+      "publicName": "importMdcKeyframe",
+      "supported": true
+    },
+    "IMPORT_MDL_COLORMAP": {
+      "publicName": "importMdlColormap",
+      "supported": true
+    },
+    "IMPORT_MDL_HL1_READ_ANIMATION_EVENTS": {
+      "publicName": "importMdlHl1ReadAnimationEvents",
+      "supported": true
+    },
+    "IMPORT_MDL_HL1_READ_ANIMATIONS": {
+      "publicName": "importMdlHl1ReadAnimations",
+      "supported": true
+    },
+    "IMPORT_MDL_HL1_READ_ATTACHMENTS": {
+      "publicName": "importMdlHl1ReadAttachments",
+      "supported": true
+    },
+    "IMPORT_MDL_HL1_READ_BLEND_CONTROLLERS": {
+      "publicName": "importMdlHl1ReadBlendControllers",
+      "supported": true
+    },
+    "IMPORT_MDL_HL1_READ_BONE_CONTROLLERS": {
+      "publicName": "importMdlHl1ReadBoneControllers",
+      "supported": true
+    },
+    "IMPORT_MDL_HL1_READ_HITBOXES": {
+      "publicName": "importMdlHl1ReadHitboxes",
+      "supported": true
+    },
+    "IMPORT_MDL_HL1_READ_MISC_GLOBAL_INFO": {
+      "publicName": "importMdlHl1ReadMiscGlobalInfo",
+      "supported": true
+    },
+    "IMPORT_MDL_HL1_READ_SEQUENCE_TRANSITIONS": {
+      "publicName": "importMdlHl1ReadSequenceTransitions",
+      "supported": true
+    },
+    "IMPORT_MDL_KEYFRAME": {
+      "publicName": "importMdlKeyframe",
+      "supported": true
+    },
+    "IMPORT_NFF_UNIT_SCALE_TO_METERS": {
+      "publicName": "importNffUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_NFF_UP_AXIS": {
+      "publicName": "importNffUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_NO_SKELETON_MESHES": {
+      "publicName": "importNoSkeletonMeshes",
+      "supported": true,
+      "kind": "boolean",
+      "nativeKind": "boolean",
+      "default": false
+    },
+    "IMPORT_OBJ_UNIT_SCALE_TO_METERS": {
+      "publicName": "importObjUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_OBJ_UP_AXIS": {
+      "publicName": "importObjUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_OFF_UNIT_SCALE_TO_METERS": {
+      "publicName": "importOffUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_OFF_UP_AXIS": {
+      "publicName": "importOffUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_OGEX_UNIT_SCALE_TO_METERS": {
+      "publicName": "importOgexUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_OGEX_UP_AXIS": {
+      "publicName": "importOgexUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_OGRE_MATERIAL_FILE": {
+      "publicName": "importOgreMaterialFile",
+      "supported": true
+    },
+    "IMPORT_OGRE_TEXTURETYPE_FROM_FILENAME": {
+      "publicName": "importOgreTexturetypeFromFilename",
+      "supported": true
+    },
+    "IMPORT_OGRE_UNIT_SCALE_TO_METERS": {
+      "publicName": "importOgreUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_OGRE_UP_AXIS": {
+      "publicName": "importOgreUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_PLY_UNIT_SCALE_TO_METERS": {
+      "publicName": "importPlyUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_PLY_UP_AXIS": {
+      "publicName": "importPlyUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_SCHEMA_DOCUMENT_PROVIDER": {
+      "publicName": "importSchemaDocumentProvider",
+      "supported": false,
+      "reason": "Pointer and callback properties require a purpose-built safe bridge."
+    },
+    "IMPORT_SMD_KEYFRAME": {
+      "publicName": "importSmdKeyframe",
+      "supported": true
+    },
+    "IMPORT_SMD_LOAD_ANIMATION_LIST": {
+      "publicName": "importSmdLoadAnimationList",
+      "supported": true
+    },
+    "IMPORT_SMD_UNIT_SCALE_TO_METERS": {
+      "publicName": "importSmdUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_SMD_UP_AXIS": {
+      "publicName": "importSmdUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_STL_UNIT_SCALE_TO_METERS": {
+      "publicName": "importStlUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_STL_UP_AXIS": {
+      "publicName": "importStlUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_TER_MAKE_UVS": {
+      "publicName": "importTerMakeUvs",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_UNREAL_KEYFRAME": {
+      "publicName": "importUnrealKeyframe",
+      "supported": true
+    },
+    "IMPORT_USD_UNIT_SCALE_TO_METERS": {
+      "publicName": "importUsdUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_USD_UP_AXIS": {
+      "publicName": "importUsdUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_X_UNIT_SCALE_TO_METERS": {
+      "publicName": "importXUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_X_UP_AXIS": {
+      "publicName": "importXUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_X3D_UNIT_SCALE_TO_METERS": {
+      "publicName": "importX3DUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_X3D_UP_AXIS": {
+      "publicName": "importX3DUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_XGL_UNIT_SCALE_TO_METERS": {
+      "publicName": "importXglUnitScaleToMeters",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "IMPORT_XGL_UP_AXIS": {
+      "publicName": "importXglUpAxis",
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
+    },
+    "PP_CT_MAX_SMOOTHING_ANGLE": {
+      "publicName": "ppCtMaxSmoothingAngle",
+      "supported": true
+    },
+    "PP_CT_TEXTURE_CHANNEL_INDEX": {
+      "publicName": "ppCtTextureChannelIndex",
+      "supported": true
+    },
+    "PP_DB_ALL_OR_NONE": {
+      "publicName": "ppDbAllOrNone",
+      "supported": true
+    },
+    "PP_DB_THRESHOLD": {
+      "publicName": "ppDbThreshold",
+      "supported": true
+    },
+    "PP_FD_CHECKAREA": {
+      "publicName": "ppFdCheckarea",
+      "supported": true
+    },
+    "PP_FD_REMOVE": {
+      "publicName": "ppFdRemove",
+      "supported": true
+    },
+    "PP_FID_ANIM_ACCURACY": {
+      "publicName": "ppFidAnimAccuracy",
+      "supported": true
+    },
+    "PP_FID_IGNORE_TEXTURECOORDS": {
+      "publicName": "ppFidIgnoreTexturecoords",
+      "supported": true
+    },
+    "PP_GSN_MAX_SMOOTHING_ANGLE": {
+      "publicName": "ppGsnMaxSmoothingAngle",
+      "supported": true
+    },
+    "PP_ICL_PTCACHE_SIZE": {
+      "publicName": "ppIclPtcacheSize",
+      "supported": true
+    },
+    "PP_LBW_MAX_WEIGHTS": {
+      "publicName": "ppLbwMaxWeights",
+      "supported": true
+    },
+    "PP_OG_EXCLUDE_LIST": {
+      "publicName": "ppOgExcludeList",
+      "supported": true
+    },
+    "PP_PTV_ADD_ROOT_TRANSFORMATION": {
+      "publicName": "ppPtvAddRootTransformation",
+      "supported": true
+    },
+    "PP_PTV_KEEP_HIERARCHY": {
+      "publicName": "ppPtvKeepHierarchy",
+      "supported": true
+    },
+    "PP_PTV_NORMALIZE": {
+      "publicName": "ppPtvNormalize",
+      "supported": true
+    },
+    "PP_PTV_ROOT_TRANSFORMATION": {
+      "publicName": "ppPtvRootTransformation",
+      "supported": true,
+      "default": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    },
+    "PP_RRM_EXCLUDE_LIST": {
+      "publicName": "ppRrmExcludeList",
+      "supported": true
+    },
+    "PP_RVC_FLAGS": {
+      "publicName": "ppRvcFlags",
+      "supported": true
+    },
+    "PP_SBBC_MAX_BONES": {
+      "publicName": "ppSbbcMaxBones",
+      "supported": true
+    },
+    "PP_SBP_REMOVE": {
+      "publicName": "ppSbpRemove",
+      "supported": true
+    },
+    "PP_SLM_TRIANGLE_LIMIT": {
+      "publicName": "ppSlmTriangleLimit",
+      "supported": true
+    },
+    "PP_SLM_VERTEX_LIMIT": {
+      "publicName": "ppSlmVertexLimit",
+      "supported": true
+    },
+    "PP_TUV_EVALUATE": {
+      "publicName": "ppTuvEvaluate",
+      "supported": true
+    },
+    "sourceFilePath": {
+      "publicName": "sourceFilePath",
+      "supported": false,
+      "reason": "Internal importer bookkeeping, not a consumer configuration capability."
+    },
+    "TRANSFORM COORDSYSTEM FOR HS! MODELS": {
+      "publicName": "importMdlHl1TransformCoordSystem",
+      "supported": true
+    },
+    "UNREAL_HANDLE_FLAGS": {
+      "publicName": "importUnrealHandleFlags",
+      "supported": true
+    },
+    "USDZ_EXPORT_ANIMATIONS": {
+      "publicName": "animations",
+      "supported": true,
+      "formats": ["usda", "usdz"]
+    },
+    "USDZ_EXPORT_CLEARCOAT": {
+      "publicName": "clearcoat",
+      "supported": true,
+      "formats": ["usda", "usdz"]
+    },
+    "USDZ_EXPORT_MATERIALX": {
+      "publicName": "materialX",
+      "supported": true,
+      "formats": ["usda", "usdz"]
+    },
+    "USDZ_EXPORT_SUBDIVISION": {
+      "publicName": "subdivision",
+      "supported": true,
+      "formats": ["usda", "usdz"]
+    },
+    "USDZ_EXPORT_VOLUMES": {
+      "publicName": "volumes",
+      "supported": true,
+      "formats": ["usda", "usdz"]
+    },
+    "USDZ_OPTIMIZE_FOR_MOBILE": {
+      "publicName": "optimizeForMobile",
+      "supported": true,
+      "formats": ["usda", "usdz"]
+    },
+    "USE_GLTF_PBR_SPECULAR_GLOSSINESS": {
+      "publicName": "useGltfPbrSpecularGlossiness",
+      "supported": true,
+      "formats": ["glb", "gltf"]
+    },
+    "USE_UNLIMITED_BONES_PER VERTEX": {
+      "publicName": "unlimitedSkinningBonesPerVertex",
+      "supported": true,
+      "formats": ["glb", "gltf"]
+    },
+    "JSON_SKIP_WHITESPACES": {
+      "publicName": "skipWhitespaces",
+      "supported": true,
+      "formats": ["assjson"],
+      "default": true,
+      "applyDefault": true
+    }
+  },
+  "postProcess": {
+    "aiProcess_CalcTangentSpace": {
+      "publicName": "calcTangentSpace"
+    },
+    "aiProcess_JoinIdenticalVertices": {
+      "publicName": "joinIdenticalVertices"
+    },
+    "aiProcess_MakeLeftHanded": {
+      "publicName": "makeLeftHanded"
+    },
+    "aiProcess_Triangulate": {
+      "publicName": "triangulate"
+    },
+    "aiProcess_RemoveComponent": {
+      "publicName": "removeComponent"
+    },
+    "aiProcess_GenNormals": {
+      "publicName": "generateNormals",
+      "conflicts": ["generateSmoothNormals"]
+    },
+    "aiProcess_GenSmoothNormals": {
+      "publicName": "generateSmoothNormals",
+      "conflicts": ["generateNormals"]
+    },
+    "aiProcess_SplitLargeMeshes": {
+      "publicName": "splitLargeMeshes"
+    },
+    "aiProcess_PreTransformVertices": {
+      "publicName": "preTransformVertices"
+    },
+    "aiProcess_LimitBoneWeights": {
+      "publicName": "limitBoneWeights"
+    },
+    "aiProcess_ValidateDataStructure": {
+      "publicName": "validateDataStructure"
+    },
+    "aiProcess_ImproveCacheLocality": {
+      "publicName": "improveCacheLocality"
+    },
+    "aiProcess_RemoveRedundantMaterials": {
+      "publicName": "removeRedundantMaterials"
+    },
+    "aiProcess_FixInfacingNormals": {
+      "publicName": "fixInfacingNormals"
+    },
+    "aiProcess_PopulateArmatureData": {
+      "publicName": "populateArmatureData"
+    },
+    "aiProcess_SortByPType": {
+      "publicName": "sortByPrimitiveType"
+    },
+    "aiProcess_FindDegenerates": {
+      "publicName": "findDegenerates"
+    },
+    "aiProcess_FindInvalidData": {
+      "publicName": "findInvalidData"
+    },
+    "aiProcess_GenUVCoords": {
+      "publicName": "generateUvCoordinates"
+    },
+    "aiProcess_TransformUVCoords": {
+      "publicName": "transformUvCoords"
+    },
+    "aiProcess_FindInstances": {
+      "publicName": "findInstances"
+    },
+    "aiProcess_OptimizeMeshes": {
+      "publicName": "optimizeMeshes"
+    },
+    "aiProcess_OptimizeGraph": {
+      "publicName": "optimizeGraph"
+    },
+    "aiProcess_FlipUVs": {
+      "publicName": "flipUvs"
+    },
+    "aiProcess_FlipWindingOrder": {
+      "publicName": "flipWindingOrder"
+    },
+    "aiProcess_SplitByBoneCount": {
+      "publicName": "splitByBoneCount"
+    },
+    "aiProcess_Debone": {
+      "publicName": "debone"
+    },
+    "aiProcess_GlobalScale": {
+      "publicName": "globalScale"
+    },
+    "aiProcess_EmbedTextures": {
+      "publicName": "embedTextures"
+    },
+    "aiProcess_ForceGenNormals": {
+      "publicName": "forceGenerateNormals"
+    },
+    "aiProcess_DropNormals": {
+      "publicName": "dropNormals"
+    },
+    "aiProcess_GenBoundingBoxes": {
+      "publicName": "generateBoundingBoxes"
+    }
+  },
+  "defaultPostProcess": [
+    "triangulate",
+    "generateUvCoordinates",
+    "joinIdenticalVertices",
+    "sortByPrimitiveType"
+  ]
+}

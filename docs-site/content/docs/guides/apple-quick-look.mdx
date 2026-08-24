@@ -1,0 +1,73 @@
+---
+title: Open USDZ in Apple Quick Look
+description: Convert a model to USDZ, detect Apple AR Quick Look, and launch the result from a browser.
+---
+
+Apple Quick Look opens a USDZ file as a rotatable model and, on supported
+iPhones and iPads, can place it in the room through AR. The conversion below
+runs locally; open this page on a compatible device to see **Open in AR**.
+
+### 1. Produce one USDZ file
+
+<ConvertDemo>
+
+```typescript
+import { convert } from 'libassimp';
+
+const response = await fetch('/cube.obj');
+const bytes = new Uint8Array(await response.arrayBuffer());
+const {
+  files: [usdz],
+} = await convert({ name: 'cube.obj', bytes }, { to: 'usdz' });
+```
+
+</ConvertDemo>
+
+Quick Look expects one USDZ archive served as `model/vnd.usdz+zip`. A browser
+that cannot launch AR can still download the same output.
+
+### 2. Detect support before showing the action
+
+Apple exposes Quick Look through an anchor whose `relList` supports `ar`.
+Check the host as well: desktop Safari can understand the relationship without
+providing the iPhone or iPad AR experience.
+
+```typescript
+const anchor = document.createElement('a');
+const appleMobile =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const canOpenAr = appleMobile && anchor.relList.supports('ar');
+```
+
+Other iOS browsers also delegate USDZ links to Quick Look. If your product
+supports them, include their iOS user-agent tokens as a fallback after the
+Apple-device check; libassimp's demo follows the same rule as Tau's viewer.
+
+### 3. Launch from the user's click
+
+Create the object URL after conversion, retain it while the action is visible,
+and revoke it when replacing the result or unmounting the view.
+
+```typescript
+const openInAr = (bytes: Uint8Array<ArrayBuffer>): void => {
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'model/vnd.usdz+zip' }));
+  const anchor = document.createElement('a');
+  anchor.rel = 'ar';
+  anchor.href = url;
+  anchor.append(document.createElement('img'));
+  anchor.click();
+};
+```
+
+Call `openInAr` directly from the button's click handler. Browsers may block a
+launch detached from a user gesture. The empty image child is required by the
+Quick Look link contract.
+
+## Variations
+
+**Desktop and Android.** Keep a normal USDZ download visible; do not show a
+button that promises AR when the host cannot honour it.
+
+**A hosted USDZ.** A regular `<a rel="ar" href="model.usdz">` works when the
+file is already on a URL. The Blob route is only for bytes produced in memory.

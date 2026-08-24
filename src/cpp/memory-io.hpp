@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// An assimp IOSystem backed by an in-memory file map plus a synchronous host
-// callback for anything the caller did not hand over up front.
+// An assimp IOSystem backed by staged random-access bytes plus a file-level
+// resolver. Parser reads and seeks stay entirely inside Wasm.
 
 #pragma once
 
@@ -40,15 +40,15 @@ struct NamedBytes {
   Bytes bytes;
 };
 
-/** Sidecar loader. Returns false when the host cannot supply `name`. Synchronous by contract. */
-using Resolver = std::function<bool(const std::string& name, Bytes& out)>;
+enum class ResolveStatus { Missing, Found, Pending };
+
+/** Sidecar loader. Pending marks the current attempt for JS replay. */
+using Resolver = std::function<ResolveStatus(const std::string& name, Bytes& out)>;
 
 /** Everything one convert call reads and writes. Both IOSystems below share exactly one of these. */
 class MemoryFiles {
  public:
-  MemoryFiles(std::vector<NamedBytes> inputs, Resolver resolve) : resolve_(std::move(resolve)) {
-    for (NamedBytes& input : inputs) inputs_.push_back(std::move(input));
-  }
+  MemoryFiles(std::deque<NamedBytes>& inputs, Resolver resolve) : inputs_(inputs), resolve_(std::move(resolve)) {}
 
   /** Exact name, then basename, then the host callback. Both outcomes are cached. */
   const Bytes* find(const std::string& name) {
@@ -59,9 +59,15 @@ class MemoryFiles {
     for (const NamedBytes& input : inputs_) {
       if (basename(input.name) == base) return &input.bytes;
     }
-    if (!resolve_ || missing_.count(name) != 0) return nullptr;
+    if (pending_ || !resolve_ || missing_.count(name) != 0) return nullptr;
     Bytes resolved;
-    if (!resolve_(name, resolved)) {
+    const ResolveStatus status = resolve_(name, resolved);
+    if (status == ResolveStatus::Pending) {
+      pending_ = true;
+      pendingName_ = name;
+      return nullptr;
+    }
+    if (status == ResolveStatus::Missing) {
       missing_.insert(name);
       return nullptr;
     }
@@ -91,6 +97,9 @@ class MemoryFiles {
   /** Everything the exporter wrote, in write order. */
   const std::deque<NamedBytes>& outputs() const { return outputs_; }
 
+  bool pending() const { return pending_; }
+  const std::string& pendingName() const { return pendingName_; }
+
   static std::string basename(const std::string& path) {
     const std::size_t slash = path.find_last_of("/\\");
     return slash == std::string::npos ? path : path.substr(slash + 1);
@@ -98,10 +107,12 @@ class MemoryFiles {
 
  private:
   // Deques, not vectors: streams hold pointers into these while assimp keeps opening more files.
-  std::deque<NamedBytes> inputs_;
+  std::deque<NamedBytes>& inputs_;
   std::deque<NamedBytes> outputs_;
   std::unordered_set<std::string> missing_;
   Resolver resolve_;
+  bool pending_ = false;
+  std::string pendingName_;
 };
 
 /** Append-and-seek stream over one output buffer. */

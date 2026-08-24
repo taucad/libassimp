@@ -2,7 +2,9 @@ import path from 'node:path';
 
 // Initial public package contract from the blueprint's Target Package Manifest.
 // Change the list and ceiling together in the causing pull request.
-const PACKAGE_FILE_COUNT_CEILING = 28;
+// Origin: the generated capability registry and validator split measured in the
+// multi-output/typed-config candidate; 30 exact files, with no spare allowance.
+const PACKAGE_FILE_COUNT_CEILING = 30;
 
 export const PACKAGE_FILES = [
   'BREAKING_CHANGES.md',
@@ -12,6 +14,7 @@ export const PACKAGE_FILES = [
   'compatibility.md',
   'dist/assimp-error.d.mts',
   'dist/assimp-error.mjs',
+  'dist/assimp-options.mjs',
   'dist/cjs-error.cjs',
   'dist/cjs-error.d.cts',
   'dist/convert.d.mts',
@@ -20,7 +23,8 @@ export const PACKAGE_FILES = [
   'dist/create-assimp.mjs',
   'dist/exporter.d.mts',
   'dist/exporter.mjs',
-  'dist/formats.d.mts',
+  'dist/generated/assimp-capabilities.d.mts',
+  'dist/generated/assimp-capabilities.mjs',
   'dist/importer.d.mts',
   'dist/importer.mjs',
   'dist/index.d.mts',

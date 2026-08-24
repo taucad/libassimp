@@ -1,0 +1,50 @@
+---
+title: Convert to multiple formats
+description: Import once, configure ordered targets independently, and consume a positional result tuple.
+---
+
+## One plan
+
+```typescript
+import { convertFormats } from 'libassimp';
+import { readFile } from 'node:fs/promises';
+
+const bytes = new Uint8Array(await readFile('assembly.fbx'));
+const [glb, step, obj] = await convertFormats(
+  { name: 'assembly.fbx', bytes },
+  {
+    targets: [{ to: 'glb' }, { to: 'step' }, { to: 'obj', exportOptions: { materials: false } }],
+  },
+);
+
+console.log(glb.format, step.files[0].name, obj.files[0].name);
+```
+
+The source bytes are copied once and Assimp imports and post-processes once. Each result position corresponds to the target at the same position and carries its literal `format`.
+
+## Repeated targets
+
+```typescript
+import { convertFormats } from 'libassimp/exporter';
+
+const bytes = new Uint8Array();
+const [ascii, binary] = await convertFormats(
+  { name: 'part.glb', bytes },
+  {
+    targets: [
+      { to: 'stl', exportOptions: { binary: false } },
+      { to: 'stl', exportOptions: { binary: true } },
+    ],
+  },
+);
+
+console.log(ascii.files[0].name, binary.files[0].name);
+```
+
+Position distinguishes repeated formats; no caller-generated ID is needed.
+
+## Failure and memory behavior
+
+All request configuration is validated before import. Targets export sequentially into isolated stores. If target N fails, the Promise rejects with `formatIndex` and `format`, and no partial public result escapes.
+
+Completed outputs accumulate in JavaScript until the plan resolves. For very large assets, use singular `convert` when persisting and releasing one output before starting the next matters more than avoiding repeated imports.

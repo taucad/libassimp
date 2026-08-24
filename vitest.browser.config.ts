@@ -26,10 +26,11 @@ const entry = (name: string): string =>
 
 export default defineConfig({
   resolve: {
-    alias: {
-      'libassimp-candidate/importer': entry('importer'),
-      'libassimp-candidate/exporter': entry('exporter'),
-    },
+    alias: [
+      { find: 'libassimp-candidate/importer', replacement: entry('importer') },
+      { find: 'libassimp-candidate/exporter', replacement: entry('exporter') },
+      { find: 'libassimp-candidate', replacement: entry('index') },
+    ],
   },
   test: {
     browser: {

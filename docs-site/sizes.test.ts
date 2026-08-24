@@ -16,10 +16,15 @@ const wasmTest = VARIANTS.every((variant) => existsSync(wasmPath(variant))) ? it
 
 const distribution = resolve(ROOT, 'dist/index.mjs');
 const distributionTest = existsSync(distribution) ? it : it.skip;
+const demoWasm = resolve(import.meta.dirname, 'public/demo/libassimp-full.wasm');
 
 describe('published size figures', () => {
   it('names every shipped build', () => {
     expect(Object.keys(sizes.wasm)).toEqual([...VARIANTS]);
+  });
+
+  it('self-hosts the measured full binary used by every live demo', () => {
+    expect(statSync(demoWasm).size).toBe(sizes.wasm.full.raw);
   });
 
   // Raw lengths are compared rather than recompressed: brotli-11 over 29 MB of binaries costs a

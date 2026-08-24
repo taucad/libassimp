@@ -60,11 +60,15 @@ describe('documentation fences', () => {
       }),
     );
     const tsc = join(root, 'node_modules/typescript/bin/tsc');
-    expect(() =>
+    let diagnostics = '';
+    try {
       execFileSync(process.execPath, [tsc, '--project', join(work, 'tsconfig.json')], {
         encoding: 'utf8',
         stdio: 'pipe',
-      }),
-    ).not.toThrow();
+      });
+    } catch (error) {
+      diagnostics = `${error.stdout ?? ''}${error.stderr ?? ''}`;
+    }
+    expect(diagnostics).toBe('');
   });
 });

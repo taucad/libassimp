@@ -13,8 +13,8 @@
         "*.test.ts"
       ],
       "ignore": ["assimp/**", "src/cjs-error.d.cts"],
-      "ignoreBinaries": ["cmake", "ctest"],
-      "ignoreDependencies": ["@nx/js"]
+      "ignoreBinaries": ["cmake", "ctest", "ninja"],
+      "ignoreDependencies": ["@nx/js", "libassimp-candidate"]
     },
     "docs-site": {
       "entry": [
@@ -24,7 +24,8 @@
         "scripts/*.mjs",
         "source.config.ts",
         "*.config.{mjs,ts}"
-      ]
+      ],
+      "ignore": ["public/demo/libassimp-full.js"]
     }
   }
 }

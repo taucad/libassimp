@@ -1,29 +1,53 @@
 ---
 title: Resolve sidecar files
-description: Feed the importer the referenced files it asks for, from a directory, a bucket or a browser file picker.
+description: Load referenced buffers, textures, materials, and layers asynchronously when Assimp asks for them.
 ---
 
-Models reference other files: an OBJ names a `.mtl`, a glTF names a `.bin` and
-its textures, a USD layer names other layers. `resolve` answers those requests
-by name, one at a time.
+`resolve(name)` may return bytes, `undefined`, or a Promise of either. Supplied files are checked first; the resolver handles names not already present.
 
-### 1. Return the bytes, or `undefined`
+## Fetch over the network
+
+<ConvertDemo>
 
 ```typescript
-import { convert } from 'libassimp';
+import { convert } from 'libassimp/importer';
 
-import { readFileSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-
-const bytes = new Uint8Array(await readFile('scene.gltf'));
+const entryUrl = new URL('https://assets.example/scene.gltf');
+const entry = await fetch(entryUrl);
+const bytes = new Uint8Array(await entry.arrayBuffer());
 
 const { files } = await convert(
   { name: 'scene.gltf', bytes },
   {
     to: 'glb',
-    resolve: (name) => {
+    resolve: async (name) => {
+      const response = await fetch(new URL(name, entryUrl));
+      return response.ok ? new Uint8Array(await response.arrayBuffer()) : undefined;
+    },
+  },
+);
+
+console.log(files[0].name);
+```
+
+</ConvertDemo>
+
+Returning `undefined` means unavailable; Assimp decides whether that reference is optional. Throwing or rejecting produces `RESOLVE_FAILED` with the exact `fileName` and original `cause`.
+
+## Read from Node asynchronously
+
+```typescript
+import { convert } from 'libassimp';
+import { readFile } from 'node:fs/promises';
+
+const bytes = new Uint8Array(await readFile('models/cube.obj'));
+const { files } = await convert(
+  { name: 'cube.obj', bytes },
+  {
+    to: 'glb',
+    resolve: async (name) => {
       try {
-        return new Uint8Array(readFileSync(name));
+        return new Uint8Array(await readFile(new URL(name, 'file:///models/')));
       } catch {
         return undefined;
       }
@@ -34,60 +58,8 @@ const { files } = await convert(
 console.log(files[0].name);
 ```
 
-Returning `undefined` is not a failure by itself: the import fails only if the
-engine needed that file. A missing `.mtl` leaves an OBJ with default
-materials; a missing glTF `.bin` fails with `IMPORT_FAILED` and the message
-`GLTF: could not open referenced file "scene.bin"`.
+The consumer callback is invoked once per exact requested name within a conversion. JSPI hosts suspend inside parsing; other hosts transparently replay staged parsing from the settled per-call cache. The public behavior is identical.
 
-### 2. Prefetch, because the callback cannot wait
+## Browser-picked files
 
-`resolve` is synchronous by contract — assimp asks in the middle of parsing —
-so anything asynchronous has to happen first. Read the candidates into a map
-and serve from it.
-
-```typescript
-import { convert } from 'libassimp';
-
-const download = async (name: string): Promise<Uint8Array> =>
-  new Uint8Array(await (await fetch(`https://assets.example.com/${name}`)).arrayBuffer());
-
-const entry = await download('scene.gltf');
-const cache = new Map([['scene.bin', await download('scene.bin')]]);
-
-const { files } = await convert(
-  { name: 'scene.gltf', bytes: entry },
-  { to: 'glb', resolve: (name) => cache.get(name) },
-);
-
-console.log(files[0].name);
-```
-
-### 3. Serve a browser file picker from the same map
-
-A directory picker hands you every file at once, which is exactly the shape
-the callback wants.
-
-```typescript
-import { convert } from 'libassimp/importer';
-
-const load = async (input: HTMLInputElement): Promise<Map<string, Uint8Array>> => {
-  const entries = await Promise.all(
-    Array.from(input.files ?? []).map(
-      async (file) => [file.name, new Uint8Array(await file.arrayBuffer())] as const,
-    ),
-  );
-  return new Map(entries);
-};
-```
-
-Pass `cache.get(name)` as `resolve`, and the entry file as the first argument.
-Names arrive as the model wrote them, so keep the picker's names intact rather
-than rewriting them to paths.
-
-## Variations
-
-**Files you already have.** Passing them in the array is simpler than a
-callback, and the two combine: the array is checked first.
-
-**Names with directories in them.** A model may reference `textures/base.png`.
-The callback receives the string the model wrote, so normalise it on your side.
+Files already selected together are simplest as the input array. A directory picker can also populate a `Map<string, Uint8Array>` and return `map.get(name)` synchronously. No prefetch is required for sources that support async reads.

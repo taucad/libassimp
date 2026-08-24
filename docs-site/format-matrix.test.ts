@@ -24,9 +24,32 @@ describe('format matrix', () => {
     }
   });
 
-  it('keeps the aliases the export vocabulary documents', () => {
-    const ids = new Set(matrix.full.export.map(({ id }) => id));
-    for (const id of ['glb2', 'gltf2', 'stp', 'collada']) expect(ids.has(id)).toBe(true);
+  it('uses the exact canonical export vocabulary and option routes', () => {
+    expect(matrix.full.export.map(({ id }) => id)).toEqual([
+      '3ds',
+      '3mf',
+      'assjson',
+      'dae',
+      'fbx',
+      'glb',
+      'gltf',
+      'obj',
+      'ply',
+      'step',
+      'stl',
+      'usda',
+      'usdz',
+      'x',
+      'x3d',
+    ]);
+    expect(matrix.importer.export.map(({ id }) => id)).toEqual(['assjson', 'glb', 'gltf']);
+    expect(Object.keys(matrix.full.export.find(({ id }) => id === 'stl')?.exportOptions ?? {})).toContain(
+      'binary',
+    );
+    expect(Object.keys(matrix.full.export.find(({ id }) => id === 'obj')?.exportOptions ?? {})).toContain(
+      'materials',
+    );
+    expect(JSON.stringify(matrix)).not.toMatch(/glb1|gltf1|glb2|gltf2|objnomtl|plyb|stlb/u);
   });
 
   generatedTest('regenerates to the committed file, when the package is built', () => {

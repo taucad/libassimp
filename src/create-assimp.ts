@@ -1,162 +1,295 @@
-/**
- * Loading and lifetime for one compiled variant: the bundler-opaque glue
- * import, the instance façade, and the lazy instance every one-shot `convert`
- * shares. Each entry module binds this to its own pair of artifact URLs.
- */
+/** One-artifact loading, automatic JSPI/replay selection, queues, and lifetime. */
 
-import type { AssimpFile, ConvertOptions, ConvertResult, NativeModule } from './convert.js';
-import { runConvert } from './convert.js';
-import type { FormatInfo } from './formats.js';
+import type {
+  AssimpFile,
+  ConvertFormatsOptions,
+  ConvertFormatsResult,
+  ConvertOptions,
+  ConvertResult,
+  ConvertTarget,
+  NativeModule,
+  NativeRuntime,
+} from './convert.js';
+import { prepareConversion, ResolutionContext, runPreparedConversion } from './convert.js';
+import type { AllExportFormat, ExportFormatInfo, FormatInfo } from './generated/assimp-capabilities.js';
 
-/**
- * Settings for {@link Assimp} creation.
- *
- * @public
- */
+/** Settings for {@link Assimp} creation. @public */
 export type CreateAssimpOptions = {
-  /**
-   * Where to fetch this entry's `.wasm`. Defaults to the binary shipped beside
-   * the entry module, which Node resolves directly and a bundler emits as an
-   * asset. Point it at your own copy when you serve the binary from a CDN or a
-   * hashed asset directory.
-   */
-  wasmUrl?: string | URL;
-  /** Already-fetched binary, used instead of fetching `wasmUrl`. */
-  wasmBinary?: ArrayBuffer | Uint8Array;
-  /**
-   * Receives the compiled module's diagnostic lines. Without it they are
-   * dropped; a failure that stops a conversion is thrown, never only logged.
-   */
-  onLog?: (entry: { level: 'info' | 'error'; message: string }) => void;
+  /** Wasm location. Defaults to the single artifact shipped beside this entry. */
+  readonly wasmUrl?: string | URL;
+  /** Already-fetched bytes used instead of `wasmUrl`. */
+  readonly wasmBinary?: ArrayBuffer | Uint8Array;
+  /** Receives generated-runtime diagnostics. */
+  readonly onLog?: (entry: { readonly level: 'info' | 'error'; readonly message: string }) => void;
 };
 
-/**
- * A loaded conversion instance: one compiled module reused across calls, with
- * a lifetime you control. The one-shot `convert` shares an instance of its own.
- *
- * @public
- */
-export type Assimp<Format extends string = string> = {
-  /** Convert files on this instance. Rejects once the instance is disposed. */
-  readonly convert: (
-    files: AssimpFile | readonly AssimpFile[],
-    options: ConvertOptions<Format>,
-  ) => Promise<ConvertResult>;
-  /** The formats this entry was compiled with, one entry per id. */
+/** Singular conversion callable narrowed to one package entry. @public */
+export type ConvertFunction<ExportFormat extends AllExportFormat> = <Format extends ExportFormat>(
+  files: AssimpFile | readonly AssimpFile[],
+  options: ConvertOptions<Format>,
+) => Promise<ConvertResult>;
+
+/** Positional plural conversion callable narrowed to one package entry. @public */
+export type ConvertFormatsFunction<ExportFormat extends AllExportFormat> = <
+  const Targets extends readonly [ConvertTarget<ExportFormat>, ...ConvertTarget<ExportFormat>[]],
+>(
+  files: AssimpFile | readonly AssimpFile[],
+  options: ConvertFormatsOptions<Targets>,
+) => Promise<ConvertFormatsResult<Targets>>;
+
+/** Loaded conversion instance. @public */
+export type Assimp<ImportFormat extends string, ExportFormat extends AllExportFormat> = {
+  readonly convert: ConvertFunction<ExportFormat>;
+  readonly convertFormats: ConvertFormatsFunction<ExportFormat>;
   readonly formats: {
-    readonly import: readonly FormatInfo[];
-    readonly export: readonly FormatInfo[];
+    readonly import: readonly FormatInfo<ImportFormat>[];
+    readonly export: readonly ExportFormatInfo<ExportFormat>[];
   };
-  /**
-   * Release the instance. Later `convert` calls reject with an `Error`, so
-   * create a new instance rather than retrying on this one.
-   */
   readonly dispose: () => void;
-  /** `using assimp = await createAssimp()` disposes at scope exit. */
   readonly [Symbol.dispose]: () => void;
 };
 
-/** Emscripten module overrides this wrapper sets. @internal */
 type ModuleOptions = {
   readonly locateFile: () => string;
   readonly print: (message: string) => void;
   readonly printErr: (message: string) => void;
-  readonly instantiateWasm?: (
+  readonly instantiateWasm: (
     imports: WebAssembly.Imports,
     receive: (instance: WebAssembly.Instance) => void,
-  ) => void;
+  ) => WebAssembly.Exports;
 };
 
-/** The `-sMODULARIZE -sEXPORT_ES6` default export. @internal */
 type ModuleFactory = (options: ModuleOptions) => Promise<NativeModule>;
 
-/** One diagnostic sink per Emscripten stream. */
+type JspiWebAssembly = typeof WebAssembly & {
+  readonly Suspending?: new (
+    callback: (...arguments_: number[]) => number | Promise<number>,
+  ) => WebAssembly.ImportValue;
+  readonly promising?: (callback: (handle: number) => number) => (handle: number) => Promise<number>;
+};
+
+type EntryFormats<ImportFormat extends string, ExportFormat extends AllExportFormat> = Readonly<{
+  import: readonly FormatInfo<ImportFormat>[];
+  export: readonly ExportFormatInfo<ExportFormat>[];
+}>;
+
 const sink =
   (onLog: CreateAssimpOptions['onLog'], level: 'info' | 'error') =>
   (message: string): void => {
     onLog?.({ level, message });
   };
 
-/** Keep the first description of each id; importers repeat shared extensions. */
-const unique = (formats: readonly FormatInfo[]): readonly FormatInfo[] => {
-  const byId = new Map<string, FormatInfo>();
-  for (const format of formats) {
-    if (!byId.has(format.id)) byId.set(format.id, format);
-  }
-  return [...byId.values()];
+const wasmSourceUrl = (configured: string | URL | undefined, fallback: URL): URL => {
+  if (configured instanceof URL) return configured;
+  return configured === undefined ? fallback : new URL(configured, fallback);
 };
 
-const loadModule = async (
+/** Compile a URL with a byte fallback for hosts without streaming compilation. @internal */
+export const compileUrl = async (url: URL): Promise<WebAssembly.Module> => {
+  if (url.protocol === 'file:' && 'process' in globalThis) {
+    const { readFile } = await import('node:fs/promises');
+    return WebAssembly.compile(await readFile(url));
+  }
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to fetch ${url.href}: ${response.status} ${response.statusText}`);
+  try {
+    return await WebAssembly.compileStreaming(Promise.resolve(response.clone()));
+  } catch {
+    return WebAssembly.compile(await response.arrayBuffer());
+  }
+};
+
+/** Report whether the host exposes both JSPI primitives used by libassimp. @internal */
+export const isJspiAvailable = (): boolean => {
+  const wasm = WebAssembly as JspiWebAssembly;
+  return typeof wasm.Suspending === 'function' && typeof wasm.promising === 'function';
+};
+
+/** Find the artifact's single unsupplied host-function import. @internal */
+export const missingImport = (
+  compiled: WebAssembly.Module,
+  imports: WebAssembly.Imports,
+): WebAssembly.ModuleImportDescriptor => {
+  const mutable = imports;
+  const missing = WebAssembly.Module.imports(compiled).filter(({ kind, module, name }) => {
+    const supplied = mutable[module]?.[name];
+    if (kind === 'function') return typeof supplied !== 'function';
+    return supplied === undefined;
+  });
+  if (missing.length !== 1 || missing[0]?.kind !== 'function') {
+    throw new Error(
+      `libassimp artifact invariant failed: expected one host function import, found ${missing.length}.`,
+    );
+  }
+  return missing[0];
+};
+
+/** Load and bind one generated glue/Wasm pair. @internal */
+export const loadModule = async (
+  glueUrl: URL,
+  defaultWasmUrl: URL,
+  options: CreateAssimpOptions,
+): Promise<NativeRuntime> => {
+  try {
+    const compiled =
+      options.wasmBinary === undefined
+        ? await compileUrl(wasmSourceUrl(options.wasmUrl, defaultWasmUrl))
+        : await WebAssembly.compile(options.wasmBinary as BufferSource);
+    const glue = (await import(/* webpackIgnore: true */ /* @vite-ignore */ glueUrl.href)) as {
+      default: ModuleFactory;
+    };
+    const jspi = isJspiAvailable();
+    const runtimeState: { instance?: WebAssembly.Instance; memory?: WebAssembly.Memory } = {};
+    let resolveInstantiation: (value: WebAssembly.Instance | PromiseLike<WebAssembly.Instance>) => void;
+    const instantiationRequested = new Promise<WebAssembly.Instance>((resolve) => {
+      resolveInstantiation = resolve;
+    });
+    let active: ResolutionContext | undefined;
+    const dispatch = (operation: number, first: number, second: number): number | Promise<number> => {
+      if (active === undefined || runtimeState.memory === undefined) {
+        throw new Error('libassimp host dispatch called outside an active conversion.');
+      }
+      return active.dispatch({
+        operation,
+        first,
+        second,
+        memory: runtimeState.memory,
+        suspending: jspi,
+      });
+    };
+
+    const nativePromise = glue.default({
+      locateFile: () => wasmSourceUrl(options.wasmUrl, defaultWasmUrl).href,
+      print: sink(options.onLog, 'info'),
+      printErr: sink(options.onLog, 'error'),
+      instantiateWasm: (baseImports, receive) => {
+        const descriptor = missingImport(compiled, baseImports);
+        const imports = baseImports;
+        const moduleImports = (imports[descriptor.module] ??= {});
+        const wasm = WebAssembly as JspiWebAssembly;
+        moduleImports[descriptor.name] =
+          jspi && wasm.Suspending !== undefined ? new wasm.Suspending(dispatch) : dispatch;
+        const instantiation = WebAssembly.instantiate(compiled, baseImports).then((instance) => {
+          runtimeState.instance = instance;
+          receive(instance);
+          return instance;
+        });
+        resolveInstantiation(instantiation);
+        return {};
+      },
+    });
+    const instance = await Promise.race([
+      instantiationRequested,
+      nativePromise.then(() => {
+        throw new Error('libassimp glue did not request Wasm instantiation.');
+      }),
+    ]);
+    const native = await nativePromise;
+    const memoryExport = WebAssembly.Module.exports(compiled).find(({ kind }) => kind === 'memory');
+    const rawExport = native._libassimp_run_plan;
+    const foundMemory = memoryExport && instance.exports[memoryExport.name];
+    if (!(foundMemory instanceof WebAssembly.Memory) || typeof rawExport !== 'function') {
+      throw new Error('libassimp artifact is missing its memory or stable raw plan export.');
+    }
+    runtimeState.memory = foundMemory;
+    const raw = rawExport;
+    const wasm = WebAssembly as JspiWebAssembly;
+    const invoke = jspi && wasm.promising !== undefined ? wasm.promising(raw) : raw;
+    return {
+      native,
+      runPlan: async (handle, context) => {
+        if (active !== undefined) throw new Error('libassimp instance re-entry is not allowed.');
+        active = context;
+        try {
+          return await invoke(handle);
+        } finally {
+          active = undefined;
+        }
+      },
+    };
+  } catch (error) {
+    options.onLog?.({ level: 'error', message: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+};
+
+const disposedError = (): Error => new Error('assimp instance disposed; create another with createAssimp().');
+
+/** Bind one package entry to its artifact and generated static format tables. @internal */
+export const createEntry = <ImportFormat extends string, ExportFormat extends AllExportFormat>(
   glueUrl: URL,
   wasmUrl: URL,
-  options: CreateAssimpOptions,
-): Promise<NativeModule> => {
-  // Imported through its own URL so a bundler emits the glue as an asset
-  // instead of following the edge and pulling every variant's Emscripten
-  // runtime — and its Node branches — into the application graph.
-  const glue = (await import(/* webpackIgnore: true */ /* @vite-ignore */ glueUrl.href)) as {
-    default: ModuleFactory;
-  };
-  // `BufferSource` excludes views over a `SharedArrayBuffer`, which no caller
-  // hands to a loader; the public option stays the plain `Uint8Array` a file
-  // read returns.
-  const wasmBinary = options.wasmBinary as BufferSource | undefined;
-  return glue.default({
-    locateFile: () => (options.wasmUrl ?? wasmUrl).toString(),
-    print: sink(options.onLog, 'info'),
-    printErr: sink(options.onLog, 'error'),
-    ...(wasmBinary === undefined
-      ? {}
-      : {
-          instantiateWasm: (imports, receive) => {
-            void WebAssembly.instantiate(wasmBinary, imports).then(({ instance }) => {
-              receive(instance);
-            });
-          },
-        }),
-  });
-};
-
-/**
- * Bind one compiled variant to its artifact URLs.
- *
- * @internal
- * @param glueUrl - This variant's Emscripten glue module.
- * @param wasmUrl - This variant's binary, the `wasmUrl` default.
- * @returns The entry's `createAssimp` and one-shot `convert`.
- */
-export const createEntry = <Format extends string>(glueUrl: URL, wasmUrl: URL) => {
-  const createAssimp = async (options: CreateAssimpOptions = {}): Promise<Assimp<Format>> => {
-    const native = await loadModule(glueUrl, wasmUrl, options);
-    const tables = native.formats();
+  formats: EntryFormats<ImportFormat, ExportFormat>,
+) => {
+  const supportedFormats = new Set<string>(formats.export.map(({ id }) => id));
+  const createAssimp = async (
+    options: CreateAssimpOptions = {},
+  ): Promise<Assimp<ImportFormat, ExportFormat>> => {
+    let runtime: NativeRuntime | undefined = await loadModule(glueUrl, wasmUrl, options);
     let disposed = false;
-    const dispose = (): void => {
-      disposed = true;
+    let tail: Promise<void> = Promise.resolve();
+
+    const enqueue = <Result>(operation: () => Promise<Result>): Promise<Result> => {
+      const result = tail.then(operation);
+      tail = result.then(
+        () => undefined,
+        () => undefined,
+      );
+      return result;
     };
+
+    const convertFormats: ConvertFormatsFunction<ExportFormat> = (files, convertOptions) => {
+      if (disposed) return Promise.reject(disposedError());
+      let request;
+      try {
+        request = prepareConversion(files, convertOptions, supportedFormats);
+      } catch (error) {
+        return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+      }
+      return enqueue(() => runPreparedConversion(runtime as NativeRuntime, request));
+    };
+
+    const convert: ConvertFunction<ExportFormat> = (files, convertOptions) => {
+      const target = {
+        to: convertOptions.to,
+        ...(convertOptions.exportOptions === undefined
+          ? {}
+          : { exportOptions: convertOptions.exportOptions }),
+      } as ConvertTarget<ExportFormat>;
+      const plural = {
+        targets: [target] as [ConvertTarget<ExportFormat>],
+        ...(convertOptions.resolve === undefined ? {} : { resolve: convertOptions.resolve }),
+        ...(convertOptions.importOptions === undefined
+          ? {}
+          : { importOptions: convertOptions.importOptions }),
+        ...(convertOptions.postProcess === undefined ? {} : { postProcess: convertOptions.postProcess }),
+      };
+      return convertFormats(files, plural).then(([result]) => ({ files: result.files }));
+    };
+
+    const dispose = (): void => {
+      if (disposed) return;
+      disposed = true;
+      void tail.then(() => {
+        runtime = undefined;
+      });
+    };
+
     return {
-      // eslint-disable-next-line @typescript-eslint/require-await -- `async` turns the disposed throw into the rejection the type promises.
-      convert: async (files, convertOptions) => {
-        if (disposed) {
-          throw new Error('assimp instance disposed; create another with createAssimp().');
-        }
-        return runConvert(native, files, convertOptions);
-      },
-      formats: { import: unique(tables.import), export: unique(tables.export) },
+      convert,
+      convertFormats,
+      formats,
       dispose,
       [Symbol.dispose]: dispose,
     };
   };
 
-  // ponytail: no reset on a failed bring-up. The only way loading fails is an
-  // unreachable or invalid binary, which the next call would hit again.
-  let shared: Promise<Assimp<Format>> | undefined;
-  const convert = async (
-    files: AssimpFile | readonly AssimpFile[],
-    options: ConvertOptions<Format>,
-  ): Promise<ConvertResult> => {
-    shared ??= createAssimp();
-    return (await shared).convert(files, options);
-  };
+  let shared: Promise<Assimp<ImportFormat, ExportFormat>> | undefined;
+  const instance = (): Promise<Assimp<ImportFormat, ExportFormat>> => (shared ??= createAssimp());
+  const convert: ConvertFunction<ExportFormat> = async (files, options) =>
+    (await instance()).convert(files, options);
+  const convertFormats: ConvertFormatsFunction<ExportFormat> = async (files, options) =>
+    (await instance()).convertFormats(files, options);
 
-  return { convert, createAssimp };
+  return { convert, convertFormats, createAssimp };
 };
