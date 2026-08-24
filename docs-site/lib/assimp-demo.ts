@@ -7,10 +7,12 @@ export const isAssimpLoaded = (): boolean => loaded !== undefined;
 
 /** Load the self-hosted full build once per document, clearing failed attempts for retry. */
 export const loadAssimp = async (): Promise<Assimp> => {
-  loaded ??= createAssimp({ wasmUrl: '/demo/libassimp-full.wasm' }).catch((error: unknown) => {
-    loaded = undefined;
-    throw error;
-  });
+  loaded ??= createAssimp({ wasmUrl: new URL('/demo/libassimp-full.wasm', document.baseURI) }).catch(
+    (error: unknown) => {
+      loaded = undefined;
+      throw error;
+    },
+  );
   return loaded;
 };
 
