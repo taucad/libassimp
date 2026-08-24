@@ -142,7 +142,7 @@ jobs:
             if git rev-parse --verify --quiet "refs/tags/v$previous_version" >/dev/null; then
               git log -100 "v$previous_version..main" --pretty='- %h %s'
             else
-              git log -100 main --pretty='- %h %s'
+              git log -100 origin/main --pretty='- %h %s'
             fi
             echo 'LOGEOF'
           } >> "$GITHUB_OUTPUT"

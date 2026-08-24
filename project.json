@@ -36,6 +36,7 @@
     },
     "lint": {
       "executor": "nx:run-commands",
+      "dependsOn": ["build"],
       "options": { "command": "pnpm run lint" }
     },
     "format": {
