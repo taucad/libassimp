@@ -327,6 +327,9 @@ describe('resolver and staged-plan internals', () => {
     const handle = await suspended;
     expect(handle).toBeGreaterThan(0);
     expect(dispatchName(context, 'shared.bin', false)).toBeGreaterThan(0);
+
+    const direct = new ResolutionContext(async () => new Uint8Array([8]));
+    await expect(dispatchName(direct, 'direct.bin', true)).resolves.toBeGreaterThan(0);
   });
 
   const request = (resolve?: PreparedConversion<readonly [{ readonly to: 'glb' }]>['resolve']) =>
