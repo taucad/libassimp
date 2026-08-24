@@ -31,6 +31,15 @@ describe('CI release policy', () => {
     });
   });
 
+  it('does not require a root lockfile change for a metadata-only version bump', () => {
+    assert.doesNotThrow(() =>
+      deriveRelease({
+        ...stable,
+        changedFiles: ['.nx/version-plans/first.md', 'CHANGELOG.md', 'package.json'],
+      }),
+    );
+  });
+
   it('validates but never publishes a release pull request', () => {
     assert.deepEqual(deriveRelease({ ...stable, event: 'pull_request', ref: 'refs/pull/1/merge' }), {
       kind: 'release-pull-request',
