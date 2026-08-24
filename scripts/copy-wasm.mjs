@@ -28,7 +28,9 @@ if (missing.length > 0) {
 mkdirSync(fileURLToPath(destination), { recursive: true });
 mkdirSync(fileURLToPath(demo), { recursive: true });
 for (const name of wanted) copyFileSync(new URL(name, source), new URL(name, destination));
-copyFileSync(new URL('libassimp-full.wasm', source), new URL('libassimp-full.wasm', demo));
+for (const extension of EXTENSIONS) {
+  copyFileSync(new URL(`libassimp-full.${extension}`, source), new URL(`libassimp-full.${extension}`, demo));
+}
 copyFileSync(
   new URL('../src/cjs-error.cjs', import.meta.url),
   new URL('../dist/cjs-error.cjs', import.meta.url),
@@ -37,4 +39,4 @@ copyFileSync(
   new URL('../src/cjs-error.d.cts', import.meta.url),
   new URL('../dist/cjs-error.d.cts', import.meta.url),
 );
-console.log(`copied ${wanted.length} Emscripten artifacts, the docs Wasm, and the CommonJS shim`);
+console.log(`copied ${wanted.length} Emscripten artifacts, the docs pair, and the CommonJS shim`);

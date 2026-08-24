@@ -24,7 +24,8 @@
         "scripts/*.mjs",
         "source.config.ts",
         "*.config.{mjs,ts}"
-      ]
+      ],
+      "ignore": ["public/demo/libassimp-full.js"]
     }
   }
 }
