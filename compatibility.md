@@ -4,7 +4,7 @@ This file is the canonical host and WebAssembly feature matrix. Other docs link 
 
 | Host             | Supported floor | CI evidence                                | Async resolver route                             |
 | ---------------- | --------------- | ------------------------------------------ | ------------------------------------------------ |
-| Node.js          | 22.14.0         | `node (22.14.0)`, `node (24)`, `node (26)` | replay                                           |
+| Node.js          | 22.14.0         | `node (22.14.0)`, `node (24)`, `node (26)` | replay on 22/24; JSPI when APIs exist on 26      |
 | Chromium         | Chrome 95       | `browser (chromium)`                       | JSPI when both host APIs exist; replay otherwise |
 | Firefox          | Firefox 100     | `browser (firefox)`                        | replay until JSPI is available                   |
 | WebKit           | Safari 16.4     | `browser (webkit)`                         | replay until JSPI is available                   |

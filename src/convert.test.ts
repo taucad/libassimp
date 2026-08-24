@@ -408,7 +408,11 @@ describe('resolver and staged-plan internals', () => {
 });
 
 describe('instance route parity', () => {
-  it('produces exact normal-JSPI and forced-replay output with one resolver call', async () => {
+  it.skipIf(
+    typeof (WebAssembly as typeof WebAssembly & { readonly Suspending?: unknown }).Suspending !==
+      'function' ||
+      typeof (WebAssembly as typeof WebAssembly & { readonly promising?: unknown }).promising !== 'function',
+  )('produces exact normal-JSPI and forced-replay output with one resolver call', async () => {
     const wasm = WebAssembly as typeof WebAssembly & {
       readonly Suspending?: unknown;
       readonly promising?: unknown;
