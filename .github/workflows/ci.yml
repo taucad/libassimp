@@ -329,15 +329,13 @@ jobs:
         with:
           name: wasm
           path: src/wasm
-      - name: Benchmark the pull request
+      - name: Build the pull request benchmark
         id: current
-        continue-on-error: true # The always-run comparison and comment must report an absolute-gate failure.
-        run: |
-          pnpm run build
-          node bench/gated.mjs > /tmp/current-benchmark.json
-      - name: Benchmark main on the same runner
+        continue-on-error: true # The final step reports a build failure after preserving the benchmark comment.
+        run: pnpm run build
+      - name: Build main on the same runner
         id: base
-        continue-on-error: true # Preserve the report when the base-side absolute gate fails.
+        continue-on-error: true # Preserve the report when the detached base cannot be prepared.
         shell: bash
         run: |
           base_directory="$(mktemp -d)"
@@ -361,16 +359,26 @@ jobs:
             pnpm exec tsdown
             mkdir -p dist/wasm
             cp src/wasm/libassimp.js src/wasm/libassimp.wasm dist/wasm/
-            node bench/gated.mjs > /tmp/base-benchmark.json || true
+            echo "directory=$base_directory" >> "$GITHUB_OUTPUT"
           fi
       - id: compare
         continue-on-error: true # Origin: the following always-run comment must report the failed comparison before the gate closes.
+        shell: bash
         run: |
-          base=/tmp/base-benchmark.json
-          if [[ ! -f "$base" ]] || ! node -e "try { JSON.parse(require('node:fs').readFileSync(process.argv[1], 'utf8')); } catch { process.exitCode = 1; }" "$base"; then
-            base=-
+          failed=0
+          base=-
+          current=/tmp/current-benchmark-1.json
+          node bench/gated.mjs > /tmp/current-benchmark-1.json || failed=1
+          base_directory='${{ steps.base.outputs.directory }}'
+          if [[ -n "$base_directory" ]]; then
+            (cd "$base_directory" && node bench/gated.mjs > /tmp/base-benchmark-1.json) || failed=1
+            (cd "$base_directory" && node bench/gated.mjs > /tmp/base-benchmark-2.json) || failed=1
+            node bench/gated.mjs > /tmp/current-benchmark-2.json || failed=1
+            current=/tmp/current-benchmark-1.json,/tmp/current-benchmark-2.json
+            base=/tmp/base-benchmark-1.json,/tmp/base-benchmark-2.json
           fi
-          node scripts/compare-benchmark.mjs /tmp/current-benchmark.json "$base" /tmp/benchmark.md
+          node scripts/compare-benchmark.mjs "$current" "$base" /tmp/benchmark.md || failed=1
+          exit "$failed"
       - name: Upsert benchmark comment
         if: always()
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
