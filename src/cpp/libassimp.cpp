@@ -122,6 +122,8 @@ PlanStatus Plan::run() noexcept {
   }
 
   const char* phase = "IMPORT_FAILED";
+  int activeFormatIndex = -1;
+  std::string activeFormat;
   try {
     if (!pendingName_.empty()) {
       Bytes resolved;
@@ -155,6 +157,8 @@ PlanStatus Plan::run() noexcept {
     completed.formats.reserve(targets_.size());
     for (std::size_t index = 0; index < targets_.size(); ++index) {
       const Target& target = targets_[index];
+      activeFormatIndex = static_cast<int>(index);
+      activeFormat = target.format;
       phase = "EXPORT_FAILED";
       Assimp::Exporter exporter;
       const aiExportFormatDesc* description = findExportFormat(exporter, target.nativeId);
@@ -185,9 +189,9 @@ PlanStatus Plan::run() noexcept {
     result_ = std::move(completed);
     return PlanStatus::Completed;
   } catch (const std::exception& error) {
-    result_ = fail(phase, error.what());
+    result_ = fail(phase, error.what(), activeFormatIndex, activeFormat);
   } catch (...) {
-    result_ = fail(phase, "Unknown error.");
+    result_ = fail(phase, "Unknown error.", activeFormatIndex, activeFormat);
   }
   return PlanStatus::Failed;
 }
@@ -230,7 +234,7 @@ std::vector<FormatInfo> exportFormats() {
 
 extern "C" {
 __attribute__((import_module("libassimp"), import_name("dispatch"))) int libassimp_host_dispatch(
-    int operation, int first, int second);
+    int operation, std::uint32_t first, std::uint32_t second);
 }
 
 namespace {
@@ -279,17 +283,19 @@ libassimp::Properties propertiesFromJs(const val& values) {
 
 libassimp::ResolveStatus resolveFromHost(const std::string& name, libassimp::Bytes& output) {
   const int handle = libassimp_host_dispatch(
-      kResolveBegin, static_cast<int>(reinterpret_cast<std::uintptr_t>(name.data())),
-      static_cast<int>(name.size()));
+      kResolveBegin, static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(name.data())),
+      static_cast<std::uint32_t>(name.size()));
   if (handle == kPending) return libassimp::ResolveStatus::Pending;
   if (handle == 0) return libassimp::ResolveStatus::Missing;
-  const int size = libassimp_host_dispatch(kResolveSize, handle, 0);
+  const int size = libassimp_host_dispatch(kResolveSize, static_cast<std::uint32_t>(handle), 0u);
   if (size < 0) throw std::runtime_error("Resolver returned a negative byte length.");
   output.resize(static_cast<std::size_t>(size));
   const int copied = libassimp_host_dispatch(
-      kResolveCopy, handle,
-      output.empty() ? 0 : static_cast<int>(reinterpret_cast<std::uintptr_t>(output.data())));
-  libassimp_host_dispatch(kResolveRelease, handle, 0);
+      kResolveCopy, static_cast<std::uint32_t>(handle),
+      output.empty()
+          ? 0u
+          : static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(output.data())));
+  libassimp_host_dispatch(kResolveRelease, static_cast<std::uint32_t>(handle), 0u);
   if (copied != size) throw std::runtime_error("Resolver copied an unexpected byte length.");
   return libassimp::ResolveStatus::Found;
 }

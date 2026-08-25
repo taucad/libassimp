@@ -8,6 +8,7 @@ import {
   prepareConversion,
   ResolutionContext,
   runPreparedConversion,
+  unsignedWasmI32,
   type NativeRuntime,
   type PreparedConversion,
 } from './convert.js';
@@ -166,6 +167,7 @@ describe('validation and atomic errors', () => {
     [{ targets: [{ to: 'glb', exportOptions: { binary: true } }] }, 'unknown or inapplicable'],
     [{ targets: [{ to: 'glb' }], importOptions: { favourSpeed: 'yes' } }, 'expected boolean'],
     [{ targets: [{ to: 'glb' }], postProcess: ['generateNormals', 'generateSmoothNormals'] }, 'conflicts'],
+    [{ targets: [{ to: 'glb' }], postProcess: ['toString'] }, 'unknown step'],
   ] as const)('rejects invalid runtime options before conversion', async (options, message) => {
     const error = await failure(convertFormats({ name: 'cube.obj', bytes: cube }, options as never));
     expect(error.code).toBe('INVALID_OPTIONS');
@@ -253,6 +255,26 @@ describe('validation and atomic errors', () => {
     expect(plan.targets[0]).toMatchObject({ format: '3mf', nativeId: '3mf' });
   });
 
+  it('routes format variants without emitting route sentinels as native properties', () => {
+    const plan = validatePlanOptions(
+      {
+        targets: [
+          { to: 'fbx', exportOptions: { binary: false } },
+          { to: 'obj', exportOptions: { materials: false } },
+          { to: 'ply', exportOptions: { binary: true } },
+          { to: 'stl', exportOptions: { binary: true } },
+        ],
+      },
+      new Set(['fbx', 'obj', 'ply', 'stl']),
+    );
+    expect(plan.targets.map(({ nativeId }) => nativeId)).toEqual(['fbxa', 'objnomtl', 'plyb', 'stlb']);
+    expect(
+      plan.targets
+        .flatMap(({ properties }) => properties.map(({ name }) => name))
+        .filter((name) => name.startsWith('@route/')),
+    ).toEqual([]);
+  });
+
   it('rejects a non-array post-process value', () => {
     expect(() =>
       validatePlanOptions({ targets: [{ to: 'glb' }], postProcess: 'triangulate' }, new Set(['glb'])),
@@ -279,6 +301,12 @@ describe('resolver and staged-plan internals', () => {
     new Uint8Array(memory.buffer, 0, encoded.length).set(encoded);
     return context.dispatch({ operation: 1, first: 0, second: encoded.length, memory, suspending });
   };
+
+  it('normalizes signed JavaScript i32 values at the Wasm boundary', () => {
+    expect(unsignedWasmI32(0)).toBe(0);
+    expect(unsignedWasmI32(-1)).toBe(0xffff_ffff);
+    expect(unsignedWasmI32(-2_147_483_648)).toBe(0x8000_0000);
+  });
 
   it('handles direct missing, invalid, zero-length, copy, release, and unknown dispatches', () => {
     const missing = new ResolutionContext(undefined);
@@ -344,15 +372,16 @@ describe('resolver and staged-plan internals', () => {
 
   const runtime = (overrides: Partial<NativeRuntime['native']> & { runPlan: NativeRuntime['runPlan'] }) => {
     const destroyed: number[] = [];
+    const { runPlan, ...nativeOverrides } = overrides;
     const value: NativeRuntime = {
       native: {
         _libassimp_run_plan: () => 0,
         preparePlan: () => 7,
         takePlanResult: () => ({ ok: true, code: '', message: '', formats: [{ format: 'glb', files: [] }] }),
         destroyPlan: (handle) => destroyed.push(handle),
-        ...overrides,
+        ...nativeOverrides,
       },
-      runPlan: overrides.runPlan,
+      runPlan,
     };
     return { destroyed, value };
   };

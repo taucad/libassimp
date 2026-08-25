@@ -27,6 +27,8 @@ const entry = (name: string): string =>
 export default defineConfig({
   resolve: {
     alias: [
+      { find: /^@\//u, replacement: `${resolve('docs-site')}/` },
+      { find: /^libassimp$/u, replacement: entry('index') },
       { find: 'libassimp-candidate/importer', replacement: entry('importer') },
       { find: 'libassimp-candidate/exporter', replacement: entry('exporter') },
       { find: 'libassimp-candidate', replacement: entry('index') },

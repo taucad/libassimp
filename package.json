@@ -1,6 +1,6 @@
 {
   "name": "libassimp",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.",
   "keywords": [
     "3d",

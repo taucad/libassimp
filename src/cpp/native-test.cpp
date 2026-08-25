@@ -186,6 +186,7 @@ bool runPlanCase(const std::string& name) {
     return false;
   }
   if (name == "repeated-stl-targets") {
+    if (result.formats[0].files.empty() || result.formats[1].files.empty()) return false;
     return result.formats[0].files[0].bytes != result.formats[1].files[0].bytes;
   }
   return true;

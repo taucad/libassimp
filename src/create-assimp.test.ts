@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ResolutionContext } from './convert.js';
-import { compileUrl, isJspiAvailable, loadModule, missingImport } from './create-assimp.js';
+import { compileUrl, createEntry, isJspiAvailable, loadModule, missingImport } from './create-assimp.js';
+import { fullAssimpCapabilities } from './generated/assimp-capabilities.js';
 import { createAssimp } from './index.js';
 import { convert as convertGltf, createAssimp as createImporter } from './importer.js';
 import { convert as convertFromGltf } from './exporter.js';
@@ -26,7 +27,12 @@ const testWasmWithoutMemory = Uint8Array.from([
 ]);
 
 const glueUrl = (
-  options: { readonly instantiate?: boolean; readonly raw?: boolean; readonly callHost?: boolean } = {},
+  options: {
+    readonly instantiate?: boolean;
+    readonly raw?: boolean;
+    readonly callHost?: boolean;
+    readonly successfulPlan?: boolean;
+  } = {},
 ) => {
   const source = `export default async options => {
     options.locateFile();
@@ -46,7 +52,9 @@ const glueUrl = (
     return {
       _libassimp_run_plan: ${options.raw === false ? 'undefined' : 'instance?.exports.run'},
       preparePlan: () => 1,
-      takePlanResult: () => ({ ok: true, code: '', message: '', formats: [] }),
+      takePlanResult: () => ({ ok: true, code: '', message: '', formats: ${
+        options.successfulPlan === true ? "[{ format: 'glb', files: [] }]" : '[]'
+      } }),
       destroyPlan: () => undefined,
     };
   };`;
@@ -349,6 +357,36 @@ describe('createAssimp loading and lifetime', () => {
 });
 
 describe('entry variants', () => {
+  it('retries a failed shared load and reuses the successful instance', async () => {
+    const response = (): Response =>
+      new Response(testWasm.slice().buffer, { headers: { 'Content-Type': 'application/wasm' } });
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 503, statusText: 'Offline' }))
+      .mockResolvedValueOnce(response());
+    vi.stubGlobal('fetch', fetch);
+    vi.spyOn(WebAssembly, 'compileStreaming').mockResolvedValue(new WebAssembly.Module(testWasm));
+    const entry = createEntry(
+      glueUrl({ successfulPlan: true }),
+      new URL('https://example.test/shared.wasm'),
+      {
+        import: [fullAssimpCapabilities.import.obj],
+        export: [fullAssimpCapabilities.export.glb],
+      },
+    );
+
+    await expect(entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).rejects.toThrow(
+      '503 Offline',
+    );
+    await expect(entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).resolves.toEqual({
+      files: [],
+    });
+    await expect(entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).resolves.toEqual({
+      files: [],
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it('imports broad formats and writes the exact canonical importer catalog', async () => {
     expect((await convertGltf({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).files[0]?.name).toBe(
       'result.glb',

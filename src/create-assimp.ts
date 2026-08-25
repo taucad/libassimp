@@ -285,7 +285,11 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
   };
 
   let shared: Promise<Assimp<ImportFormat, ExportFormat>> | undefined;
-  const instance = (): Promise<Assimp<ImportFormat, ExportFormat>> => (shared ??= createAssimp());
+  const instance = (): Promise<Assimp<ImportFormat, ExportFormat>> =>
+    (shared ??= createAssimp().catch((error: unknown) => {
+      shared = undefined;
+      throw error;
+    }));
   const convert: ConvertFunction<ExportFormat> = async (files, options) =>
     (await instance()).convert(files, options);
   const convertFormats: ConvertFormatsFunction<ExportFormat> = async (files, options) =>

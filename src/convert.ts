@@ -100,6 +100,9 @@ const isPromiseLike = (value: unknown): value is PromiseLike<Uint8Array | undefi
   value !== null &&
   typeof (value as { then?: unknown }).then === 'function';
 
+/** Interpret an Emscripten i32 pointer or length as an unsigned Wasm value. @internal */
+export const unsignedWasmI32 = (value: number): number => value >>> 0;
+
 /** Per-call resolver cache shared by JSPI and replay. @internal */
 export class ResolutionContext {
   private readonly states = new Map<string, ResolverState>();
@@ -174,6 +177,8 @@ export class ResolutionContext {
     memory,
     suspending,
   }: ResolutionDispatch): number | Promise<number> {
+    first = unsignedWasmI32(first);
+    second = unsignedWasmI32(second);
     if (operation === 1) {
       const name = new TextDecoder().decode(new Uint8Array(memory.buffer, first, second));
       return this.begin(name, suspending);

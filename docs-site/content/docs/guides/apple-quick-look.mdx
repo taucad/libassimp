@@ -50,14 +50,23 @@ Create the object URL after conversion, retain it while the action is visible,
 and revoke it when replacing the result or unmounting the view.
 
 ```typescript
-const openInAr = (bytes: Uint8Array<ArrayBuffer>): void => {
+const openInAr = (bytes: Uint8Array<ArrayBuffer>): string => {
   const url = URL.createObjectURL(new Blob([bytes], { type: 'model/vnd.usdz+zip' }));
   const anchor = document.createElement('a');
   anchor.rel = 'ar';
   anchor.href = url;
   anchor.append(document.createElement('img'));
+  anchor.hidden = true;
+  document.body.append(anchor);
   anchor.click();
+  anchor.remove();
+  return url;
 };
+
+declare const usdz: { readonly bytes: Uint8Array<ArrayBuffer> }; // Result from step 1.
+const arUrl = openInAr(usdz.bytes);
+// When replacing this result or unmounting its owner:
+URL.revokeObjectURL(arUrl);
 ```
 
 Call `openInAr` directly from the button's click handler. Browsers may block a

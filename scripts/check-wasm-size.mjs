@@ -8,7 +8,7 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
 // Origin: production emsdk 6.0.8 build at compile/link `-O3`, standalone
 // `wasm-opt -O4`, mimalloc, explicit legacy EH, and glTF 1 removed (see
-// CMakeLists.txt), engine c06c37a38, measured 2026-08-25 on macOS arm64; 1%
+// CMakeLists.txt), engine c06c37a38, measured 2026-08-25 NZST on macOS arm64; 1%
 // headroom. Against the 2026-08-23 pre-removal/bridge build, raw sizes fell by
 // 131,774 B (exporter), 137,670 B (importer), and 132,548 B (full).
 const CEILINGS = {

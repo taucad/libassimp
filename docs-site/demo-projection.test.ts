@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { hasQuickLook } from './lib/assimp-demo';
 import {
   demoControls,
+  demoExportOptions,
   readDemoOptions,
   substituteDemoValues,
   type DemoControl,
@@ -35,6 +36,12 @@ const perturb = (control: DemoControl, current: DemoValue): DemoValue => {
 };
 
 describe('interactive conversion demos', () => {
+  it('serves the canonical cube fixture byte-for-byte', () => {
+    expect(readFileSync(resolve(import.meta.dirname, 'public/cube.obj'))).toEqual(
+      readFileSync(resolve(import.meta.dirname, '../tests/fixtures/cube.obj')),
+    );
+  });
+
   it('puts runnable examples on the main conversion journeys', () => {
     for (const path of [
       'tutorial.mdx',
@@ -94,6 +101,31 @@ describe('interactive conversion demos', () => {
         ).toBe(wanted);
       }
     }
+  });
+
+  it('projects only options supported by the selected export format', () => {
+    const values = {
+      to: '3mf',
+      unit: 'millimeter',
+      decimalPrecision: 8,
+      application: 'libassimp docs',
+      upAxis: 'y',
+      pointClouds: true,
+    } as const;
+    expect(demoExportOptions(values, '3mf')).toEqual({
+      unit: 'millimeter',
+      decimalPrecision: 8,
+      application: 'libassimp docs',
+      upAxis: 'y',
+      pointClouds: true,
+    });
+    expect(demoExportOptions(values, 'glb')).toEqual({ pointClouds: true });
+  });
+
+  it('rewrites from the captured literal instead of a replacement substring', () => {
+    expect(substituteDemoValues("const options = { to: '3mf' }; // 3mf", { to: 'glb' })).toBe(
+      "const options = { to: 'glb' }; // 3mf",
+    );
   });
 
   it('exposes the documented 3MF properties and the USDZ target', () => {

@@ -14,7 +14,7 @@
       ],
       "ignore": ["assimp/**", "src/cjs-error.d.cts"],
       "ignoreBinaries": ["cmake", "ctest", "ninja"],
-      "ignoreDependencies": ["@nx/js", "libassimp-candidate"]
+      "ignoreDependencies": ["@nx/js", "libassimp-candidate", "react", "react-dom"]
     },
     "docs-site": {
       "entry": [

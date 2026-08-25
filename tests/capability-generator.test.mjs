@@ -31,9 +31,11 @@ const overrides = JSON.parse(readFileSync(`${root}scripts/assimp-capability-over
 describe('capability generator', () => {
   it('generates byte-identical output twice', () => {
     const path = `${root}src/generated/assimp-capabilities.ts`;
-    execFileSync(process.execPath, [`${root}scripts/generate-assimp-capabilities.mjs`]);
+    const before = readFileSync(path);
+    execFileSync(process.execPath, [`${root}scripts/generate-assimp-capabilities.mjs`, '--check']);
     const first = readFileSync(path);
-    execFileSync(process.execPath, [`${root}scripts/generate-assimp-capabilities.mjs`]);
+    execFileSync(process.execPath, [`${root}scripts/generate-assimp-capabilities.mjs`, '--check']);
+    expect(first).toEqual(before);
     expect(readFileSync(path)).toEqual(first);
   });
 
