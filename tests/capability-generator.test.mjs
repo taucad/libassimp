@@ -23,6 +23,7 @@ import {
   validateOverrideCoverage,
   validateSourceEvidence,
 } from '../scripts/generate-assimp-capabilities.mjs';
+import { internalExportOptionDescriptors } from '../src/generated/assimp-capabilities.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const evidence = JSON.parse(readFileSync(`${root}scripts/assimp-capability-evidence.json`, 'utf8'));
@@ -52,5 +53,21 @@ describe('capability generator', () => {
     const path = evidence.sources[0];
     const hashes = { ...evidence.sourceSha256ByPath, [path]: 'changed' };
     expect(() => validateSourceEvidence(evidence, evidence.engineSha, hashes)).toThrow(path);
+  });
+
+  it('normalizes route selectors to the internal descriptor contract', () => {
+    const selectors = Object.entries(internalExportOptionDescriptors).flatMap(([format, descriptors]) =>
+      Object.values(descriptors)
+        .filter(({ nativeName }) => nativeName.startsWith('@route/'))
+        .map((descriptor) => ({ format, descriptor })),
+    );
+    expect(selectors).toHaveLength(4);
+    for (const { format, descriptor } of selectors) {
+      expect(descriptor).toMatchObject({
+        nativeKind: descriptor.kind,
+        formats: [format],
+        phases: ['export'],
+      });
+    }
   });
 });

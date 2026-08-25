@@ -41,7 +41,7 @@ export type NativePlanOptions = Readonly<{
 type InternalDescriptor = Readonly<{
   nativeName: string;
   kind: NativePropertyKind;
-  nativeKind?: NativePropertyKind;
+  nativeKind: NativePropertyKind;
   default: boolean | number | string | readonly number[] | null;
   minimum?: number;
   maximum?: number;
@@ -179,7 +179,7 @@ const nativeProperties = (
           : (descriptor.nativeValues[publicValue] as NativePropertyValue);
       const value =
         descriptor.nativeKind === 'integer' && typeof mapped === 'boolean' ? Number(mapped) : mapped;
-      return { name: descriptor.nativeName, kind: descriptor.nativeKind as NativePropertyKind, value };
+      return { name: descriptor.nativeName, kind: descriptor.nativeKind, value };
     });
 
 const validatePostProcess = (value: unknown, errors: string[]): number => {
