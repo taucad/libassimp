@@ -110,9 +110,26 @@ const formatConvertDemo = (node: MdxJsxElement): string | undefined => {
   return code === undefined ? undefined : `\`\`\`${read('lang') ?? 'typescript'}\n${code}\n\`\`\``;
 };
 
-/** Write a format matrix out as one line of ids, which is what the table shows. */
-const formatMatrix = (kind: 'import' | 'export'): string =>
-  `- \`${kind}\`: ${matrix[kind].map(({ id }) => id).join(', ')}`;
+/** Write the visible format-table rows as plain text. */
+const formatMatrix = (kind: 'import' | 'export'): string => {
+  if (kind === 'export') {
+    return matrix.export
+      .map(({ id, extension, description }) => `- \`${id}\`: \`result.${extension}\` — ${description}`)
+      .join('\n');
+  }
+
+  const families = new Map<string, string[]>();
+  for (const { description, extension } of matrix.import) {
+    families.set(description, [...(families.get(description) ?? []), extension]);
+  }
+  return [...families]
+    .toSorted(([left], [right]) => (left < right ? -1 : 1))
+    .map(
+      ([description, extensions]) =>
+        `- ${description.replace(/ Importer$/u, '')}: ${extensions.map((extension) => `\`.${extension}\``).join(', ')}`,
+    )
+    .join('\n');
+};
 
 /** Write the size strip out as the measured figures it prints. */
 const formatSizes = (): string =>

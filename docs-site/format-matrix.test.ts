@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import matrix from './content/docs/format-matrix.json';
+import { llmStringifyMdx } from './lib/llm-stringify-mdx';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const committed = resolve(import.meta.dirname, 'content/docs/format-matrix.json');
@@ -45,6 +46,13 @@ describe('format matrix', () => {
       'materials',
     );
     expect(JSON.stringify(matrix)).not.toMatch(/glb1|gltf1|glb2|gltf2|objnomtl|plyb|stlb/u);
+  });
+
+  it('projects the visible table data for text-only readers', () => {
+    const project = (name: 'ImportMatrix' | 'ExportMatrix') =>
+      llmStringifyMdx({ attributes: [], name, type: 'mdxJsxFlowElement' });
+    expect(project('ImportMatrix')).toContain('Wavefront Object: `.obj`');
+    expect(project('ExportMatrix')).toContain('`glb`: `result.glb` — glTF 2 binary container');
   });
 
   generatedTest('regenerates to the committed file, when the package is built', () => {

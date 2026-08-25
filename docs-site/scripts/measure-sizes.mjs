@@ -3,6 +3,7 @@
 // checked in so drift shows up as a diff. The wasm figures cover the same bytes
 // ../../scripts/check-wasm-size.mjs ratchets, so a ceiling move lands here too.
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
@@ -14,6 +15,7 @@ const previous = existsSync(target) ? JSON.parse(readFileSync(target, 'utf8')) :
 const { version } = JSON.parse(readFileSync(new URL('package.json', root), 'utf8'));
 
 const compress = (bytes) => ({
+  sha256: createHash('sha256').update(bytes).digest('hex'),
   raw: bytes.byteLength,
   gzip: gzipSync(bytes, { level: 9 }).byteLength,
   brotli: brotliCompressSync(bytes, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } }).byteLength,
@@ -30,9 +32,9 @@ if (!existsSync(binary)) {
   wasm = cached;
 } else {
   const bytes = readFileSync(binary);
-  // ponytail: brotli-11 is expensive, so an unchanged raw length reuses the committed figures.
-  // Hash the binary here if a same-length rebuild ever ships different bytes.
-  wasm = cached?.raw === bytes.byteLength ? cached : compress(bytes);
+  const sha256 = createHash('sha256').update(bytes).digest('hex');
+  // ponytail: brotli-11 is expensive, so identical content reuses the committed figures.
+  wasm = cached?.sha256 === sha256 ? cached : compress(bytes);
   console.log(`${wasm.raw} B raw, ${wasm.brotli} B brotli`);
 }
 

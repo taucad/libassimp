@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -21,11 +22,10 @@ describe('published size figures', () => {
     expect(statSync(demoWasm).size).toBe(sizes.wasm.raw);
   });
 
-  // Raw length is compared rather than recompressed: scripts/measure-sizes.mjs writes the
-  // compressed figures on every build, and
-  // scripts/check-wasm-size.mjs is the gate that recompresses and ratchets them.
   wasmTest('quotes the binary the package ships, when src/wasm holds it', () => {
-    const { raw, gzip, brotli } = sizes.wasm;
+    const bytes = readFileSync(wasmPath);
+    const { sha256, raw, gzip, brotli } = sizes.wasm;
+    expect(sha256).toBe(createHash('sha256').update(bytes).digest('hex'));
     expect(raw).toEqual(statSync(wasmPath).size);
     expect(brotli).toBeLessThan(gzip);
     expect(gzip).toBeLessThan(raw);
