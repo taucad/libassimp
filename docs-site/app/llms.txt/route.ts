@@ -10,5 +10,5 @@ export const GET = (): Response =>
     // Point agents at the Markdown projection rather than the HTML page.
     llms(source)
       .index()
-      .replaceAll(/\]\((\/docs[^)\s]*)\)/gu, '](https://libassimp.vercel.app$1.mdx)'),
+      .replaceAll(/\]\((\/docs[^)\s]*)\)/gu, '](https://libassimp.xyz$1.mdx)'),
   );

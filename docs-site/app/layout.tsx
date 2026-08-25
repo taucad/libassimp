@@ -6,8 +6,8 @@ import './global.css';
 
 export const metadata: Metadata = {
   description:
-    'Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.',
-  metadataBase: new URL('https://libassimp.vercel.app'),
+    'Assimp for TypeScript and WebAssembly: import 69 3D formats and export 15 formats in browsers and Node.js.',
+  metadataBase: new URL('https://libassimp.xyz'),
   title: { default: 'libassimp', template: `%s — libassimp` },
 };
 

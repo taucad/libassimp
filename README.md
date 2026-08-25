@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/libassimp)](https://www.npmjs.com/package/libassimp)
 [![CI](https://github.com/taucad/libassimp/actions/workflows/ci.yml/badge.svg)](https://github.com/taucad/libassimp/actions/workflows/ci.yml)
 
-Assimp compiled to WebAssembly: typed conversion among 40+ 3D formats in Node.js, browsers, and workers.
+Assimp for TypeScript and WebAssembly: import 69 3D formats and export 15 formats in browsers and Node.js.
 
 | I want to…                             | Start here                                                          |
 | -------------------------------------- | ------------------------------------------------------------------- |
@@ -94,7 +94,7 @@ Releases are built by GitHub Actions with npm provenance. Report vulnerabilities
 
 ## Documentation
 
-Read the [documentation](https://libassimp.vercel.app), [contribution guide](CONTRIBUTING.md), or [maintainer guide](MAINTAINER.md).
+Read the [documentation](https://libassimp.xyz), [contribution guide](CONTRIBUTING.md), or [maintainer guide](MAINTAINER.md).
 
 ## License
 
