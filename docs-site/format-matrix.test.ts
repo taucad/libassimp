@@ -10,22 +10,18 @@ const ROOT = resolve(import.meta.dirname, '..');
 const committed = resolve(import.meta.dirname, 'content/docs/format-matrix.json');
 
 /** Regenerating reads the built entries, so the check needs a built package. */
-const built = ['index', 'importer', 'exporter'].every((entry) =>
-  existsSync(resolve(ROOT, `dist/${entry}.mjs`)),
-);
+const built = existsSync(resolve(ROOT, 'dist/index.mjs'));
 const generatedTest = built ? it : it.skip;
 
 describe('format matrix', () => {
-  it('carries a table for every build', () => {
-    expect(Object.keys(matrix)).toEqual(['full', 'importer', 'exporter']);
-    for (const tables of Object.values(matrix)) {
-      expect(tables.import.length).toBeGreaterThan(0);
-      expect(tables.export.length).toBeGreaterThan(0);
-    }
+  it('carries the import and export tables', () => {
+    expect(Object.keys(matrix)).toEqual(['import', 'export']);
+    expect(matrix.import.length).toBeGreaterThan(0);
+    expect(matrix.export.length).toBeGreaterThan(0);
   });
 
   it('uses the exact canonical export vocabulary and option routes', () => {
-    expect(matrix.full.export.map(({ id }) => id)).toEqual([
+    expect(matrix.export.map(({ id }) => id)).toEqual([
       '3ds',
       '3mf',
       'assjson',
@@ -42,11 +38,10 @@ describe('format matrix', () => {
       'x',
       'x3d',
     ]);
-    expect(matrix.importer.export.map(({ id }) => id)).toEqual(['assjson', 'glb', 'gltf']);
-    expect(Object.keys(matrix.full.export.find(({ id }) => id === 'stl')?.exportOptions ?? {})).toContain(
+    expect(Object.keys(matrix.export.find(({ id }) => id === 'stl')?.exportOptions ?? {})).toContain(
       'binary',
     );
-    expect(Object.keys(matrix.full.export.find(({ id }) => id === 'obj')?.exportOptions ?? {})).toContain(
+    expect(Object.keys(matrix.export.find(({ id }) => id === 'obj')?.exportOptions ?? {})).toContain(
       'materials',
     );
     expect(JSON.stringify(matrix)).not.toMatch(/glb1|gltf1|glb2|gltf2|objnomtl|plyb|stlb/u);

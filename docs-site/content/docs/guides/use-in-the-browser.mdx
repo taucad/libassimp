@@ -8,7 +8,7 @@ description: Load one artifact, resolve remote sidecars asynchronously, and move
 <ConvertDemo>
 
 ```typescript
-import { convert } from 'libassimp/importer';
+import { convert } from 'libassimp';
 
 const toGlb = async (file: File): Promise<Uint8Array> => {
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -24,10 +24,10 @@ const toGlb = async (file: File): Promise<Uint8Array> => {
 Each package entry ships one Wasm artifact. During instantiation, libassimp checks for both `WebAssembly.Suspending` and `WebAssembly.promising`. A capable host uses JSPI to suspend Assimp parsing around an async resolver; every other supported host uses promise-cache replay. There is no user-agent test, alternate URL, or public mode option.
 
 ```typescript
-import { createAssimp } from 'libassimp/importer';
+import { createAssimp } from 'libassimp';
 
 using assimp = await createAssimp({
-  wasmUrl: new URL('/assets/libassimp-importer.wasm', location.href),
+  wasmUrl: new URL('/assets/libassimp.wasm', location.href),
 });
 
 const bytes = new Uint8Array();

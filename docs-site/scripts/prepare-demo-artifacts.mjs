@@ -8,6 +8,6 @@ const destination = new URL('../../dist/wasm/', import.meta.url);
 
 mkdirSync(fileURLToPath(destination), { recursive: true });
 for (const extension of ['js', 'wasm']) {
-  const name = `libassimp-full.${extension}`;
+  const name = `libassimp.${extension}`;
   copyFileSync(new URL(name, source), new URL(name, destination));
 }

@@ -110,18 +110,14 @@ const formatConvertDemo = (node: MdxJsxElement): string | undefined => {
   return code === undefined ? undefined : `\`\`\`${read('lang') ?? 'typescript'}\n${code}\n\`\`\``;
 };
 
-/** Write a format matrix out as one line of ids per build, which is what the table shows. */
+/** Write a format matrix out as one line of ids, which is what the table shows. */
 const formatMatrix = (kind: 'import' | 'export'): string =>
-  Object.entries(matrix)
-    .map(([variant, tables]) => `- \`${variant}\`: ${tables[kind].map(({ id }) => id).join(', ')}`)
-    .join('\n');
+  `- \`${kind}\`: ${matrix[kind].map(({ id }) => id).join(', ')}`;
 
 /** Write the size strip out as the measured figures it prints. */
 const formatSizes = (): string =>
   [
-    ...Object.entries(sizes.wasm).map(
-      ([variant, bytes]) => `- \`${variant}\` binary: ${bytes.raw} B raw, ${bytes.brotli} B brotli`,
-    ),
+    `- \`libassimp.wasm\`: ${sizes.wasm.raw} B raw, ${sizes.wasm.brotli} B brotli`,
     `- JavaScript entrypoint: ${sizes.js.raw} B raw, ${sizes.js.gzip} B gzip`,
   ].join('\n');
 

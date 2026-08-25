@@ -3,8 +3,8 @@ import path from 'node:path';
 // Initial public package contract from the blueprint's Target Package Manifest.
 // Change the list and ceiling together in the causing pull request.
 // Origin: the generated capability registry and validator split measured in the
-// multi-output/typed-config candidate; 30 exact files, with no spare allowance.
-const PACKAGE_FILE_COUNT_CEILING = 30;
+// single-artifact candidate; 22 exact files, with no spare allowance.
+const PACKAGE_FILE_COUNT_CEILING = 22;
 
 export const PACKAGE_FILES = [
   'BREAKING_CHANGES.md',
@@ -21,20 +21,12 @@ export const PACKAGE_FILES = [
   'dist/convert.mjs',
   'dist/create-assimp.d.mts',
   'dist/create-assimp.mjs',
-  'dist/exporter.d.mts',
-  'dist/exporter.mjs',
   'dist/generated/assimp-capabilities.d.mts',
   'dist/generated/assimp-capabilities.mjs',
-  'dist/importer.d.mts',
-  'dist/importer.mjs',
   'dist/index.d.mts',
   'dist/index.mjs',
-  'dist/wasm/libassimp-exporter.js',
-  'dist/wasm/libassimp-exporter.wasm',
-  'dist/wasm/libassimp-full.js',
-  'dist/wasm/libassimp-full.wasm',
-  'dist/wasm/libassimp-importer.js',
-  'dist/wasm/libassimp-importer.wasm',
+  'dist/wasm/libassimp.js',
+  'dist/wasm/libassimp.wasm',
   'license',
   'package.json',
 ].sort();

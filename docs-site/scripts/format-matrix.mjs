@@ -3,17 +3,12 @@ import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const ENTRIES = { full: 'index', importer: 'importer', exporter: 'exporter' };
-
-const matrix = {};
-for (const [variant, entry] of Object.entries(ENTRIES)) {
-  const { assimpCapabilities } = await import(new URL(`../../dist/${entry}.mjs`, import.meta.url).href);
-  matrix[variant] = {
-    import: Object.values(assimpCapabilities.import),
-    export: Object.values(assimpCapabilities.export),
-  };
-  console.log(`${variant}: ${matrix[variant].import.length} import, ${matrix[variant].export.length} export`);
-}
+const { assimpCapabilities } = await import(new URL('../../dist/index.mjs', import.meta.url).href);
+const matrix = {
+  import: Object.values(assimpCapabilities.import),
+  export: Object.values(assimpCapabilities.export),
+};
+console.log(`${matrix.import.length} import, ${matrix.export.length} export`);
 
 const target = new URL('../content/docs/format-matrix.json', import.meta.url);
 const formatted = execFileSync('pnpm', ['exec', 'oxfmt', `--stdin-filepath=${fileURLToPath(target)}`], {

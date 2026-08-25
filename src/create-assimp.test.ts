@@ -4,17 +4,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ResolutionContext } from './convert.js';
 import { compileUrl, createEntry, isJspiAvailable, loadModule, missingImport } from './create-assimp.js';
-import { fullAssimpCapabilities } from './generated/assimp-capabilities.js';
+import { assimpCapabilities } from './generated/assimp-capabilities.js';
 import { createAssimp } from './index.js';
-import { convert as convertGltf, createAssimp as createImporter } from './importer.js';
-import { convert as convertFromGltf } from './exporter.js';
 
 const fixture = (name: string): Uint8Array =>
   new Uint8Array(readFileSync(new URL(`../tests/fixtures/${name}`, import.meta.url)));
 const model = (name: string): Uint8Array =>
   new Uint8Array(readFileSync(new URL(`../assimp/test/models/${name}`, import.meta.url)));
 const cube = fixture('cube.obj');
-const wasmPath = new URL('./wasm/libassimp-full.wasm', import.meta.url);
+const wasmPath = new URL('./wasm/libassimp.wasm', import.meta.url);
 const testWasm = Uint8Array.from([
   0, 97, 115, 109, 1, 0, 0, 0, 1, 13, 2, 96, 3, 127, 127, 127, 1, 127, 96, 1, 127, 1, 127, 2, 12, 1, 3, 101,
   110, 118, 4, 104, 111, 115, 116, 0, 0, 3, 2, 1, 1, 5, 3, 1, 0, 1, 7, 16, 2, 6, 109, 101, 109, 111, 114, 121,
@@ -356,7 +354,7 @@ describe('createAssimp loading and lifetime', () => {
   });
 });
 
-describe('entry variants', () => {
+describe('shared entry loader', () => {
   it('retries a failed shared load and reuses the successful instance', async () => {
     const response = (): Response =>
       new Response(testWasm.slice().buffer, { headers: { 'Content-Type': 'application/wasm' } });
@@ -370,8 +368,8 @@ describe('entry variants', () => {
       glueUrl({ successfulPlan: true }),
       new URL('https://example.test/shared.wasm'),
       {
-        import: [fullAssimpCapabilities.import.obj],
-        export: [fullAssimpCapabilities.export.glb],
+        import: [assimpCapabilities.import.obj],
+        export: [assimpCapabilities.export.glb],
       },
     );
 
@@ -385,22 +383,5 @@ describe('entry variants', () => {
       files: [],
     });
     expect(fetch).toHaveBeenCalledTimes(2);
-  });
-
-  it('imports broad formats and writes the exact canonical importer catalog', async () => {
-    expect((await convertGltf({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).files[0]?.name).toBe(
-      'result.glb',
-    );
-    using assimp = await createImporter();
-    expect(assimp.formats.export.map(({ id }) => id)).toEqual(['assjson', 'glb', 'gltf']);
-  });
-
-  it.each(['stl', '3mf', 'usda'] as const)('writes %s through the exporter entry', async (to) => {
-    const imported = await convertGltf({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
-    const exported = await convertFromGltf(
-      { name: 'model.glb', bytes: imported.files[0]?.bytes ?? new Uint8Array() },
-      { to },
-    );
-    expect(exported.files[0]?.name).toBe(`result.${to}`);
   });
 });

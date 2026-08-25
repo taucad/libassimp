@@ -9,22 +9,16 @@ export const formatSize = (bytes: number): string => {
 
 const cells = [
   {
-    bytes: sizes.wasm.exporter.brotli,
-    hint: 'libassimp/exporter binary, brotli-compressed',
-    label: 'exporter',
+    bytes: sizes.wasm.brotli,
+    hint: 'libassimp.wasm, brotli-compressed',
+    label: 'Wasm',
   },
-  {
-    bytes: sizes.wasm.importer.brotli,
-    hint: 'libassimp/importer binary, brotli-compressed',
-    label: 'importer',
-  },
-  { bytes: sizes.wasm.full.brotli, hint: 'libassimp binary, brotli-compressed', label: 'full' },
   { bytes: sizes.js.gzip, hint: 'JavaScript entrypoint, gzip-compressed', label: 'JS API' },
 ];
 
-/** Print the measured download size of each build, so the entry choice is a number, not a feeling. */
+/** Print the measured download sizes of the Wasm artifact and JavaScript API. */
 export const SizeStrip = (): React.JSX.Element => (
-  <dl className="my-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-fd-border text-sm not-prose sm:grid-cols-4">
+  <dl className="my-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-fd-border text-sm not-prose">
     {cells.map(({ bytes, hint, label }) => (
       <div className="bg-fd-card px-4 py-3" key={label} title={hint}>
         <dt className="font-mono text-xs text-fd-muted-foreground">{label}</dt>

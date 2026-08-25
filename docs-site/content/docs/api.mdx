@@ -3,7 +3,7 @@ title: API reference
 description: Conversion methods, generated capabilities, directional formats, typed options, lifecycle, and failures.
 ---
 
-Every symbol exists on `libassimp`, `libassimp/importer`, and `libassimp/exporter`; format unions and static data narrow to the selected entry.
+Every public symbol is available from the single `libassimp` entry.
 
 ## `convert`
 
@@ -67,7 +67,7 @@ An instance exposes `convert`, `convertFormats`, directional `formats`, `dispose
 ## Static generated data
 
 ```typescript
-import { assimpCapabilities, conversionEdges, defaultPostProcess } from 'libassimp/exporter';
+import { assimpCapabilities, conversionEdges, defaultPostProcess } from 'libassimp';
 
 const stl = assimpCapabilities.export.stl.exportOptions;
 const glbToStl = conversionEdges.find(({ from, to }) => from === 'glb' && to === 'stl');
@@ -76,7 +76,7 @@ console.log(stl.binary.default, glbToStl, defaultPostProcess);
 ```
 
 - `assimpCapabilities` is the keyed serializable registry: directional import/export metadata, exact export-option descriptors, `ImportOptions`, and `PostProcessDescriptor` data.
-- `conversionEdges` is the exact entry import/export cross-product minus identity pairs. `ConversionEdge` remains a discriminated union of valid pairs.
+- `conversionEdges` is the exact import/export cross-product minus identity pairs. `ConversionEdge` remains a discriminated union of valid pairs.
 - `defaultPostProcess` is the default readonly `PostProcessStep` tuple.
 
 Importing these values does not load Wasm.

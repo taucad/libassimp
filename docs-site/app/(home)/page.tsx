@@ -32,8 +32,8 @@ const Page = (): React.JSX.Element => (
       <SizeStrip />
 
       <p className="text-sm text-fd-muted-foreground">
-        Brotli-compressed binary per entry, plus the gzipped JavaScript entrypoint. Import the narrowest entry
-        that covers the conversion and ship the smallest binary.
+        Brotli-compressed <code>libassimp.wasm</code>, plus the gzipped JavaScript entrypoint. One artifact
+        provides the complete import and export catalog.
       </p>
 
       <div className="mt-8 flex flex-wrap gap-4 text-sm font-medium">

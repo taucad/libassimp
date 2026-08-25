@@ -6,7 +6,7 @@ description: Load an OBJ and its material asynchronously, configure processing, 
 ## 1. Read the entry file
 
 ```typescript
-import { convert } from 'libassimp/importer';
+import { convert } from 'libassimp';
 import { readFile, writeFile } from 'node:fs/promises';
 
 const bytes = new Uint8Array(await readFile('cube.obj'));
@@ -21,7 +21,7 @@ The name selects the importer and establishes the base path for references.
 <ConvertDemo>
 
 ```typescript
-import { convert } from 'libassimp/importer';
+import { convert } from 'libassimp';
 import { readFile } from 'node:fs/promises';
 
 const bytes = new Uint8Array(await readFile('cube.obj'));
@@ -49,7 +49,7 @@ The callback may return bytes, absence, or a Promise of either. It is called onc
 ## 3. Configure the typed pipeline
 
 ```typescript
-import { convert, defaultPostProcess } from 'libassimp/importer';
+import { convert, defaultPostProcess } from 'libassimp';
 
 const bytes = new Uint8Array();
 const { files } = await convert(

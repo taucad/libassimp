@@ -13,7 +13,6 @@ const countWords = (source: string): number => source.split(/\s+/u).filter(Boole
 // 2026-08-23; each page carries its measured count plus a little slack.
 const pageCeilings: Readonly<Record<string, number>> = {
   'api.mdx': 620,
-  'guides/choose-an-entry.mdx': 440,
   'guides/convert-a-model.mdx': 440,
   'guides/convert-to-multiple-formats.mdx': 260,
   'guides/apple-quick-look.mdx': 460,

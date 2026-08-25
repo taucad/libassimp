@@ -17,9 +17,8 @@ const instances = requestedBrowser
   ? [providers[requestedBrowser as keyof typeof providers]]
   : [providers.chromium, providers.firefox, providers.webkit];
 
-// The entries of the exact candidate under test: CI points this at the
-// extracted tarball's `dist`, a local run at the TypeScript sources over the
-// working `src/wasm/` build.
+// The exact candidate entry under test: CI points this at the extracted
+// tarball's `dist`, a local run at TypeScript over the working Wasm build.
 const distribution = process.env['LIBASSIMP_DIST_DIR'];
 const entry = (name: string): string =>
   resolve(distribution ? `${distribution}/${name}.mjs` : `src/${name}.ts`);
@@ -31,8 +30,6 @@ export default defineConfig({
       { find: /^libassimp$/u, replacement: entry('index') },
       { find: /^react$/u, replacement: resolve('docs-site/node_modules/react/index.js') },
       { find: /^react-dom\/client$/u, replacement: resolve('docs-site/node_modules/react-dom/client.js') },
-      { find: 'libassimp-candidate/importer', replacement: entry('importer') },
-      { find: 'libassimp-candidate/exporter', replacement: entry('exporter') },
       { find: 'libassimp-candidate', replacement: entry('index') },
     ],
   },

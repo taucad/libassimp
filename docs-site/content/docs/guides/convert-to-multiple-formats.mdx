@@ -25,7 +25,7 @@ The source bytes are copied once and Assimp imports and post-processes once. Eac
 ## Repeated targets
 
 ```typescript
-import { convertFormats } from 'libassimp/exporter';
+import { convertFormats } from 'libassimp';
 
 const bytes = new Uint8Array();
 const [ascii, binary] = await convertFormats(

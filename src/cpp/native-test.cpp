@@ -44,8 +44,8 @@ const Case kCases[] = {
     {"obj-to-stl", "OBJ/box.obj", "stl", "", "solid", "result.stl"},
     {"obj-to-ply", "OBJ/box.obj", "ply", "", "ply", "result.ply"},
     // Without lib3mf assimp's built-in 3MF exporter writes through kuba-zip straight to the real
-    // filesystem, bypassing any IOSystem — so nothing reaches the file map. The wasm variants all
-    // set ASSIMP_BUILD_3MF_LIB3MF=ON (where the bridge does honour the IOSystem) and the format
+    // filesystem, bypassing any IOSystem — so nothing reaches the file map. The production Wasm build
+    // sets ASSIMP_BUILD_3MF_LIB3MF=ON (where the bridge does honour the IOSystem) and the format
     // matrix covers the happy path; here we pin that the bypass surfaces as a clean failure.
     {"3mf-without-lib3mf-fails-cleanly", "OBJ/box.obj", "3mf", "EXPORT_FAILED", "", ""},
     {"obj-to-assjson", "OBJ/box.obj", "assjson", "", "{", "result.json"},

@@ -8,5 +8,6 @@
 - Added positional `convertFormats`; no public target/result ID is accepted.
 - Made `resolve` Promise-capable on every supported host.
 - Split `FormatInfo` into directional `ImportFormatInfo` and `ExportFormatInfo`, and added static `conversionEdges` and `assimpCapabilities`.
+- Removed `libassimp/importer`, `libassimp/exporter`, and their `/wasm` subpaths. Use the complete root entry and the sole `libassimp/wasm` artifact.
 
 No released stable version is affected.

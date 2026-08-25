@@ -1,6 +1,6 @@
 ---
 title: Install libassimp
-description: Add the ESM package, choose one entry, and load its single Wasm artifact.
+description: Add the ESM package and load its single Wasm artifact.
 ---
 
 ```bash tab="npm"
@@ -13,18 +13,14 @@ pnpm add libassimp
 
 libassimp requires Node.js 22.14 or newer and is ESM-only. CommonJS callers use dynamic `import()`.
 
-## Entries
+## Package entry
 
-| Import               | Reads                      | Writes                   |
-| -------------------- | -------------------------- | ------------------------ |
-| `libassimp`          | all 69 compiled extensions | all 15 canonical formats |
-| `libassimp/importer` | all 69 compiled extensions | `assjson`, `glb`, `gltf` |
-| `libassimp/exporter` | glTF/USD-family input      | all 15 canonical formats |
+`libassimp` reads all 69 compiled extensions and writes all 15 canonical formats.
 
-The API shape is the same; format unions, metadata, and `conversionEdges` narrow per entry.
+Format unions, metadata, and `conversionEdges` describe that complete catalog.
 
 ```typescript
-import { conversionEdges } from 'libassimp/exporter';
+import { conversionEdges } from 'libassimp';
 
 console.log(conversionEdges.some(({ from, to }) => from === 'glb' && to === 'stl'));
 ```
@@ -36,14 +32,14 @@ This import reads static JavaScript data and does not fetch or compile Wasm.
 Vite and webpack 5 can emit the entry-relative glue and Wasm assets. To control the location or provide already-fetched bytes, create an instance:
 
 ```typescript
-import { createAssimp } from 'libassimp/importer';
+import { createAssimp } from 'libassimp';
 
-const response = await fetch('/assets/libassimp-importer.wasm');
+const response = await fetch('/assets/libassimp.wasm');
 using assimp = await createAssimp({ wasmBinary: await response.arrayBuffer() });
 
 console.log(assimp.formats.export.map(({ id }) => id));
 ```
 
-`CreateAssimpOptions` remains `wasmUrl`, `wasmBinary`, and `onLog`. There is no async-mode selector: each entry ships one artifact and automatically uses JSPI when available or replay otherwise. Published binary subpaths remain `libassimp/wasm`, `libassimp/importer/wasm`, and `libassimp/exporter/wasm`.
+`CreateAssimpOptions` remains `wasmUrl`, `wasmBinary`, and `onLog`. There is no async-mode selector: the artifact automatically uses JSPI when available or replay otherwise. The published binary subpath is `libassimp/wasm`.
 
 Workers require no pthread bootstrap or cross-origin isolation. See the canonical [compatibility matrix](https://github.com/taucad/libassimp/blob/main/compatibility.md) for host floors and feature routing.

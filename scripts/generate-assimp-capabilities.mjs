@@ -32,7 +32,7 @@ const evidencePath = `${root}scripts/assimp-capability-evidence.json`;
 const overridesPath = `${root}scripts/assimp-capability-overrides.json`;
 const outputPath = `${root}src/generated/assimp-capabilities.ts`;
 const matrixPath = `${root}docs-site/content/docs/format-matrix.json`;
-const buildDirectory = `${root}build/wasm-full`;
+const buildDirectory = `${root}build/wasm`;
 const containerRoot = '/src';
 const propertyMethods = new Map([
   ['GetPropertyBool', 'boolean'],
@@ -264,7 +264,7 @@ const macroEvidence = () => {
       '-E',
       '-x',
       'c++',
-      '-I/src/build/wasm-full/assimp/include',
+      '-I/src/build/wasm/assimp/include',
       '-I/src/assimp/include',
       '-include',
       'assimp/config.h',
@@ -290,7 +290,7 @@ const postProcessEvidence = () => {
     [
       '-std=gnu++20',
       '-I/src/assimp/include',
-      '-I/src/build/wasm-full/assimp/include',
+      '-I/src/build/wasm/assimp/include',
       '-x',
       'c++',
       '-Xclang',
@@ -331,7 +331,7 @@ const sourceHashes = (paths) =>
 
 const refreshEvidence = () => {
   if (!readFileSync(`${buildDirectory}/build.ninja`, 'utf8').includes('ASSIMP_BUILD_NO_GLTF1')) {
-    throw new Error('Reconfigure wasm-full after applying the glTF 1 compile definitions.');
+    throw new Error('Reconfigure wasm after applying the glTF 1 compile definitions.');
   }
   const database = JSON.parse(
     execFileSync('ninja', ['-C', buildDirectory, '-t', 'compdb'], {
@@ -445,7 +445,7 @@ const refreshEvidence = () => {
       ...propertyRows.map(({ file }) => sourcePath(file)),
       `${root}assimp/include/assimp/config.h.in`,
       `${root}assimp/include/assimp/postprocess.h`,
-      `${root}variants.json`,
+      `${root}assimp-builds.json`,
     ]),
   ];
   const evidence = {
@@ -453,11 +453,7 @@ const refreshEvidence = () => {
     sourceSha256: sourceFingerprint(sourcePaths, engineSha),
     sourceSha256ByPath: sourceHashes(sourcePaths),
     sources: sourcePaths.map(sourceName).sort((one, two) => one.localeCompare(two)),
-    formats: {
-      full: { import: matrix.full.import },
-      importer: { import: matrix.importer.import },
-      exporter: { import: matrix.exporter.import },
-    },
+    formats: { import: matrix.import },
     properties: [...byName.values()].sort((one, two) => one.nativeName.localeCompare(two.nativeName)),
     postProcess: postProcessEvidence(),
   };
@@ -804,7 +800,6 @@ const renderGenerated = (evidence, overrides) => {
     description,
     exportOptions: publicDescriptorsByFormat[id],
   }));
-  const importerExportInfo = exportInfo.filter(({ id }) => overrides.formats.importer.includes(id));
   const internalImportDescriptors = Object.fromEntries(
     importOptions.map((descriptor) => [descriptor.publicName, descriptor]),
   );
@@ -856,7 +851,6 @@ ${exportMapFields}
 };
 
 export type AllExportFormat = keyof ExportOptionsByFormat;
-export type ImporterExportFormat = ${overrides.formats.importer.map(quote).join(' | ')};
 export type ExportOptionsFor<Format extends AllExportFormat> = ExportOptionsByFormat[Format];
 export type ExportOptionDescriptorsFor<Format extends AllExportFormat> = Readonly<{
   [Key in keyof ExportOptionsByFormat[Format]]-?: OptionDescriptor;
@@ -866,15 +860,10 @@ export type PostProcessStep = ${steps.map(({ publicName: name }) => quote(name))
 
 export const defaultPostProcess = ${JSON.stringify(overrides.defaultPostProcess)} as const satisfies readonly PostProcessStep[];
 
-export const fullImportFormats = ${formatValues(imports.full.import)} as const;
-export const importerImportFormats = ${formatValues(imports.importer.import)} as const;
-export const exporterImportFormats = ${formatValues(imports.exporter.import)} as const;
-export const allExportFormats = ${JSON.stringify(exportInfo, undefined, 2)} as const;
-export const importerExportFormats = ${JSON.stringify(importerExportInfo, undefined, 2)} as const;
+export const importFormats = ${formatValues(imports.import)} as const;
+export const exportFormats = ${JSON.stringify(exportInfo, undefined, 2)} as const;
 
-export type FullImportFormat = ${formatType(imports.full.import)};
-export type ImporterImportFormat = ${formatType(imports.importer.import)};
-export type ExporterImportFormat = ${formatType(imports.exporter.import)};
+export type CompiledImportFormat = ${formatType(imports.import)};
 
 export type ImportFormatInfo<Format extends string> = Format extends string ? FormatInfo<Format> : never;
 export type ExportFormatInfo<Format extends AllExportFormat> = Format extends AllExportFormat
@@ -895,9 +884,7 @@ const createConversionEdges = <ImportFormat extends string, ExportFormat extends
 ): readonly ConversionEdgeFor<ImportFormat, ExportFormat>[] =>
   imports.flatMap(({ id: from }) => exports.filter(({ id: to }) => !isSameFormat(from, to)).map(({ id: to }) => ({ from, to }))) as unknown as readonly ConversionEdgeFor<ImportFormat, ExportFormat>[];
 
-export const fullConversionEdges = createConversionEdges(fullImportFormats, allExportFormats);
-export const importerConversionEdges = createConversionEdges(importerImportFormats, importerExportFormats);
-export const exporterConversionEdges = createConversionEdges(exporterImportFormats, allExportFormats);
+export const conversionEdges = createConversionEdges(importFormats, exportFormats);
 
 const importOptionDescriptors = ${JSON.stringify(importDescriptors, undefined, 2)} as const;
 const postProcessDescriptors = ${JSON.stringify(stepDescriptors, undefined, 2)} as const;
@@ -916,23 +903,9 @@ const keyed = <const Values extends readonly FormatInfo[]>(values: Values) =>
     readonly [Key in Values[number]['id']]: Extract<Values[number], { readonly id: Key }>;
   };
 
-export const fullAssimpCapabilities = {
-  import: keyed(fullImportFormats),
-  export: keyed(allExportFormats),
-  importOptions: importOptionDescriptors,
-  postProcess: postProcessDescriptors,
-} as const;
-
-export const importerAssimpCapabilities = {
-  import: keyed(importerImportFormats),
-  export: keyed(importerExportFormats),
-  importOptions: importOptionDescriptors,
-  postProcess: postProcessDescriptors,
-} as const;
-
-export const exporterAssimpCapabilities = {
-  import: keyed(exporterImportFormats),
-  export: keyed(allExportFormats),
+export const assimpCapabilities = {
+  import: keyed(importFormats),
+  export: keyed(exportFormats),
   importOptions: importOptionDescriptors,
   postProcess: postProcessDescriptors,
 } as const;

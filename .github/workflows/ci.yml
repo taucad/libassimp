@@ -52,16 +52,12 @@ jobs:
   build-wasm:
     needs: preflight
     runs-on: ubuntu-24.04
-    # Origin: about 3x the measured cold job after the -O2 link: compile takes
-    # roughly 25 minutes on 4 vCPU and link takes less than 1 minute. The prior
-    # 240-minute ceiling matched the -O3 link measured on run 32583934372.
+    # Origin: about 3x the measured cold full-format job after the -O2 link:
+    # compile takes roughly 25 minutes on 4 vCPU and link takes less than 1
+    # minute. The prior 240-minute ceiling matched the -O3 link on run 32583934372.
     timeout-minutes: 90
     container:
       image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: [full, importer, exporter]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -79,24 +75,22 @@ jobs:
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         id: wasm-cache
         with:
-          path: src/wasm/libassimp-${{ matrix.variant }}.*
-          key: wasm-${{ matrix.variant }}-${{ hashFiles('emsdk-image.txt', 'variants.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**', '.gitmodules') }}-${{ steps.engine.outputs.sha }}
+          path: src/wasm/libassimp.*
+          key: wasm-${{ hashFiles('emsdk-image.txt', 'assimp-builds.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**', '.gitmodules') }}-${{ steps.engine.outputs.sha }}
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         if: steps.wasm-cache.outputs.cache-hit != 'true'
         with:
           path: .ccache
-          key: ${{ runner.os }}-ccache-${{ matrix.variant }}-${{ hashFiles('emsdk-image.txt', 'variants.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**') }}-${{ hashFiles('.gitmodules') }}-${{ steps.engine.outputs.sha }}
-          restore-keys: |
-            ${{ runner.os }}-ccache-${{ matrix.variant }}-
-      - name: Build the ${{ matrix.variant }} variant
+          key: ccache-${{ runner.os }}-${{ hashFiles('emsdk-image.txt', 'assimp-builds.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**', '.gitmodules') }}-${{ steps.engine.outputs.sha }}
+      - name: Build libassimp.wasm
         if: steps.wasm-cache.outputs.cache-hit != 'true'
         env:
           LIBASSIMP_EMSDK: host
-        run: node scripts/build-wasm.mjs --variant ${{ matrix.variant }}
+        run: node scripts/build-wasm.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: wasm-${{ matrix.variant }}
-          path: src/wasm/libassimp-${{ matrix.variant }}.*
+          name: wasm
+          path: src/wasm/libassimp.*
           if-no-files-found: error
 
   quality:
@@ -114,9 +108,8 @@ jobs:
           node-version: '26'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: wasm-*
+          name: wasm
           path: src/wasm
-          merge-multiple: true
       - run: pnpm nx run libassimp:quality
       - run: node --test tests/ci/ci-release.test.mjs tests/ci/release-attestations.test.mjs
       - name: Require a Version Plan for release-affecting changes
@@ -159,9 +152,8 @@ jobs:
       # The docs site imports the package, so its build needs the glue and wasm.
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: wasm-*
+          name: wasm
           path: src/wasm
-          merge-multiple: true
       - run: pnpm nx run libassimp:docs-prose
 
   node:
@@ -181,9 +173,8 @@ jobs:
           node-version: ${{ matrix.node }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: wasm-*
+          name: wasm
           path: src/wasm
-          merge-multiple: true
       - run: pnpm nx run libassimp:test
       - run: pnpm nx run libassimp:typecheck
 
@@ -206,7 +197,7 @@ jobs:
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: .ccache
-          key: ${{ runner.os }}-ccache-native-${{ hashFiles('variants.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**') }}-${{ hashFiles('.gitmodules') }}-${{ steps.engine.outputs.sha }}
+          key: ${{ runner.os }}-ccache-native-${{ hashFiles('assimp-builds.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**') }}-${{ hashFiles('.gitmodules') }}-${{ steps.engine.outputs.sha }}
           restore-keys: |
             ${{ runner.os }}-ccache-native-
       - name: Build and test the binding natively
@@ -232,9 +223,8 @@ jobs:
           node-version: '26'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: wasm-*
+          name: wasm
           path: src/wasm
-          merge-multiple: true
       - run: pnpm run build
       - run: pnpm run pkgcheck
       - run: pnpm run check:size
@@ -337,9 +327,8 @@ jobs:
           node-version: '26'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: wasm-*
+          name: wasm
           path: src/wasm
-          merge-multiple: true
       - name: Benchmark the pull request
         id: current
         continue-on-error: true # The always-run comparison and comment must report an absolute-gate failure.
@@ -355,14 +344,23 @@ jobs:
           git worktree add --detach "$base_directory" 'origin/${{ github.base_ref }}'
           git -C "$base_directory" submodule update --init --recursive
           if [[ -f "$base_directory/bench/gated.mjs" ]]; then
-            # wasm is CI-built and never committed, so the base tree reuses this
-            # run's binaries and the timing column isolates the TypeScript
-            # facade. An engine or build-flag change shows up in the byte
-            # fingerprint instead.
-            cp -R src/wasm "$base_directory/src/wasm"
+            # Wasm is CI-built and never committed, so the base tree reuses this
+            # run's binary and the timing column isolates the TypeScript facade.
+            # Normalize the detached base's private artifact URL before bundling
+            # so a filename-only change remains benchmarkable on the same runner.
+            mkdir -p "$base_directory/src/wasm"
+            cp src/wasm/libassimp.* "$base_directory/src/wasm/"
+            BASE_DIRECTORY="$base_directory" node --input-type=module -e "
+              import { readFileSync, writeFileSync } from 'node:fs';
+              const path = process.env.BASE_DIRECTORY + '/src/index.ts';
+              const source = readFileSync(path, 'utf8');
+              writeFileSync(path, source.replaceAll(/\.\/wasm\/libassimp-[a-z]+(?=\.(?:js|wasm))/gu, './wasm/libassimp'));
+            "
             cd "$base_directory"
             pnpm install --frozen-lockfile
-            pnpm run build
+            pnpm exec tsdown
+            mkdir -p dist/wasm
+            cp src/wasm/libassimp.js src/wasm/libassimp.wasm dist/wasm/
             node bench/gated.mjs > /tmp/base-benchmark.json || true
           fi
       - id: compare
