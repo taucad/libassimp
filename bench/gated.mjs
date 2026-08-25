@@ -7,7 +7,9 @@ import { fnv64 } from '../tests/fnv64.mjs';
 // `dist/index.mjs`, so the benchmark measures exactly what ships.
 import { convert, createAssimp } from 'libassimp';
 
-const bytes = new Uint8Array(readFileSync(new URL('../tests/fixtures/cube.obj', import.meta.url)));
+// Generated from Tau's replicad/helical-gear example with:
+// pnpm nx run cli:tau -- export libs/tau-examples/src/kernels/replicad/helical-gear/main.ts --ext=glb --output=helical-gear.glb
+const bytes = new Uint8Array(readFileSync(new URL('./fixtures/helical-gear.glb', import.meta.url)));
 const materialCube = new Uint8Array(
   readFileSync(new URL('../tests/fixtures/cube-material.obj', import.meta.url)),
 );
@@ -28,12 +30,12 @@ const time = async (job) => {
 };
 
 // Warm-up: the first call pays for loading and compiling the module.
-await convert({ name: 'cube.obj', bytes }, { to: 'glb' });
+await convert({ name: 'helical-gear.glb', bytes }, { to: 'glb' });
 
 const conversions = [];
 let output;
 for (let index = 0; index < iterations; index += 1) {
-  const [duration, { files }] = await time(() => convert({ name: 'cube.obj', bytes }, { to: 'glb' }));
+  const [duration, { files }] = await time(() => convert({ name: 'helical-gear.glb', bytes }, { to: 'glb' }));
   conversions.push(duration);
   output = files[0].bytes;
 }
@@ -57,14 +59,14 @@ try {
         batchTargets.map(async ({ to, exportOptions }) => ({
           format: to,
           ...(await batchAssimp.convert(
-            { name: 'cube.obj', bytes },
+            { name: 'helical-gear.glb', bytes },
             exportOptions === undefined ? { to } : { to, exportOptions },
           )),
         })),
       ),
     );
     const [pluralDuration, plural] = await time(() =>
-      batchAssimp.convertFormats({ name: 'cube.obj', bytes }, { targets: batchTargets }),
+      batchAssimp.convertFormats({ name: 'helical-gear.glb', bytes }, { targets: batchTargets }),
     );
     assert.deepEqual(plural, singular);
     singularDurations.push(singularDuration);
@@ -129,7 +131,7 @@ if (asyncResolver.jspi !== null) {
 }
 
 const report = {
-  name: 'cube-obj-to-glb-v1',
+  name: 'helical-gear-glb-to-glb-v1',
   iterations,
   medianMs: median(conversions),
   initMs: median(initializations),
@@ -146,10 +148,10 @@ const report = {
 
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 
-// Origin: medians over seven runs of the first production build on macOS
-// arm64, 2026-08-23 — convert 0.44 ms, createAssimp 25.6 ms. The gates are
-// twice those, which a shared runner clears while a facade regression does not.
-const MAX_MEDIAN_MS = Number(process.env['MAX_MEDIAN_MS'] ?? 0.9);
+// Origin: medians over seven runs of the Tau CLI helical-gear fixture on macOS
+// arm64, 2026-08-25 — convert 47.651 ms, createAssimp 25.593 ms. The gates are
+// rounded to about twice those local measurements.
+const MAX_MEDIAN_MS = Number(process.env['MAX_MEDIAN_MS'] ?? 100);
 const MAX_INIT_MS = Number(process.env['MAX_INIT_MS'] ?? 50);
 
 const failures = [

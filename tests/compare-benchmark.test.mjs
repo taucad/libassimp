@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { averageBenchmarks, compareBenchmark } from '../scripts/compare-benchmark.mjs';
 
 const report = (medianMs, initMs = 20) => ({
-  name: 'cube-obj-to-glb-v1',
+  name: 'helical-gear-glb-to-glb-v1',
   medianMs,
   initMs,
   outputBytes: 2_360,
