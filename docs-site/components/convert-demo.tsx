@@ -1,11 +1,18 @@
 'use client';
 
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock';
-import { AssimpError, type ExportFormat, type ExportOptionsFor } from 'libassimp';
+import { AssimpError, type ConvertOptions } from 'libassimp';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { hasQuickLook, hasWebAssembly, isAssimpLoaded, launchQuickLook, loadAssimp } from '@/lib/assimp-demo';
-import { demoControls, readDemoOptions, substituteDemoValues, type DemoValue } from '@/lib/demo-options';
+import {
+  demoControls,
+  demoExportOptions,
+  isDemoExportFormat,
+  readDemoOptions,
+  substituteDemoValues,
+  type DemoValue,
+} from '@/lib/demo-options';
 
 import styles from './convert-demo.module.css';
 
@@ -102,39 +109,48 @@ export const ConvertDemo = ({
   const [values, setValues] = useState<Record<string, DemoValue>>(() => readDemoOptions(code));
   const [outcome, setOutcome] = useState<Outcome>({ kind: 'idle' });
   const urlsRef = useRef<readonly string[]>([]);
+  const generationRef = useRef(0);
+  const mountedRef = useRef(false);
   const supported = hasWebAssembly();
   const shown = useMemo(() => substituteDemoValues(code, values), [code, values]);
   const inputs = useMemo(() => inputFiles(code), [code]);
 
   const run = async (current: Readonly<Record<string, DemoValue>>): Promise<void> => {
     if (!supported) return;
+    const generation = ++generationRef.current;
+    const isCurrent = (): boolean => mountedRef.current && generation === generationRef.current;
+    for (const url of urlsRef.current) URL.revokeObjectURL(url);
+    urlsRef.current = [];
     const cold = !isAssimpLoaded();
     setOutcome({ kind: 'running', phase: cold ? 'load' : 'convert' });
+    const createdUrls: string[] = [];
     try {
       const loadStarted = performance.now();
       const assimp = await loadAssimp();
+      if (!isCurrent()) return;
       const loadMs = cold ? Math.round(performance.now() - loadStarted) : 0;
       const started = performance.now();
       const target = String(current['to'] ?? 'glb');
-      const exportOptions = Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'to'));
-      const result = await assimp.convert(inputs, {
-        to: target as ExportFormat,
-        exportOptions: exportOptions as ExportOptionsFor<ExportFormat>,
-      });
+      if (!isDemoExportFormat(target)) throw new Error(`Unsupported demo export format: ${target}`);
+      const exportOptions = demoExportOptions(current, target);
+      const options = { to: target, exportOptions } satisfies ConvertOptions;
+      const result = await assimp.convert(inputs, options);
+      if (!isCurrent()) return;
       const ms = Math.round(performance.now() - started);
 
-      for (const url of urlsRef.current) URL.revokeObjectURL(url);
       const files = result.files.map((file) => {
         const mime = MIME[extension(file.name)] ?? 'application/octet-stream';
+        const url = URL.createObjectURL(new Blob([file.bytes as Uint8Array<ArrayBuffer>], { type: mime }));
+        createdUrls.push(url);
         return {
           bytes: file.bytes.byteLength,
           magic: magic(file.bytes),
           mime,
           name: file.name,
-          url: URL.createObjectURL(new Blob([file.bytes as Uint8Array<ArrayBuffer>], { type: mime })),
+          url,
         };
       });
-      urlsRef.current = files.map(({ url }) => url);
+      urlsRef.current = createdUrls;
       setOutcome({
         files,
         inputBytes: inputs.reduce((sum, file) => sum + file.bytes.byteLength, 0),
@@ -143,6 +159,8 @@ export const ConvertDemo = ({
         ms,
       });
     } catch (error: unknown) {
+      for (const url of createdUrls) URL.revokeObjectURL(url);
+      if (!isCurrent()) return;
       setOutcome({
         ...(error instanceof AssimpError ? { code: error.code } : {}),
         kind: 'failed',
@@ -151,19 +169,16 @@ export const ConvertDemo = ({
     }
   };
 
-  const drawnOnce = useRef(false);
   useEffect(() => {
-    if (drawnOnce.current) return;
-    drawnOnce.current = true;
+    mountedRef.current = true;
     void run(values);
-  });
-
-  useEffect(
-    () => () => {
+    return () => {
+      mountedRef.current = false;
+      generationRef.current += 1;
       for (const url of urlsRef.current) URL.revokeObjectURL(url);
-    },
-    [],
-  );
+      urlsRef.current = [];
+    };
+  }, []);
 
   const update = (key: string, value: DemoValue): void => {
     const next = { ...values, [key]: value };

@@ -169,6 +169,7 @@ const nativeProperties = (
     ]),
   ]
     .sort()
+    .filter((publicName) => !(descriptors[publicName] as InternalDescriptor).nativeName.startsWith('@route/'))
     .map((publicName) => {
       const descriptor = descriptors[publicName] as InternalDescriptor;
       const publicValue = (values[publicName] ?? descriptor.default) as NativePropertyValue;
@@ -178,9 +179,8 @@ const nativeProperties = (
           : (descriptor.nativeValues[publicValue] as NativePropertyValue);
       const value =
         descriptor.nativeKind === 'integer' && typeof mapped === 'boolean' ? Number(mapped) : mapped;
-      return { name: descriptor.nativeName, kind: descriptor.nativeKind ?? descriptor.kind, value };
-    })
-    .filter(({ name }) => !name.startsWith('@route/'));
+      return { name: descriptor.nativeName, kind: descriptor.nativeKind as NativePropertyKind, value };
+    });
 
 const validatePostProcess = (value: unknown, errors: string[]): number => {
   const candidates = value === undefined ? defaultPostProcess : value;
@@ -193,7 +193,7 @@ const validatePostProcess = (value: unknown, errors: string[]): number => {
   let flags = 0;
   for (let index = 0; index < names.length; index += 1) {
     const name = names[index];
-    if (typeof name !== 'string' || !(name in steps)) {
+    if (typeof name !== 'string' || !Object.hasOwn(steps, name)) {
       errors.push(`postProcess[${index}]: unknown step ${String(name)}`);
       continue;
     }

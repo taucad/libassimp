@@ -20,7 +20,7 @@ jobs:
       scan-args: |-
         --lockfile=pnpm-lock.yaml
         --config=osv-scanner.toml
-      upload-sarif: true
+      upload-sarif: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' }}
     permissions:
       actions: read
       contents: read

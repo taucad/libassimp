@@ -47,11 +47,13 @@ try {
     `import assert from 'node:assert/strict';
 
 let compilations = 0;
-const compile = WebAssembly.compile;
-WebAssembly.compile = async (...args) => {
-  compilations += 1;
-  return compile(...args);
-};
+for (const method of ['compile', 'instantiate', 'compileStreaming', 'instantiateStreaming']) {
+  const original = WebAssembly[method];
+  WebAssembly[method] = function (...args) {
+    compilations += 1;
+    return Reflect.apply(original, this, args);
+  };
+}
 const entries = await Promise.all([
   import('libassimp'),
   import('libassimp/importer'),

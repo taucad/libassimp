@@ -39,15 +39,22 @@ Returning `undefined` means unavailable; Assimp decides whether that reference i
 ```typescript
 import { convert } from 'libassimp';
 import { readFile } from 'node:fs/promises';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
 
-const bytes = new Uint8Array(await readFile('models/cube.obj'));
+const modelsRoot = resolve('models');
+const bytes = new Uint8Array(await readFile(resolve(modelsRoot, 'cube.obj')));
 const { files } = await convert(
   { name: 'cube.obj', bytes },
   {
     to: 'glb',
     resolve: async (name) => {
+      const candidate = resolve(modelsRoot, name);
+      const relativePath = relative(modelsRoot, candidate);
+      if (relativePath === '..' || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
+        return undefined;
+      }
       try {
-        return new Uint8Array(await readFile(new URL(name, 'file:///models/')));
+        return new Uint8Array(await readFile(candidate));
       } catch {
         return undefined;
       }

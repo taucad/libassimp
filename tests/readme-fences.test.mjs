@@ -67,7 +67,8 @@ describe('documentation fences', () => {
         stdio: 'pipe',
       });
     } catch (error) {
-      diagnostics = `${error.stdout ?? ''}${error.stderr ?? ''}`;
+      diagnostics = `${error?.stdout ?? ''}${error?.stderr ?? ''}`;
+      if (diagnostics === '') throw error;
     }
     expect(diagnostics).toBe('');
   });

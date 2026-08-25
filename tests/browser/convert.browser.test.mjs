@@ -26,21 +26,25 @@ const filesSnapshot = (results) =>
   }));
 
 const errorSnapshot = async (operation) => {
+  let thrown;
   try {
     await operation();
-    throw new Error('Expected conversion to fail.');
   } catch (error) {
-    expect(error).toBeInstanceOf(AssimpError);
-    return {
-      code: error.code,
-      message: error.message,
-      format: error.format,
-      formatIndex: error.formatIndex,
-      fileName: error.fileName,
-      cause:
-        error.cause instanceof Error ? { name: error.cause.name, message: error.cause.message } : error.cause,
-    };
+    thrown = error;
   }
+  if (thrown === undefined) throw new Error('Expected conversion to fail.');
+  expect(thrown).toBeInstanceOf(AssimpError);
+  return {
+    code: thrown.code,
+    message: thrown.message,
+    format: thrown.format,
+    formatIndex: thrown.formatIndex,
+    fileName: thrown.fileName,
+    cause:
+      thrown.cause instanceof Error
+        ? { name: thrown.cause.name, message: thrown.cause.message }
+        : thrown.cause,
+  };
 };
 
 const withoutJspi = async (operation) => {
