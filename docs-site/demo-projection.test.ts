@@ -126,6 +126,9 @@ describe('interactive conversion demos', () => {
     expect(substituteDemoValues("const options = { to: '3mf' }; // 3mf", { to: 'glb' })).toBe(
       "const options = { to: 'glb' }; // 3mf",
     );
+    expect(substituteDemoValues("const options = { unit: 'inch' }; // inch", { unit: 'meter' })).toBe(
+      "const options = { unit: 'meter' }; // inch",
+    );
   });
 
   it('exposes the documented 3MF properties and the USDZ target', () => {

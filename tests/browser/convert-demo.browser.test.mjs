@@ -115,6 +115,7 @@ test('does not let a stale conversion overwrite the latest result', async () => 
   });
   await vi.waitFor(() => expect(convert).toHaveBeenCalledTimes(2));
   await act(async () => {
+    // Controls are normally disabled here; re-enable this one to exercise the generation guard directly.
     select.disabled = false;
     select.value = 'ply';
     select.dispatchEvent(new Event('change', { bubbles: true }));

@@ -64,9 +64,18 @@ const openInAr = (bytes: Uint8Array<ArrayBuffer>): string => {
 };
 
 declare const usdz: { readonly bytes: Uint8Array<ArrayBuffer> }; // Result from step 1.
-const arUrl = openInAr(usdz.bytes);
-// When replacing this result or unmounting its owner:
-URL.revokeObjectURL(arUrl);
+let arUrl: string | undefined;
+
+const launch = (): void => {
+  if (arUrl !== undefined) URL.revokeObjectURL(arUrl);
+  arUrl = openInAr(usdz.bytes);
+};
+
+// Call when replacing this result or unmounting its owner, not immediately after launch.
+const release = (): void => {
+  if (arUrl !== undefined) URL.revokeObjectURL(arUrl);
+  arUrl = undefined;
+};
 ```
 
 Call `openInAr` directly from the button's click handler. Browsers may block a

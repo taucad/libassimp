@@ -1,13 +1,14 @@
 'use client';
 
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock';
-import { AssimpError, type ExportFormat, type ExportOptionsFor } from 'libassimp';
+import { AssimpError, type ConvertOptions } from 'libassimp';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { hasQuickLook, hasWebAssembly, isAssimpLoaded, launchQuickLook, loadAssimp } from '@/lib/assimp-demo';
 import {
   demoControls,
   demoExportOptions,
+  isDemoExportFormat,
   readDemoOptions,
   substituteDemoValues,
   type DemoValue,
@@ -130,11 +131,10 @@ export const ConvertDemo = ({
       const loadMs = cold ? Math.round(performance.now() - loadStarted) : 0;
       const started = performance.now();
       const target = String(current['to'] ?? 'glb');
+      if (!isDemoExportFormat(target)) throw new Error(`Unsupported demo export format: ${target}`);
       const exportOptions = demoExportOptions(current, target);
-      const result = await assimp.convert(inputs, {
-        to: target as ExportFormat,
-        exportOptions: exportOptions as ExportOptionsFor<ExportFormat>,
-      });
+      const options = { to: target, exportOptions } satisfies ConvertOptions;
+      const result = await assimp.convert(inputs, options);
       if (!isCurrent()) return;
       const ms = Math.round(performance.now() - started);
 

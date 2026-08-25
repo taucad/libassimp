@@ -1,4 +1,4 @@
-import { assimpCapabilities } from 'libassimp';
+import { assimpCapabilities, type ExportFormat, type ExportOptionsFor } from 'libassimp';
 
 export type DemoValue = boolean | number | string;
 
@@ -117,16 +117,18 @@ export const demoControls = (code: string): readonly DemoControl[] => {
   return [targetControl, ...properties.filter(({ key }) => key in current)];
 };
 
-const exportFormats = assimpCapabilities.export as Readonly<
-  Partial<Record<string, { readonly exportOptions: Readonly<Record<string, unknown>> }>>
->;
+const exportFormats = assimpCapabilities.export;
+
+/** Narrow a code-derived target to an advertised export format. */
+export const isDemoExportFormat = (value: string): value is ExportFormat =>
+  Object.hasOwn(exportFormats, value);
 
 /** Keep only options the selected export format advertises. */
-export const demoExportOptions = (
+export const demoExportOptions = <Format extends ExportFormat>(
   values: Readonly<Record<string, DemoValue>>,
-  target: string,
-): Record<string, DemoValue> => {
-  const allowed = exportFormats[target]?.exportOptions ?? {};
+  target: Format,
+): ExportOptionsFor<Format> => {
+  const allowed = exportFormats[target].exportOptions;
   return Object.fromEntries(
     Object.entries(values).filter(([key]) => key !== 'to' && Object.hasOwn(allowed, key)),
   );
@@ -159,7 +161,7 @@ export const substituteDemoValues = (
     const literal = new RegExp(`((?:['"])?${escaped}(?:['"])?\\s*:\\s*)([^,\\n}]+)`, 'u');
     rewritten = rewritten.replace(literal, (match, prefix: string, current: string) => {
       const next = formatLiteral(value, "'");
-      return current.trim() === next ? match : `${prefix}${next}`;
+      return current.trim() === next ? match : `${prefix}${next}${current.slice(current.trimEnd().length)}`;
     });
   }
 
