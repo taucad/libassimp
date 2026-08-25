@@ -29,6 +29,8 @@ export default defineConfig({
     alias: [
       { find: /^@\//u, replacement: `${resolve('docs-site')}/` },
       { find: /^libassimp$/u, replacement: entry('index') },
+      { find: /^react$/u, replacement: resolve('docs-site/node_modules/react/index.js') },
+      { find: /^react-dom\/client$/u, replacement: resolve('docs-site/node_modules/react-dom/client.js') },
       { find: 'libassimp-candidate/importer', replacement: entry('importer') },
       { find: 'libassimp-candidate/exporter', replacement: entry('exporter') },
       { find: 'libassimp-candidate', replacement: entry('index') },
