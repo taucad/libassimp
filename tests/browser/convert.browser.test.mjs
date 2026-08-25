@@ -1,8 +1,6 @@
 import { beforeAll, expect, test } from 'vitest';
 
-import { AssimpError, createAssimp } from 'libassimp-candidate';
-import { convert as convertToGltf } from 'libassimp-candidate/importer';
-import { convert as convertFromGltf } from 'libassimp-candidate/exporter';
+import { AssimpError, convert, createAssimp } from 'libassimp-candidate';
 
 const bytesAt = async (url) => {
   const response = await fetch(url);
@@ -81,12 +79,12 @@ beforeAll(async () => {
 });
 
 test('loads default entry artifacts and round-trips geometry in the browser', async () => {
-  const { files: gltf } = await convertToGltf({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
+  const { files: gltf } = await convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
   expect(gltf.map(({ name }) => name)).toEqual(['result.glb']);
   expect(new TextDecoder().decode(gltf[0].bytes.subarray(0, 4))).toBe('glTF');
 
-  const { files: stl } = await convertFromGltf({ name: 'model.glb', bytes: gltf[0].bytes }, { to: 'stl' });
-  const { files: roundTrip } = await convertToGltf({ name: stl[0].name, bytes: stl[0].bytes }, { to: 'glb' });
+  const { files: stl } = await convert({ name: 'model.glb', bytes: gltf[0].bytes }, { to: 'stl' });
+  const { files: roundTrip } = await convert({ name: stl[0].name, bytes: stl[0].bytes }, { to: 'glb' });
   expect(new TextDecoder().decode(roundTrip[0].bytes.subarray(0, 4))).toBe('glTF');
 });
 

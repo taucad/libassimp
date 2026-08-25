@@ -16,10 +16,9 @@
  */
 
 /**
- * Builds one or every wasm variant.
+ * Builds the production Wasm artifact.
  *
- *   node scripts/build-wasm.mjs --variant exporter [--fast]
- *   node scripts/build-wasm.mjs --all
+ *   node scripts/build-wasm.mjs [--fast]
  *
  * Runs inside the digest-pinned emsdk container by default. `LIBASSIMP_EMSDK=host`
  * builds on the host instead — that is the CI path, where the job already runs
@@ -54,13 +53,9 @@ const wasmOptFlags = [
 
 const args = process.argv.slice(2);
 const fast = args.includes('--fast');
-const variantsJson = JSON.parse(readFileSync(`${root}variants.json`, 'utf8'));
-const names = args.includes('--all')
-  ? Object.keys(variantsJson.variants)
-  : [args[args.indexOf('--variant') + 1]].filter((name) => name in variantsJson.variants);
-
-if (names.length === 0) {
-  console.error('Usage: build-wasm.mjs --variant <full|importer|exporter> | --all [--fast]');
+const unknownArgs = args.filter((argument) => argument !== '--fast');
+if (unknownArgs.length > 0) {
+  console.error('Usage: build-wasm.mjs [--fast]');
   process.exit(1);
 }
 
@@ -69,8 +64,8 @@ const engineSha = run('git', ['-C', `${root}assimp`, 'rev-parse', 'HEAD']).trim(
 // Deterministic and content-derived: the engine commit this artefact was built from.
 const sourceDateEpoch =
   process.env.SOURCE_DATE_EPOCH ?? run('git', ['-C', `${root}assimp`, 'log', '-1', '--format=%ct']).trim();
-const variantsSha256 = createHash('sha256')
-  .update(readFileSync(`${root}variants.json`))
+const buildConfigSha256 = createHash('sha256')
+  .update(readFileSync(`${root}assimp-builds.json`))
   .digest('hex');
 
 function run(command, commandArgs) {
@@ -179,119 +174,116 @@ async function inspectArtifact(wasmPath, gluePath) {
 
 mkdirSync(wasmDir, { recursive: true });
 
-for (const variant of names) {
-  const target = `libassimp-${variant}`;
-  const buildPath = `build/wasm-${variant}`;
-  const buildDir = `${root}build/wasm-${variant}`;
-  const started = Date.now();
+const target = 'libassimp';
+const buildPath = 'build/wasm';
+const buildDir = `${root}build/wasm`;
+const started = Date.now();
 
+build(
+  `emcmake cmake --preset wasm -DLIBASSIMP_FAST=${fast ? 'ON' : 'OFF'} ` +
+    `&& cmake --build --preset wasm --parallel`,
+  { stdio: 'inherit' },
+);
+
+// `--emit-tsd` executes the module during link and cannot instantiate the
+// intentionally host-supplied dispatch import. The glue is private, so its
+// declaration only needs to describe the modularized factory boundary.
+writeFileSync(
+  `${buildDir}/${target}.d.ts`,
+  'declare const factory: (options?: Record<string, unknown>) => Promise<unknown>;\nexport default factory;\n',
+);
+
+let wasmArtifact = `${buildDir}/${target}.wasm`;
+if (!fast) {
   build(
-    `emcmake cmake --preset wasm-${variant} -DLIBASSIMP_FAST=${fast ? 'ON' : 'OFF'} ` +
-      `&& cmake --build --preset wasm-${variant} --parallel`,
+    `${wasmOpt} ${buildPath}/${target}.wasm ${wasmOptFlags.join(' ')} ` +
+      `--output=${buildPath}/${target}.optimized.wasm`,
     { stdio: 'inherit' },
   );
+  wasmArtifact = `${buildDir}/${target}.optimized.wasm`;
+}
 
-  // `--emit-tsd` executes the module during link and cannot instantiate the
-  // intentionally host-supplied dispatch import. The glue is private, so its
-  // declaration only needs to describe the modularized factory boundary.
-  writeFileSync(
-    `${buildDir}/${target}.d.ts`,
-    'declare const factory: (options?: Record<string, unknown>) => Promise<unknown>;\nexport default factory;\n',
-  );
+const opcodeInspection = build(
+  `set -o pipefail; ${wasmDis} ${wasmArtifact.slice(root.length)} -o - | ` +
+    `awk -v target=${target} '` +
+    `/try_table/{table++} /\\(try /{legacy++} {line=tolower($0); if(line ~ /asyncify/) asyncify++} ` +
+    `END{printf "%s legacy_try=%d try_table=%d asyncify=%d\\n",target,legacy,table,asyncify; ` +
+    `exit(table != 0 || asyncify != 0 || legacy == 0)}'`,
+).trim();
+console.log(opcodeInspection);
 
-  let wasmArtifact = `${buildDir}/${target}.wasm`;
-  if (!fast) {
-    build(
-      `${wasmOpt} ${buildPath}/${target}.wasm ${wasmOptFlags.join(' ')} ` +
-        `--output=${buildPath}/${target}.optimized.wasm`,
-      { stdio: 'inherit' },
-    );
-    wasmArtifact = `${buildDir}/${target}.optimized.wasm`;
+const ninja = readFileSync(`${buildDir}/build.ninja`, 'utf8');
+const compileFlags = /^ *FLAGS = (.*)$/m.exec(ninja)?.[1].trim().split(/\s+/u) ?? [];
+const linkFlags = /^ *LINK_FLAGS = (.*)$/m.exec(ninja)?.[1].trim().split(/\s+/u) ?? [];
+if (!fast) {
+  for (const flag of ['-O3', '-fwasm-exceptions', '-msimd128']) {
+    if (!compileFlags.includes(flag)) throw new Error(`${target} compile flags omit ${flag}`);
+    if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
   }
-
-  const opcodeInspection = build(
-    `set -o pipefail; ${wasmDis} ${wasmArtifact.slice(root.length)} -o - | ` +
-      `awk -v target=${target} '` +
-      `/try_table/{table++} /\\(try /{legacy++} {line=tolower($0); if(line ~ /asyncify/) asyncify++} ` +
-      `END{printf "%s legacy_try=%d try_table=%d asyncify=%d\\n",target,legacy,table,asyncify; ` +
-      `exit(table != 0 || asyncify != 0 || legacy == 0)}'`,
-  ).trim();
-  console.log(opcodeInspection);
-
-  const ninja = readFileSync(`${buildDir}/build.ninja`, 'utf8');
-  const compileFlags = /^ *FLAGS = (.*)$/m.exec(ninja)?.[1].trim().split(/\s+/u) ?? [];
-  const linkFlags = /^ *LINK_FLAGS = (.*)$/m.exec(ninja)?.[1].trim().split(/\s+/u) ?? [];
-  if (!fast) {
-    for (const flag of ['-O3', '-fwasm-exceptions', '-msimd128']) {
-      if (!compileFlags.includes(flag)) throw new Error(`${target} compile flags omit ${flag}`);
-      if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
-    }
-    for (const flag of ['--closure=1', '-sEVAL_CTORS=2', '-sMALLOC=mimalloc', '-sWASM_LEGACY_EXCEPTIONS=1']) {
-      if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
-    }
+  for (const flag of ['--closure=1', '-sEVAL_CTORS=2', '-sMALLOC=mimalloc', '-sWASM_LEGACY_EXCEPTIONS=1']) {
+    if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
   }
-  const forbiddenFlags = [...compileFlags, ...linkFlags, ...wasmOptFlags].filter((flag) =>
-    /(?:ASYNCIFY|JSPI)/u.test(flag),
-  );
-  if (forbiddenFlags.length > 0)
-    throw new Error(`${target} contains forbidden flags: ${forbiddenFlags.join(', ')}`);
-  const emccVersion = build('emcc --version').split('\n')[0].trim();
+}
+const forbiddenFlags = [...compileFlags, ...linkFlags, ...wasmOptFlags].filter((flag) =>
+  /(?:ASYNCIFY|JSPI)/u.test(flag),
+);
+if (forbiddenFlags.length > 0)
+  throw new Error(`${target} contains forbidden flags: ${forbiddenFlags.join(', ')}`);
+const emccVersion = build('emcc --version').split('\n')[0].trim();
 
-  for (const suffix of ['.js', '.wasm', '.d.ts', '.js.symbols']) {
-    copyArtifact(
-      suffix === '.wasm' ? wasmArtifact : `${buildDir}/${target}${suffix}`,
-      `${wasmDir}/${target}${suffix}`,
-    );
-  }
-
-  const wasm = readFileSync(`${wasmDir}/${target}.wasm`);
-  const glue = readFileSync(`${wasmDir}/${target}.js`);
-  const inventory = await inspectArtifact(`${wasmDir}/${target}.wasm`, `${wasmDir}/${target}.js`);
-  for (const [name, bytes] of [
-    ['wasm', wasm],
-    ['glue', glue],
-  ]) {
-    // The host checkout, the container mount, and the GitHub Actions workspace: the
-    // binary must name none of them, whichever machine produced it. Anchored, because
-    // plenty of legitimately relative paths end in `/src/`.
-    const text = bytes.toString('latin1');
-    for (const path of [root.replace(/\/$/, ''), '/src/', '/__w/']) {
-      if (new RegExp(`(?<![\\w./-])${RegExp.escape(path)}`, 'u').test(text)) {
-        throw new Error(`${target} ${name} embeds the build path ${path}`);
-      }
-    }
-  }
-
-  writeFileSync(
-    `${wasmDir}/${target}.manifest.json`,
-    `${JSON.stringify(
-      {
-        variant,
-        image,
-        engineSha,
-        variantsSha256,
-        compileFlags,
-        linkFlags,
-        definitions: ['ASSIMP_BUILD_NO_GLTF1_IMPORTER', 'ASSIMP_BUILD_NO_GLTF1_EXPORTER'],
-        wasmSettings: ['WASM_LEGACY_EXCEPTIONS=1'],
-        finalOptimizerFlags: fast ? [] : wasmOptFlags,
-        fast,
-        inventory,
-        sizes: {
-          wasm: { raw: wasm.length, gzip: gzipSync(wasm).length, brotli: brotliCompressSync(wasm).length },
-          js: { raw: glue.length, gzip: gzipSync(glue).length, brotli: brotliCompressSync(glue).length },
-        },
-        sourceDateEpoch,
-        emccVersion,
-        builtAt: new Date().toISOString(),
-      },
-      undefined,
-      2,
-    )}\n`,
-  );
-
-  console.log(
-    `${target}: ${fast ? 'fast' : 'production'} build in ${Math.round((Date.now() - started) / 1000)}s, ` +
-      `wasm ${wasm.length} B, glue ${glue.length} B`,
+for (const suffix of ['.js', '.wasm', '.d.ts', '.js.symbols']) {
+  copyArtifact(
+    suffix === '.wasm' ? wasmArtifact : `${buildDir}/${target}${suffix}`,
+    `${wasmDir}/${target}${suffix}`,
   );
 }
+
+const wasm = readFileSync(`${wasmDir}/${target}.wasm`);
+const glue = readFileSync(`${wasmDir}/${target}.js`);
+const inventory = await inspectArtifact(`${wasmDir}/${target}.wasm`, `${wasmDir}/${target}.js`);
+for (const [name, bytes] of [
+  ['wasm', wasm],
+  ['glue', glue],
+]) {
+  // The host checkout, the container mount, and the GitHub Actions workspace: the
+  // binary must name none of them, whichever machine produced it. Anchored, because
+  // plenty of legitimately relative paths end in `/src/`.
+  const text = bytes.toString('latin1');
+  for (const path of [root.replace(/\/$/, ''), '/src/', '/__w/']) {
+    if (new RegExp(`(?<![\\w./-])${RegExp.escape(path)}`, 'u').test(text)) {
+      throw new Error(`${target} ${name} embeds the build path ${path}`);
+    }
+  }
+}
+
+writeFileSync(
+  `${wasmDir}/${target}.manifest.json`,
+  `${JSON.stringify(
+    {
+      image,
+      engineSha,
+      buildConfigSha256,
+      compileFlags,
+      linkFlags,
+      definitions: ['ASSIMP_BUILD_NO_GLTF1_IMPORTER', 'ASSIMP_BUILD_NO_GLTF1_EXPORTER'],
+      wasmSettings: ['WASM_LEGACY_EXCEPTIONS=1'],
+      finalOptimizerFlags: fast ? [] : wasmOptFlags,
+      fast,
+      inventory,
+      sizes: {
+        wasm: { raw: wasm.length, gzip: gzipSync(wasm).length, brotli: brotliCompressSync(wasm).length },
+        js: { raw: glue.length, gzip: gzipSync(glue).length, brotli: brotliCompressSync(glue).length },
+      },
+      sourceDateEpoch,
+      emccVersion,
+      builtAt: new Date().toISOString(),
+    },
+    undefined,
+    2,
+  )}\n`,
+);
+
+console.log(
+  `${target}: ${fast ? 'fast' : 'production'} build in ${Math.round((Date.now() - started) / 1000)}s, ` +
+    `wasm ${wasm.length} B, glue ${glue.length} B`,
+);

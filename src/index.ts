@@ -1,4 +1,4 @@
-/** `libassimp` — the full canonical importer/exporter build. */
+/** `libassimp` — the canonical importer/exporter build. */
 
 import type {
   ConvertFormatsOptions as SharedConvertFormatsOptions,
@@ -10,17 +10,17 @@ import type {
 import { createEntry } from './create-assimp.js';
 import type { Assimp as SharedAssimp } from './create-assimp.js';
 import {
-  allExportFormats,
+  assimpCapabilities,
+  conversionEdges,
   defaultPostProcess,
-  fullAssimpCapabilities,
-  fullConversionEdges,
-  fullImportFormats,
+  exportFormats,
+  importFormats,
 } from './generated/assimp-capabilities.js';
 import type {
   AllExportFormat,
+  CompiledImportFormat,
   ConversionEdgeFor,
   ExportFormatInfo as SharedExportFormatInfo,
-  FullImportFormat,
   ImportFormatInfo as SharedImportFormatInfo,
 } from './generated/assimp-capabilities.js';
 
@@ -39,7 +39,7 @@ export type {
   PostProcessStep,
 } from './generated/assimp-capabilities.js';
 
-export type ImportFormat = FullImportFormat;
+export type ImportFormat = CompiledImportFormat;
 export type ExportFormat = AllExportFormat;
 export type ImportFormatInfo<Format extends ImportFormat = ImportFormat> = SharedImportFormatInfo<Format>;
 export type ExportFormatInfo<Format extends ExportFormat = ExportFormat> = SharedExportFormatInfo<Format>;
@@ -54,15 +54,15 @@ export type ConvertFormatsResult<Targets extends readonly [ConvertTarget, ...Con
 export type Assimp = SharedAssimp<ImportFormat, ExportFormat>;
 
 /** Static generated capabilities; importing this value never loads Wasm. @public */
-export const assimpCapabilities = fullAssimpCapabilities;
+export { assimpCapabilities };
 /** Exact canonical import/export cross-product without identity pairs. @public */
-export const conversionEdges: readonly ConversionEdge[] = fullConversionEdges;
+export { conversionEdges };
 export { defaultPostProcess };
 
 const entry = createEntry<ImportFormat, ExportFormat>(
-  new URL('./wasm/libassimp-full.js', import.meta.url),
-  new URL('./wasm/libassimp-full.wasm', import.meta.url),
-  { import: fullImportFormats, export: allExportFormats },
+  new URL('./wasm/libassimp.js', import.meta.url),
+  new URL('./wasm/libassimp.wasm', import.meta.url),
+  { import: importFormats, export: exportFormats },
 );
 
 /** Convert one source to one canonical target. @public */

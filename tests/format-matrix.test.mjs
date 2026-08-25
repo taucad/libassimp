@@ -1,6 +1,6 @@
 // Behaviour matrix over the engine's own fixture corpus: one import per
-// enabled importer, one export per enabled exporter, the entry-specific
-// subsets, and the export properties the exporters honour. Every primary
+// enabled importer, one export per enabled exporter, and the export properties
+// the exporters honour. Every primary
 // output is fingerprinted in `determinism.json`, so an engine or flag change
 // that alters bytes fails here instead of downstream. Re-record deliberate
 // changes with LIBASSIMP_RECORD_DETERMINISM=1 (see CONTRIBUTING.md).
@@ -12,8 +12,6 @@ import { inflateRawSync } from 'node:zlib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createAssimp } from '../src/index.ts';
-import { createAssimp as createExporter } from '../src/exporter.ts';
-import { createAssimp as createImporter } from '../src/importer.ts';
 import { fnv64 } from './fnv64.mjs';
 
 const MODELS = fileURLToPath(new URL('../assimp/test/models/', import.meta.url));
@@ -24,7 +22,7 @@ const load = (relative) => ({
 const text = (bytes) => new TextDecoder().decode(bytes);
 
 // One representative fixture per importer the reference suite exercised.
-// `error` marks the formats `variants.json` disables and the fixtures assimp
+// `error` marks the formats `assimp-builds.json` disables and the fixtures assimp
 // itself refuses; `empty` marks a scene that parses without geometry.
 const IMPORTS = [
   ['3D', ['3D/box.uc', '3D/box_a.3d', '3D/box_d.3d']],
@@ -151,17 +149,13 @@ const maxVertexDigits = (xml) =>
   );
 
 let assimp;
-let exporter;
-let importer;
 
 beforeAll(async () => {
-  [assimp, exporter, importer] = await Promise.all([createAssimp(), createExporter(), createImporter()]);
+  assimp = await createAssimp();
 });
 
 afterAll(() => {
   assimp?.dispose();
-  exporter?.dispose();
-  importer?.dispose();
   if (recording) {
     const sorted = Object.fromEntries(
       Object.entries(observed).sort(([left], [right]) => (left < right ? -1 : 1)),
@@ -237,37 +231,6 @@ describe('exporters', () => {
     expect(gltf.files.map(({ name }) => name)).toEqual(['result.gltf', 'result.bin']);
     const dae = await assimp.convert(load(TEXTURED_SOURCE), { to: 'dae' });
     expect(dae.files.map(({ name }) => name)).toEqual(['result.dae', 'result.dae/result_texture_0001.png']);
-  });
-});
-
-describe('entries', () => {
-  it.each([
-    ['OBJ/cube_usemtl.obj'],
-    ['FBX/box.fbx'],
-    ['Collada/duck.dae'],
-    ['STL/Spider_binary.stl'],
-    ['PLY/cube.ply'],
-  ])('reads %s and writes glb through libassimp/importer', async (relative) => {
-    const { files } = await importer.convert(load(relative), { to: 'glb' });
-    expect(text(files[0].bytes.subarray(0, 4))).toBe('glTF');
-    pin(`importer ${basename(relative)}`, files[0].bytes);
-  });
-
-  it('writes every compiled exporter from glb through libassimp/exporter', async () => {
-    const source = load(TEXTURED_SOURCE);
-    for (const { id, extension } of exporter.formats.export) {
-      const { files } = await exporter.convert(source, { to: id });
-      expect(files[0].name, `${id} output name`).toBe(`result.${extension}`);
-    }
-  });
-
-  it('refuses a format its build left out', async () => {
-    await expect(importer.convert(load(EXPORT_SOURCE), { to: 'stl' })).rejects.toMatchObject({
-      code: 'UNSUPPORTED_FORMAT',
-    });
-    await expect(exporter.convert(load('OBJ/cube_usemtl.obj'), { to: 'glb' })).rejects.toMatchObject({
-      code: 'IMPORT_FAILED',
-    });
   });
 });
 

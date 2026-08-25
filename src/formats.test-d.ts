@@ -10,18 +10,11 @@ import {
   type ConvertedFormat,
   type ExportFormat,
 } from './index.js';
-import type { ExportFormat as ImporterExportFormat } from './importer.js';
-import type {
-  ConversionEdge as ExporterConversionEdge,
-  ExportFormat as ExporterExportFormat,
-} from './exporter.js';
 
 declare const bytes: Uint8Array;
 
-test('entry unions and positional tuple inference remain exact', () => {
+test('format union and positional tuple inference remain exact', () => {
   expectTypeOf<ExportFormat>().toEqualTypeOf<(typeof canonicalExports)[number]>();
-  expectTypeOf<ExporterExportFormat>().toEqualTypeOf<ExportFormat>();
-  expectTypeOf<ImporterExportFormat>().toEqualTypeOf<'assjson' | 'glb' | 'gltf'>();
 
   const result = convertFormats(
     { name: 'model.obj', bytes },
@@ -50,6 +43,6 @@ test('format options are correlated and native escape hatches do not exist', () 
 
 test('edge unions preserve exact source/target correlation', () => {
   expectTypeOf<Extract<ConversionEdge, { from: 'glb'; to: 'glb' }>>().toEqualTypeOf<never>();
-  expectTypeOf<Extract<ExporterConversionEdge, { from: 'glb'; to: 'stl' }>>().not.toEqualTypeOf<never>();
-  expectTypeOf<Extract<ExporterConversionEdge, { from: 'gltf'; to: 'glb' }>>().not.toEqualTypeOf<never>();
+  expectTypeOf<Extract<ConversionEdge, { from: 'glb'; to: 'stl' }>>().not.toEqualTypeOf<never>();
+  expectTypeOf<Extract<ConversionEdge, { from: 'gltf'; to: 'glb' }>>().not.toEqualTypeOf<never>();
 });

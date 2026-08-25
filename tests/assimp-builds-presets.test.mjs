@@ -4,30 +4,29 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { variantCacheVariables, variants } from '../scripts/variants-to-presets.mjs';
+import { buildCacheVariables, builds } from '../scripts/assimp-builds-to-presets.mjs';
 
 const presetsPath = fileURLToPath(new URL('../CMakePresets.json', import.meta.url));
-const scriptPath = fileURLToPath(new URL('../scripts/variants-to-presets.mjs', import.meta.url));
+const scriptPath = fileURLToPath(new URL('../scripts/assimp-builds-to-presets.mjs', import.meta.url));
 
-describe('variants-to-presets', () => {
+describe('assimp-builds-to-presets', () => {
   it('regenerating CMakePresets.json is a no-op', () => {
     const before = readFileSync(presetsPath, 'utf8');
     execFileSync(process.execPath, [scriptPath]);
     expect(readFileSync(presetsPath, 'utf8')).toBe(before);
   });
 
-  it('gives every variant a configure, build and test entry point', () => {
+  it('gives production Wasm and native tests their exact entry points', () => {
     const presets = JSON.parse(readFileSync(presetsPath, 'utf8'));
-    const names = [...Object.keys(variants.variants).map((name) => `wasm-${name}`), 'native-test'];
-    expect(presets.configurePresets.map((preset) => preset.name)).toEqual(names);
-    expect(presets.buildPresets.map((preset) => preset.configurePreset)).toEqual(names);
+    expect(presets.configurePresets.map((preset) => preset.name)).toEqual(['wasm', 'native-test']);
+    expect(presets.buildPresets.map((preset) => preset.configurePreset)).toEqual(['wasm', 'native-test']);
     expect(presets.testPresets.map((preset) => preset.configurePreset)).toEqual(['native-test']);
   });
 
-  it('disables every format on the shared disable list, whichever variant asked for it', () => {
-    for (const name of Object.keys(variants.variants)) {
-      const cacheVariables = variantCacheVariables(name);
-      for (const id of variants.disable.ids) {
+  it('disables every format on the shared disable list in both builds', () => {
+    for (const name of ['wasm', 'native-test']) {
+      const cacheVariables = buildCacheVariables(name);
+      for (const id of builds.disable.ids) {
         const keys =
           id.endsWith('_IMPORTER') || id.endsWith('_EXPORTER')
             ? [`ASSIMP_BUILD_${id}`]
@@ -37,17 +36,19 @@ describe('variants-to-presets', () => {
     }
   });
 
-  it('turns the by-default switches on only for the side a variant compiles whole', () => {
-    expect(variantCacheVariables('full')).toMatchObject({
+  it('builds every admitted production format and the bounded native subset', () => {
+    expect(buildCacheVariables('wasm')).toMatchObject({
       ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT: 'ON',
       ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT: 'ON',
       ASSIMP_BUILD_USD_IMPORTER: 'ON',
+      ASSIMP_BUILD_VRML_IMPORTER: 'ON',
+      ASSIMP_BUILD_IFC_IMPORTER: 'ON',
     });
-    expect(variantCacheVariables('exporter')).toMatchObject({
+    expect(buildCacheVariables('native-test')).toMatchObject({
       ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT: 'OFF',
-      ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT: 'ON',
-      ASSIMP_BUILD_GLTF_IMPORTER: 'ON',
-      ASSIMP_BUILD_USD_IMPORTER: 'ON',
+      ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT: 'OFF',
+      ASSIMP_BUILD_OBJ_IMPORTER: 'ON',
+      ASSIMP_BUILD_GLTF_EXPORTER: 'ON',
     });
   });
 });

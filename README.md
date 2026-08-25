@@ -56,7 +56,7 @@ The positional result tuple preserves target order and literal format types. The
 ## Resolve sidecars asynchronously
 
 ```typescript
-import { convert } from 'libassimp/importer';
+import { convert } from 'libassimp';
 
 const response = await fetch('https://assets.example/model.gltf');
 const bytes = new Uint8Array(await response.arrayBuffer());
@@ -78,11 +78,7 @@ The same artifact automatically suspends with JSPI when the host supports it and
 
 `assimpCapabilities`, `conversionEdges`, and `defaultPostProcess` are generated from the pinned Assimp source and are available without loading Wasm. Public targets are canonical: binary/ASCII choices use `exportOptions.binary`, OBJ materials use `exportOptions.materials`, and `glb`/`gltf` always mean glTF 2.
 
-Three entries expose the same API with narrower compiled catalogs:
-
-- `libassimp`: 69 import extensions and all 15 canonical exporters.
-- `libassimp/importer`: 69 import extensions and `assjson`, `glb`, `gltf` output.
-- `libassimp/exporter`: glTF/USD-family input and all 15 canonical exporters.
+The single `libassimp` entry reads all 69 compiled extensions and writes all 15 canonical formats through `libassimp.wasm`.
 
 ## Compatibility
 

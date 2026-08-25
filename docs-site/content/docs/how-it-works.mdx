@@ -24,7 +24,7 @@ The custom IOSystem exposes named in-memory byte arrays through Assimp's random-
 
 ## Async resolution with one artifact
 
-Every entry ships one baseline-compatible Wasm artifact:
+The package ships one baseline-compatible `libassimp.wasm` artifact:
 
 ```mermaid
 flowchart TD
@@ -47,7 +47,7 @@ Public targets are not Assimp exporter IDs. `glb` and `gltf` always route to glT
 
 <ExportMatrix />
 
-The import table is directional: it lists extensions each entry can read, not targets it can write.
+The import table is directional: it lists readable extensions, not writable targets.
 
 <ImportMatrix />
 
@@ -59,6 +59,6 @@ The import table is directional: it lists extensions each entry can read, not ta
 
 ## Production build
 
-All three variants compile and link with `-O3 -DNDEBUG`, fixed SIMD, mimalloc, Wasm exceptions, Closure-compiled glue, constructor evaluation, and standalone `wasm-opt -O4 --converge --traps-never-happen --skip-pass=code-folding`. The build explicitly pins `WASM_LEGACY_EXCEPTIONS=1`; exnref waits until every documented host floor supports it. LTO, relaxed SIMD, pthreads, Asyncify, and mode-specific JSPI artifacts remain absent.
+The artifact compiles and links with `-O3 -DNDEBUG`, fixed SIMD, mimalloc, Wasm exceptions, Closure-compiled glue, constructor evaluation, and standalone `wasm-opt -O4 --converge --traps-never-happen --skip-pass=code-folding`. The build explicitly pins `WASM_LEGACY_EXCEPTIONS=1`; exnref waits until every documented host floor supports it. LTO, relaxed SIMD, pthreads, Asyncify, and mode-specific JSPI artifacts remain absent.
 
-Build manifests record exact definitions, compile/link/optimizer flags, import/export inventory, and raw/gzip/brotli size for each artifact. CI ratchets those measured files rather than estimating them.
+The build manifest records exact definitions, compile/link/optimizer flags, import/export inventory, and raw/gzip/brotli size. CI ratchets those measured files rather than estimating them.

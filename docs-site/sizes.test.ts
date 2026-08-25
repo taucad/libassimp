@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -8,35 +9,26 @@ import { formatSize } from './components/size-strip';
 import sizes from './lib/sizes.json';
 
 const ROOT = resolve(import.meta.dirname, '..');
-const VARIANTS = ['full', 'importer', 'exporter'] as const;
-
 /** The figures need the CI-built binaries; `pnpm run build` at the repo root stages them. */
-const wasmPath = (variant: string): string => resolve(ROOT, `src/wasm/libassimp-${variant}.wasm`);
-const wasmTest = VARIANTS.every((variant) => existsSync(wasmPath(variant))) ? it : it.skip;
+const wasmPath = resolve(ROOT, 'src/wasm/libassimp.wasm');
+const wasmTest = existsSync(wasmPath) ? it : it.skip;
 
 const distribution = resolve(ROOT, 'dist/index.mjs');
 const distributionTest = existsSync(distribution) ? it : it.skip;
-const demoWasm = resolve(import.meta.dirname, 'public/demo/libassimp-full.wasm');
+const demoWasm = resolve(import.meta.dirname, 'public/demo/libassimp.wasm');
 
 describe('published size figures', () => {
-  it('names every shipped build', () => {
-    expect(Object.keys(sizes.wasm)).toEqual([...VARIANTS]);
+  it('self-hosts the measured binary used by every live demo', () => {
+    expect(statSync(demoWasm).size).toBe(sizes.wasm.raw);
   });
 
-  it('self-hosts the measured full binary used by every live demo', () => {
-    expect(statSync(demoWasm).size).toBe(sizes.wasm.full.raw);
-  });
-
-  // Raw lengths are compared rather than recompressed: brotli-11 over 29 MB of binaries costs a
-  // minute, scripts/measure-sizes.mjs writes the compressed figures on every build, and
-  // scripts/check-wasm-size.mjs is the gate that recompresses and ratchets them.
-  wasmTest('quotes the binaries the package ships, when src/wasm holds them', () => {
-    for (const variant of VARIANTS) {
-      const { raw, gzip, brotli } = sizes.wasm[variant];
-      expect(raw, variant).toEqual(statSync(wasmPath(variant)).size);
-      expect(brotli, variant).toBeLessThan(gzip);
-      expect(gzip, variant).toBeLessThan(raw);
-    }
+  wasmTest('quotes the binary the package ships, when src/wasm holds it', () => {
+    const bytes = readFileSync(wasmPath);
+    const { sha256, raw, gzip, brotli } = sizes.wasm;
+    expect(sha256).toBe(createHash('sha256').update(bytes).digest('hex'));
+    expect(raw).toEqual(statSync(wasmPath).size);
+    expect(brotli).toBeLessThan(gzip);
+    expect(gzip).toBeLessThan(raw);
   });
 
   distributionTest('quotes the built JavaScript entrypoint, when dist/index.mjs exists', () => {
@@ -57,7 +49,7 @@ const staticOutputTest = process.env['VERIFY_STATIC_OUTPUT'] === 'true' ? it : i
 describe('static home page', () => {
   staticOutputTest('prints the measured sizes', () => {
     const html = readFileSync(resolve(import.meta.dirname, 'out/index.html'), 'utf8');
-    for (const variant of VARIANTS) expect(html).toContain(formatSize(sizes.wasm[variant].brotli));
+    expect(html).toContain(formatSize(sizes.wasm.brotli));
     expect(html).toContain(formatSize(sizes.js.gzip));
   });
 });

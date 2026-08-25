@@ -13,8 +13,8 @@ describe('npm package file contract', () => {
     expect(() => validatePackageFiles([...PACKAGE_FILES, 'src/cpp/libassimp.cpp'])).toThrow(
       'forbidden=[src/cpp/libassimp.cpp]',
     );
-    expect(() => validatePackageFiles([...PACKAGE_FILES, 'dist/wasm/libassimp-full.js.symbols'])).toThrow(
-      'forbidden=[dist/wasm/libassimp-full.js.symbols]',
+    expect(() => validatePackageFiles([...PACKAGE_FILES, 'dist/wasm/libassimp.js.symbols'])).toThrow(
+      'forbidden=[dist/wasm/libassimp.js.symbols]',
     );
   });
 });

@@ -157,7 +157,6 @@
       "x",
       "x3d"
     ],
-    "importer": ["assjson", "glb", "gltf"],
     "routes": {
       "3ds": {
         "extension": "3ds",

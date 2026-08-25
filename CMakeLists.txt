@@ -18,9 +18,6 @@ project(libassimp CXX C)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Which variants.json entry this build compiles. CMakePresets.json sets it along
-# with the matching ASSIMP_BUILD_<FORMAT>_<SIDE> cache entries.
-set(LIBASSIMP_VARIANT "full" CACHE STRING "variants.json entry to build")
 option(LIBASSIMP_NATIVE_TESTS "Build the host-native ctest driver" OFF)
 option(LIBASSIMP_FAST "Skip the slow optimization passes; local iteration only" OFF)
 
@@ -69,7 +66,7 @@ if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS)
 endif()
 
 if(EMSCRIPTEN)
-  set(LIBASSIMP_TARGET "libassimp-${LIBASSIMP_VARIANT}")
+  set(LIBASSIMP_TARGET "libassimp")
   add_executable(${LIBASSIMP_TARGET} src/cpp/libassimp.cpp)
   target_link_libraries(${LIBASSIMP_TARGET} PRIVATE assimp)
   set_target_properties(${LIBASSIMP_TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

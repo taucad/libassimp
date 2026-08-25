@@ -328,9 +328,7 @@ export const ConvertDemo = ({
 
       {!supported ? <p className={styles.status}>This browser has no WebAssembly support.</p> : undefined}
       {outcome.kind === 'running' ? (
-        <p className={styles.status}>
-          {outcome.phase === 'load' ? 'Loading the self-hosted full build…' : 'Converting…'}
-        </p>
+        <p className={styles.status}>{outcome.phase === 'load' ? 'Loading libassimp…' : 'Converting…'}</p>
       ) : undefined}
       {outcome.kind === 'failed' ? (
         <p className={`${styles.status} ${styles.error}`}>

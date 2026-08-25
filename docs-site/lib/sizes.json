@@ -1,25 +1,14 @@
 {
   "version": "0.0.0",
   "wasm": {
-    "full": {
-      "raw": 11696786,
-      "gzip": 3064739,
-      "brotli": 2061982
-    },
-    "importer": {
-      "raw": 10364581,
-      "gzip": 2705070,
-      "brotli": 1828406
-    },
-    "exporter": {
-      "raw": 7297772,
-      "gzip": 1874418,
-      "brotli": 1246422
-    }
+    "sha256": "e5b344044cd92a744f8fd1f8f06a0c443f4f4539452fd6af680ce41f7c621e80",
+    "raw": 11696786,
+    "gzip": 3064739,
+    "brotli": 2061982
   },
   "js": {
-    "raw": 1190,
-    "gzip": 504
+    "raw": 894,
+    "gzip": 396
   },
-  "measuredAt": "2026-08-25T01:37:10.997Z"
+  "measuredAt": "2026-08-25T06:01:00.411Z"
 }
