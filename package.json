@@ -1,7 +1,7 @@
 {
   "name": "libassimp",
   "version": "0.0.0",
-  "description": "Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.",
+  "description": "Assimp for TypeScript and WebAssembly: import 69 3D formats and export 15 formats in browsers and Node.js.",
   "keywords": [
     "3d",
     "3mf",
@@ -16,7 +16,7 @@
     "wasm",
     "webassembly"
   ],
-  "homepage": "https://libassimp.vercel.app",
+  "homepage": "https://libassimp.xyz",
   "bugs": {
     "url": "https://github.com/taucad/libassimp/issues"
   },

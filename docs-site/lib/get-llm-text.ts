@@ -1,7 +1,7 @@
 import { source } from '@/lib/source';
 
 /** Absolute base for the Markdown projections agents fetch. */
-const origin = 'https://libassimp.vercel.app';
+const origin = 'https://libassimp.xyz';
 
 export const getMarkdownPath = (pageUrl: string): string => `${pageUrl}.mdx`;
 
