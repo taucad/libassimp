@@ -718,7 +718,14 @@ const renderGenerated = (evidence, overrides) => {
     for (const format of descriptor.formats) exportOptions[format].push(descriptor);
   }
   for (const [format, route] of Object.entries(overrides.formats.routes)) {
-    for (const option of route.options ?? []) exportOptions[format].push(option);
+    for (const option of route.options ?? []) {
+      exportOptions[format].push({
+        ...option,
+        nativeKind: option.kind,
+        formats: [format],
+        phases: ['export'],
+      });
+    }
     exportOptions[format].sort((one, two) => one.publicName.localeCompare(two.publicName));
   }
 

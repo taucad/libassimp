@@ -87,7 +87,7 @@ const wasmSourceUrl = (configured: string | URL | undefined, fallback: URL): URL
 /** Compile a URL with a byte fallback for hosts without streaming compilation. @internal */
 export const compileUrl = async (url: URL): Promise<WebAssembly.Module> => {
   if (url.protocol === 'file:' && 'process' in globalThis) {
-    const { readFile } = await import('node:fs/promises');
+    const { readFile } = await import(/* webpackIgnore: true */ /* @vite-ignore */ 'node:fs/promises');
     return WebAssembly.compile(await readFile(url));
   }
   const response = await fetch(url);

@@ -28,6 +28,10 @@ describe('generated format catalogs', () => {
     expect(exportFormats.map(({ id }) => id)).toEqual(canonicalExports);
   });
 
+  it('publishes the exact compiled 69 import roots', () => {
+    expect(importFormats).toHaveLength(69);
+  });
+
   it('publishes exactly the non-identity import/export cross-product', () => {
     expect(conversionEdges).toEqual(cross(importFormats, exportFormats));
   });

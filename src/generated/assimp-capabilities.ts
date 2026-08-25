@@ -4294,6 +4294,9 @@ export const internalExportOptionDescriptors = {
       owners: ['FBX'],
       description: 'Write binary FBX when true and ASCII FBX when false.',
       source: 'assimp/code/Common/Exporter.cpp',
+      nativeKind: 'boolean',
+      formats: ['fbx'],
+      phases: ['export'],
     },
     joinIdenticalVertices: {
       publicName: 'joinIdenticalVertices',
@@ -4585,6 +4588,9 @@ export const internalExportOptionDescriptors = {
       owners: ['Obj'],
       description: 'Write an MTL sidecar when the scene has materials.',
       source: 'assimp/code/Common/Exporter.cpp',
+      nativeKind: 'boolean',
+      formats: ['obj'],
+      phases: ['export'],
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4625,6 +4631,9 @@ export const internalExportOptionDescriptors = {
       owners: ['Ply'],
       description: 'Write binary PLY when true and ASCII PLY when false.',
       source: 'assimp/code/Common/Exporter.cpp',
+      nativeKind: 'boolean',
+      formats: ['ply'],
+      phases: ['export'],
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4696,6 +4705,9 @@ export const internalExportOptionDescriptors = {
       owners: ['STL'],
       description: 'Write binary STL when true and ASCII STL when false.',
       source: 'assimp/code/Common/Exporter.cpp',
+      nativeKind: 'boolean',
+      formats: ['stl'],
+      phases: ['export'],
     },
     pointClouds: {
       publicName: 'pointClouds',
