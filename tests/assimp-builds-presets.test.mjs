@@ -50,5 +50,9 @@ describe('assimp-builds-to-presets', () => {
       ASSIMP_BUILD_OBJ_IMPORTER: 'ON',
       ASSIMP_BUILD_GLTF_EXPORTER: 'ON',
     });
+    const native = JSON.parse(readFileSync(presetsPath, 'utf8')).configurePresets.find(
+      ({ name }) => name === 'native-test',
+    );
+    expect(native.cacheVariables.ASSIMP_BUILD_3MF_LIB3MF).toBe('ON');
   });
 });
