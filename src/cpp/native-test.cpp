@@ -43,11 +43,8 @@ const Case kCases[] = {
     {"obj-to-obj", "OBJ/box.obj", "obj", "", "#", "result.obj"},
     {"obj-to-stl", "OBJ/box.obj", "stl", "", "solid", "result.stl"},
     {"obj-to-ply", "OBJ/box.obj", "ply", "", "ply", "result.ply"},
-    // Without lib3mf assimp's built-in 3MF exporter writes through kuba-zip straight to the real
-    // filesystem, bypassing any IOSystem — so nothing reaches the file map. The production Wasm build
-    // sets ASSIMP_BUILD_3MF_LIB3MF=ON (where the bridge does honour the IOSystem) and the format
-    // matrix covers the happy path; here we pin that the bypass surfaces as a clean failure.
-    {"3mf-without-lib3mf-fails-cleanly", "OBJ/box.obj", "3mf", "EXPORT_FAILED", "", ""},
+    {"gltf2-manifold-to-3mf", "glTF2/EXT_mesh_manifold/TwoMaterialBox.glb", "3mf", "", "PK",
+     "result.3mf"},
     {"obj-to-assjson", "OBJ/box.obj", "assjson", "", "{", "result.json"},
     {"obj-to-usda", "OBJ/box.obj", "usda", "", "#usda", "result.usda"},
     {"obj-to-usdz", "OBJ/box.obj", "usdz", "", "PK", "result.usdz"},
@@ -161,25 +158,33 @@ bool run(const Case& item) {
 
 bool runPlanCase(const std::string& name) {
   libassimp::Bytes bytes;
-  const std::string path = modelsDir() + "/OBJ/box.obj";
+  const std::string file = name == "later-target-atomic" ? "PLY/points.ply" : "OBJ/box.obj";
+  const std::string path = modelsDir() + "/" + file;
   if (!readFile(path, bytes)) return false;
-  std::vector<libassimp::NamedBytes> files{{"box.obj", std::move(bytes)}};
+  std::vector<libassimp::NamedBytes> files{{libassimp::MemoryFiles::basename(path), std::move(bytes)}};
   std::vector<libassimp::Target> targets;
   if (name == "import-once-three-targets") {
     targets = {{"glb", "glb2", {}}, {"stl", "stl", {}}, {"ply", "ply", {}}};
   } else if (name == "repeated-stl-targets") {
     targets = {{"stl", "stl", {}}, {"stl", "stlb", {}}};
   } else if (name == "later-target-atomic") {
-    targets = {{"glb", "glb2", {}}, {"3mf", "3mf", {}}};
+    targets = {{"assjson", "assjson", {}}, {"3mf", "3mf", {}}};
   } else {
     return false;
   }
-  libassimp::Plan plan("box.obj", std::move(files), {}, kPostProcess, std::move(targets), {});
+  libassimp::Plan plan(libassimp::MemoryFiles::basename(path), std::move(files), {}, kPostProcess,
+                       std::move(targets), {});
   const libassimp::PlanStatus status = plan.run();
   const libassimp::Result& result = plan.result();
   if (name == "later-target-atomic") {
-    return status == libassimp::PlanStatus::Failed && result.code == "EXPORT_FAILED" &&
-           result.formatIndex == 1 && result.format == "3mf" && result.formats.empty();
+    const bool passed = status == libassimp::PlanStatus::Failed && result.code == "EXPORT_FAILED" &&
+                        result.formatIndex == 1 && result.format == "3mf" && result.formats.empty();
+    if (!passed) {
+      std::cerr << name << ": got status=" << static_cast<int>(status) << " code='" << result.code
+                << "' formatIndex=" << result.formatIndex << " format='" << result.format
+                << "' outputs=" << result.formats.size() << " message='" << result.message << "'\n";
+    }
+    return passed;
   }
   if (status != libassimp::PlanStatus::Completed || !result.ok || plan.importAttempts() != 1 ||
       result.formats.size() != 2 + (name == "import-once-three-targets")) {

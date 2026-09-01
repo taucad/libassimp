@@ -98,12 +98,10 @@ const presets = {
         CMAKE_CXX_COMPILER_LAUNCHER: 'ccache',
         ...Object.fromEntries(
           Object.entries(sharedCacheVariables).filter(
-            // lib3mf is an import-side FetchContent dependency; the ctest leg has to stay cheap.
             // The vendored zlib no longer compiles against the macOS SDK; CI hosts ship zlib.
-            ([key]) => key !== 'ASSIMP_BUILD_3MF_LIB3MF' && key !== 'ASSIMP_BUILD_ZLIB',
+            ([key]) => key !== 'ASSIMP_BUILD_ZLIB',
           ),
         ),
-        ASSIMP_BUILD_3MF_LIB3MF: 'OFF',
         ASSIMP_BUILD_ZLIB: 'OFF',
         ...buildCacheVariables('native-test'),
       },

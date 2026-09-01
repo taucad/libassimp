@@ -1,9 +1,9 @@
 {
-  "engineSha": "c06c37a38fa8cf1020deafd9f416b805ca499fcf",
-  "sourceSha256": "4bd2666429e006bc4827ab5f0df66a0dbbb341aa3bf2b37c7c27212998bb289f",
+  "engineSha": "ef850a10da52f43eb32ae0ac4b22090edb28d2de",
+  "sourceSha256": "a02189f08563c36c7f0dbed5a17b7c50daebf55c18f7f58cda89795ddf054482",
   "sourceSha256ByPath": {
     "assimp-builds.json": "12ad123069f3f4685c239f4a844362bad68021bf79acc20694ef0a39544efb21",
-    "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "a67f76a8771f5c72ec4bbbb2e477a89b88e214efec3d40695ced4c8343cd2e58",
+    "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "5dc9b5a66e066a0e5bb5f83de6bb9de1a29d3b7837a4dfa543006f640b3a1edd",
     "assimp/code/AssetLib/AC/ACLoader.cpp": "874aeda14e635ec6d3ad2c0ae47add63f1095693bb088adb6c8db4317494c551",
     "assimp/code/AssetLib/ASE/ASELoader.cpp": "3f24015f200645dbc3d382435d851ca8c8cc7c8e816e095458d41c3b98df5b46",
     "assimp/code/AssetLib/Assjson/json_exporter.cpp": "ef5512005d91bf3ffb191b73e06770bf19b19ec3ecd6442bc9fa01aea9110208",
@@ -20,7 +20,7 @@
     "assimp/code/AssetLib/FBX/FBXModel.cpp": "22cc1f2fe8a00d4fab623de91aee68bc93d7bc0b506a06a5cb9c7401ed270f39",
     "assimp/code/AssetLib/FBX/FBXNodeAttribute.cpp": "3b9654b978c9af0a121bd3c52f7f3292fca6133fe2cc4ba9a7da8d199a1534dc",
     "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp": "ebe2377c631a6b21efd1a4a12462affd090ed17a60369578613d58b73ebab3e4",
-    "assimp/code/AssetLib/glTF2/glTF2Importer.cpp": "8e7f3d277f42a874816e6b4f97cb9d3a16d3a25623a0ea4a6879670ab169bd70",
+    "assimp/code/AssetLib/glTF2/glTF2Importer.cpp": "d8927e385804d24b300318690baf5832636b07f57fc998b7b45e790228e49965",
     "assimp/code/AssetLib/IFC/IFCLoader.cpp": "08504694b6a611e575c21d44cf2056a7cc490431e0b42862c3724a1bb78ccca6",
     "assimp/code/AssetLib/LWO/LWOLoader.cpp": "5c4c00dfc37459b3f837510fdade543f4305585e3569a967f391fb3f3c1aa9fb",
     "assimp/code/AssetLib/LWS/LWSLoader.cpp": "7ea5cf7f588cc209d43052be170f0cb91ed4ab1c08fe19e2303659f419f7f285",
@@ -37,7 +37,7 @@
     "assimp/code/AssetLib/Unreal/UnrealLoader.cpp": "2651b54ccdb63cf50742a31106b4261d55ce91fd5806bf0e52d52d33eaa74c4a",
     "assimp/code/AssetLib/USD/USDZExporter.cpp": "b0a80f39a5764b82c96a1afaec51592ae5c13838e247f18f6dd9e2b8211e3b26",
     "assimp/code/AssetLib/X/XFileExporter.cpp": "730178631df48132ac12e0c1d68fab8f2f7b8ef949e0155cad66335674afd260",
-    "assimp/code/Common/Exporter.cpp": "7918fb8392113744d6fad99cf688fd775aaaf0ad0624ce1e880f1dc3be003b37",
+    "assimp/code/Common/Exporter.cpp": "d9abdb1572b28f4cd8c0db00000ea46e25c817abdee897bc966ec6a922b78d45",
     "assimp/code/Common/Importer.cpp": "02b3283d3bb08596e867d59dfad40b7e4d8edd29531d36d235a0581996e5571f",
     "assimp/code/Common/UnitAxisContract.cpp": "fc0ddf1a7ac862ac41e1d56ae18020a9821bfd9f14e016e4e64af64fe64a6a88",
     "assimp/code/PostProcessing/CalcTangentsProcess.cpp": "dad8b4f1f57f3f59cdf593e780b4336e3c9bc54213a49533849c9da7dcd791f8",
@@ -480,7 +480,7 @@
       "defaults": [""],
       "owners": ["3MF"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:425"]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:522"]
     },
     {
       "nativeName": "3MF_EXPORT_DECIMAL_PRECISION",
@@ -489,7 +489,7 @@
       "defaults": [9],
       "owners": ["3MF"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:620"]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:835"]
     },
     {
       "nativeName": "3MF_EXPORT_UNIT",
@@ -498,7 +498,7 @@
       "defaults": ["millimeter"],
       "owners": ["3MF"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:386"]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:483"]
     },
     {
       "nativeName": "3MF_EXPORT_UPAXIS",
@@ -507,7 +507,7 @@
       "defaults": [2],
       "owners": ["3MF"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:400"]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:497"]
     },
     {
       "nativeName": "AI_CONFIG_ANDROID_JNI_ASSIMP_MANAGER_SUPPORT",
@@ -604,7 +604,7 @@
       "defaults": ["$blobfile"],
       "owners": ["Common"],
       "symbols": ["AI_CONFIG_EXPORT_BLOB_NAME"],
-      "sources": ["assimp/code/Common/Exporter.cpp:376"]
+      "sources": ["assimp/code/Common/Exporter.cpp:375"]
     },
     {
       "nativeName": "EXPORT_FBX_TRANSPARENCY_FACTOR_REFER_TO_OPACITY",
@@ -623,7 +623,7 @@
       "owners": ["Common", "PostProcessing"],
       "symbols": ["AI_CONFIG_EXPORT_POINT_CLOUDS"],
       "sources": [
-        "assimp/code/Common/Exporter.cpp:497",
+        "assimp/code/Common/Exporter.cpp:522",
         "assimp/code/PostProcessing/PretransformVertices.cpp:113"
       ]
     },
@@ -1476,7 +1476,7 @@
       "defaults": [],
       "owners": ["glTF2"],
       "symbols": ["AI_CONFIG_IMPORT_SCHEMA_DOCUMENT_PROVIDER"],
-      "sources": ["assimp/code/AssetLib/glTF2/glTF2Importer.cpp:2032"]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Importer.cpp:2327"]
     },
     {
       "nativeName": "IMPORT_SMD_KEYFRAME",
