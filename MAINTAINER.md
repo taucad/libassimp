@@ -28,7 +28,7 @@ open the pull request yourself.
 ## Repository operations
 
 Repository rules, secret scanning, push protection, and private vulnerability
-reporting are managed through the `cloud-infra` stack. The npm Trusted
+reporting are managed through the `tau-cloud` stack. The npm Trusted
 Publisher is bound to `taucad/libassimp` and `.github/workflows/ci.yml`. npm
 allows one publisher per package and matches the workflow filename exactly, so
 never re-register it and never add an `NPM_TOKEN`.
