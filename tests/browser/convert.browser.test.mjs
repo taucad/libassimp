@@ -67,14 +67,16 @@ let materialCube;
 let material;
 let externalGltf;
 let points;
+let manifold;
 
 beforeAll(async () => {
-  [cube, materialCube, material, externalGltf, points] = await Promise.all([
+  [cube, materialCube, material, externalGltf, points, manifold] = await Promise.all([
     bytesAt(new URL('../fixtures/cube.obj', import.meta.url)),
     bytesAt(new URL('../../assimp/test/models/OBJ/cube_usemtl.obj', import.meta.url)),
     bytesAt(new URL('../../assimp/test/models/OBJ/cube_usemtl.mtl', import.meta.url)),
     bytesAt(new URL('../../assimp/test/models/glTF2/BoxTextured-glTF/BoxTextured.gltf', import.meta.url)),
     bytesAt(new URL('../../assimp/test/models/PLY/points.ply', import.meta.url)),
+    bytesAt(new URL('../../assimp/test/models/glTF2/EXT_mesh_manifold/TwoMaterialBox.glb', import.meta.url)),
   ]);
 });
 
@@ -85,6 +87,13 @@ test('loads default entry artifacts and round-trips geometry in the browser', as
 
   const { files: stl } = await convert({ name: 'model.glb', bytes: gltf[0].bytes }, { to: 'stl' });
   const { files: roundTrip } = await convert({ name: stl[0].name, bytes: stl[0].bytes }, { to: 'glb' });
+  expect(new TextDecoder().decode(roundTrip[0].bytes.subarray(0, 4))).toBe('glTF');
+});
+
+test('exports EXT_mesh_manifold to 3MF and reimports it in the browser', async () => {
+  const { files } = await convert({ name: 'TwoMaterialBox.glb', bytes: manifold }, { to: '3mf' });
+  expect(new TextDecoder().decode(files[0].bytes.subarray(0, 2))).toBe('PK');
+  const { files: roundTrip } = await convert({ name: files[0].name, bytes: files[0].bytes }, { to: 'glb' });
   expect(new TextDecoder().decode(roundTrip[0].bytes.subarray(0, 4))).toBe('glTF');
 });
 

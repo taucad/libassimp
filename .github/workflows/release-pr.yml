@@ -113,7 +113,7 @@ jobs:
           previous_version=$(node -p "require('./package.json').version")
           {
             echo 'plans<<PLANSEOF'
-            grep -H '^libassimp:' .nx/version-plans/*.md | sed 's/^/- /'
+            grep -H -E '^(__default__|libassimp):' .nx/version-plans/*.md | sed 's/^/- /' || true
             echo 'PLANSEOF'
           } >> "$GITHUB_OUTPUT"
 

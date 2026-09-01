@@ -205,11 +205,26 @@ describe('importers', () => {
 });
 
 describe('exporters', () => {
+  it('writes EXT_mesh_manifold as one exact multi-material 3MF mesh', async () => {
+    const source = load('glTF2/EXT_mesh_manifold/TwoMaterialBox.glb');
+    const result = await assimp.convert(source, { to: '3mf' });
+    const xml = modelXml(result.files[0].bytes);
+    expect(xml.match(/<object\b/gu)).toHaveLength(1);
+    expect(xml.match(/<mesh\b/gu)).toHaveLength(1);
+    expect(xml.match(/<vertex\b/gu)).toHaveLength(40);
+    expect(xml).toMatch(/<object\b[^>]*\bpid="1"[^>]*\bpindex="0"/u);
+    const triangles = [...xml.matchAll(/<triangle\b[^>]*\/>/gu)].map(([triangle]) => triangle);
+    expect(triangles).toHaveLength(20);
+    expect(triangles.slice(0, 10).every((triangle) => !triangle.includes(' pid='))).toBe(true);
+    expect(triangles.slice(10).every((triangle) => /\bpid="1"[^>]*\bp1="1"/u.test(triangle))).toBe(true);
+  });
+
   it('writes every compiled exporter from one imported scene', async () => {
     const source = load(EXPORT_SOURCE);
     for (const { id, extension } of assimp.formats.export) {
-      const { files } = await assimp.convert(source, { to: id });
-      const [plural] = await assimp.convertFormats(source, { targets: [{ to: id }] });
+      const input = id === '3mf' ? load(TEXTURED_SOURCE) : source;
+      const { files } = await assimp.convert(input, { to: id });
+      const [plural] = await assimp.convertFormats(input, { targets: [{ to: id }] });
       expect(files[0].name, `${id} output name`).toBe(`result.${extension}`);
       if (TIMESTAMPED.has(id)) {
         expect(
@@ -286,15 +301,14 @@ describe('export properties', () => {
   });
 
   it('scales 3MF vertex precision with 3MF_EXPORT_DECIMAL_PRECISION', async () => {
-    const cylinders = load('glTF2/2CylinderEngine-glTF-Binary/2CylinderEngine.glb');
-    const fallback = await assimp.convert(cylinders, { to: '3mf' });
+    const fallback = await assimp.convert(source(), { to: '3mf' });
     expect(maxVertexDigits(modelXml(fallback.files[0].bytes))).toBeGreaterThanOrEqual(9);
-    const wide = await assimp.convert(cylinders, {
+    const wide = await assimp.convert(source(), {
       to: '3mf',
       exportOptions: { decimalPrecision: 12 },
     });
     expect(maxVertexDigits(modelXml(wide.files[0].bytes))).toBeGreaterThanOrEqual(10);
-    const narrow = await assimp.convert(cylinders, {
+    const narrow = await assimp.convert(source(), {
       to: '3mf',
       exportOptions: { decimalPrecision: 3 },
     });
