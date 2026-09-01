@@ -10,9 +10,8 @@ permissions:
   issues: write
 
 jobs:
-  # Exploratory runs need the same artifacts `ci.yml` gates, and wasm is never
-  # committed. The benchmark measures the root entry, and the package build
-  # stages all three variants, so the drift run builds all three.
+  # Exploratory runs need the same artifact `ci.yml` gates, and wasm is never
+  # committed. The benchmark measures the root entry and its sole binary.
   build-wasm:
     runs-on: ubuntu-24.04
     # Origin: about 3x the measured cold job after the -O2 link: compile takes
@@ -21,10 +20,6 @@ jobs:
     timeout-minutes: 90
     container:
       image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: [full, importer, exporter]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -38,17 +33,15 @@ jobs:
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: .ccache
-          key: ${{ runner.os }}-ccache-${{ matrix.variant }}-${{ hashFiles('emsdk-image.txt', 'variants.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**') }}-${{ hashFiles('.gitmodules') }}-${{ steps.engine.outputs.sha }}
-          restore-keys: |
-            ${{ runner.os }}-ccache-${{ matrix.variant }}-
-      - name: Build the ${{ matrix.variant }} variant
+          key: ccache-${{ runner.os }}-${{ hashFiles('emsdk-image.txt', 'assimp-builds.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**', '.gitmodules') }}-${{ steps.engine.outputs.sha }}
+      - name: Build libassimp.wasm
         env:
           LIBASSIMP_EMSDK: host
-        run: node scripts/build-wasm.mjs --variant ${{ matrix.variant }}
+        run: node scripts/build-wasm.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: wasm-${{ matrix.variant }}
-          path: src/wasm/libassimp-${{ matrix.variant }}.*
+          name: wasm
+          path: src/wasm/libassimp.*
           if-no-files-found: error
 
   drift:
@@ -63,9 +56,8 @@ jobs:
           node-version: '26'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: wasm-*
+          name: wasm
           path: src/wasm
-          merge-multiple: true
       - id: benchmark
         continue-on-error: true # Origin: exploratory drift opens an issue; PR gate remains fail-closed in ci.yml.
         env:

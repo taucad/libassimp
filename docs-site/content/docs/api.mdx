@@ -1,49 +1,54 @@
 ---
 title: API reference
-description: Every public export — the one-shot convert, the instance factory, the request and result types, and the failure codes.
+description: Conversion methods, generated capabilities, directional formats, typed options, lifecycle, and failures.
 ---
 
-Every export below comes from `libassimp`, and identically from
-`libassimp/importer` and `libassimp/exporter`. The two entries differ only in
-the `ExportFormat` ids they accept and the importers compiled into their
-binary.
+Every public symbol is available from the single `libassimp` entry.
 
 ## `convert`
-
-Convert one model, or a model and the files it references, to another format.
 
 ```typescript
 import type { AssimpFile, ConvertOptions, ConvertResult } from 'libassimp';
 
-export declare const convert: (
+export declare const convert: <Format extends import('libassimp').ExportFormat>(
   files: AssimpFile | readonly AssimpFile[],
-  options: ConvertOptions,
+  options: ConvertOptions<Format>,
 ) => Promise<ConvertResult>;
 ```
 
-- **Parameters**: the model as a single file, or an array whose first element
-  is the entry file and whose other elements are available to be referenced;
-  and the target format with any per-call settings.
-- **Returns**: the files the exporter wrote, primary output first.
-- **Throws**: `AssimpError` when the format is unavailable to this entry or a
-  conversion phase fails.
+Converts one entry file to one canonical target. The first array element is always the entry file. `ConvertOptions` contains `to`, `resolve`, `importOptions`, `postProcess`, and target-specific `exportOptions`.
 
-Calls share one lazily created instance per process, so the first call pays for
-loading the binary and later calls do not. Reach for `createAssimp` when you
-want that lifetime in your own hands.
+## `convertFormats`
 
 ```typescript
-import { convert } from 'libassimp';
+import type { AssimpFile, ConvertFormatsOptions, ConvertFormatsResult, ConvertTarget } from 'libassimp';
+
+export declare const convertFormats: <const Targets extends readonly [ConvertTarget, ...ConvertTarget[]]>(
+  files: AssimpFile | readonly AssimpFile[],
+  options: ConvertFormatsOptions<Targets>,
+) => Promise<ConvertFormatsResult<Targets>>;
+```
+
+Imports once and exports a non-empty target tuple sequentially. Each `ConvertedFormat` contains its literal `format` and ordered files; target order, repeats, and result positions are preserved. There is no caller ID field.
+
+```typescript
+import { convertFormats } from 'libassimp';
 
 const bytes = new Uint8Array();
-const { files } = await convert({ name: 'model.dae', bytes }, { to: 'glb' });
+const [ascii, binary] = await convertFormats(
+  { name: 'part.glb', bytes },
+  {
+    targets: [
+      { to: 'stl', exportOptions: { binary: false } },
+      { to: 'stl', exportOptions: { binary: true } },
+    ],
+  },
+);
 
-console.log(files[0].name);
+console.log(ascii.format, binary.format);
 ```
 
 ## `createAssimp`
-
-Create an instance whose lifetime, binary location and diagnostics you control.
 
 ```typescript
 import type { Assimp, CreateAssimpOptions } from 'libassimp';
@@ -51,89 +56,76 @@ import type { Assimp, CreateAssimpOptions } from 'libassimp';
 export declare const createAssimp: (options?: CreateAssimpOptions) => Promise<Assimp>;
 ```
 
-- **Parameters**: where to load the binary from, and where to send the
-  engine's diagnostic lines.
-- **Returns**: a loaded instance, with the format tables its build carries.
-- **Throws**: whatever fetching or instantiating the binary threw.
+An instance exposes `convert`, `convertFormats`, directional `formats`, `dispose()`, and `Symbol.dispose`. Work is FIFO-serialized per instance; create separate instances for parallel conversions.
+
+`CreateAssimpOptions` has only:
+
+- `wasmUrl`: override the entry's single Wasm URL.
+- `wasmBinary`: compile supplied bytes instead of fetching that URL.
+- `onLog`: receive runtime diagnostics.
+
+## Static generated data
 
 ```typescript
-import { createAssimp } from 'libassimp';
+import { assimpCapabilities, conversionEdges, defaultPostProcess } from 'libassimp';
 
-using assimp = await createAssimp({
-  onLog: ({ level, message }) => {
-    console[level === 'error' ? 'error' : 'log'](message);
-  },
-});
+const stl = assimpCapabilities.export.stl.exportOptions;
+const glbToStl = conversionEdges.find(({ from, to }) => from === 'glb' && to === 'stl');
 
-const bytes = new Uint8Array();
-const { files } = await assimp.convert({ name: 'model.stl', bytes }, { to: '3mf' });
-
-console.log(files[0].name);
+console.log(stl.binary.default, glbToStl, defaultPostProcess);
 ```
 
-`using` disposes the instance at the end of the scope; `assimp.dispose()` does
-the same by hand. Conversions on a disposed instance reject, so create another
-rather than retrying on it. Instances are independent: two of them hold two
-compiled modules and two heaps.
+- `assimpCapabilities` is the keyed serializable registry: directional import/export metadata, exact export-option descriptors, `ImportOptions`, and `PostProcessDescriptor` data.
+- `conversionEdges` is the exact import/export cross-product minus identity pairs. `ConversionEdge` remains a discriminated union of valid pairs.
+- `defaultPostProcess` is the default readonly `PostProcessStep` tuple.
 
-## Types
+Importing these values does not load Wasm.
+
+## Core types
 
 ### `AssimpFile`
 
 <auto-type-table path="./props.ts" name="AssimpFile" />
 
-### `ConvertOptions`
+### `ResolveFile`
 
-<auto-type-table path="./props.ts" name="ConvertOptions" />
+`ResolveFile` returns `Uint8Array | undefined | Promise<Uint8Array | undefined>` for an exact requested sidecar name.
 
-`to` takes any `ExportFormat` id this entry accepts — assimp's own exporter
-ids plus the aliases `glb`, `gltf`, `glb1`, `gltf1`, `step` and `dae`. The
-[format matrix](/docs/how-it-works#exporters) lists them per entry.
+### Options
 
-### `ConvertResult`
+`ImportOptions` is the generated exact import configuration. `ExportOptionsByFormat` maps every canonical target to its exact options; `ExportOptionsFor<Format>` indexes that map. `ExportOptionDescriptorsFor<Format>` exposes its runtime descriptors. `OptionDescriptor` describes kind, default, bounds, enum values, applicability, and documentation. No public index signature or raw native property bag exists.
 
-<auto-type-table path="./props.ts" name="ConvertResult" />
+### Formats
 
-### `Assimp`
+`ImportFormat` and `ExportFormat` are directional unions. `ImportFormatInfo` describes readable extensions; `ExportFormatInfo` adds target-specific option descriptors. `FormatInfo` is the shared base. Native exporter IDs are private.
 
-<auto-type-table path="./props.ts" name="Assimp" />
+### Requests and results
 
-### `CreateAssimpOptions`
-
-<auto-type-table path="./props.ts" name="CreateAssimpOptions" />
-
-### `FormatInfo`
-
-<auto-type-table path="./props.ts" name="FormatInfo" />
+`ConvertTarget`, `ConvertOptions`, `ConvertFormatsOptions`, `ConvertResult`, `ConvertedFormat`, and `ConvertFormatsResult` preserve exact target types. Empty plural target arrays are rejected by both TypeScript and runtime validation.
 
 ## Failures
 
-A failed conversion rejects with an `AssimpError`: a normal `Error` with a
-stable `code`, carrying the engine's own diagnostic text as its message.
-
-### `AssimpFailureCode`
+`AssimpError` is a normal `Error` with an `AssimpFailureCode`. `AssimpErrorContext` may add `formatIndex`, canonical `format`, exact resolver `fileName`, and `cause`.
 
 <auto-type-table path="./props.ts" name="AssimpFailureCode" />
 
 ```typescript
 import { AssimpError, convert } from 'libassimp';
 
-const bytes = new Uint8Array();
-
 try {
-  await convert({ name: 'model.obj', bytes }, { to: 'glb' });
+  await convert(
+    { name: 'model.glb', bytes: new Uint8Array() },
+    { to: 'stl', exportOptions: { binary: true } },
+  );
 } catch (error) {
-  if (error instanceof AssimpError && error.code === 'IMPORT_FAILED') {
-    console.error(error.message);
+  if (error instanceof AssimpError) {
+    console.error(error.code, error.formatIndex, error.format, error.fileName, error.cause);
   }
 }
 ```
 
-[Handle failures](/docs/guides/handle-failures) turns each code into a
-decision.
+Codes are `NO_FILES`, `UNSUPPORTED_FORMAT`, `INVALID_OPTIONS`, `RESOLVE_FAILED`, `IMPORT_FAILED`, and `EXPORT_FAILED`. Plural output is atomic: a failed target exposes no partial result.
 
 ## Versioning
 
-Versions follow Semantic Versioning. Before 1.0 a minor release may carry a
-breaking API change, and each one is recorded in
-[BREAKING_CHANGES.md](https://github.com/taucad/libassimp/blob/main/BREAKING_CHANGES.md).
+Before 1.0, minor versions may break the prerelease API. Each removal is recorded in [BREAKING_CHANGES.md](https://github.com/taucad/libassimp/blob/main/BREAKING_CHANGES.md).

@@ -2,10 +2,11 @@
   "title": "Guides",
   "pages": [
     "convert-a-model",
-    "choose-an-entry",
+    "convert-to-multiple-formats",
     "resolve-sidecar-files",
     "export-properties",
     "use-in-the-browser",
+    "apple-quick-look",
     "handle-failures"
   ]
 }

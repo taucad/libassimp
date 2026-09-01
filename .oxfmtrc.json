@@ -8,6 +8,7 @@
     "docs-site/.source/**",
     "docs-site/next-env.d.ts",
     "docs-site/out/**",
+    "docs-site/public/demo/**",
     "docs-site/tsconfig.json",
     "src/wasm/**"
   ],

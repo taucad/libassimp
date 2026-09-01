@@ -7,25 +7,25 @@
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const VARIANTS = ['full', 'importer', 'exporter'];
 const EXTENSIONS = ['js', 'wasm'];
 
 const source = new URL('../src/wasm/', import.meta.url);
 const destination = new URL('../dist/wasm/', import.meta.url);
+const demo = new URL('../docs-site/public/demo/', import.meta.url);
 
-const wanted = VARIANTS.flatMap((variant) =>
-  EXTENSIONS.map((extension) => `libassimp-${variant}.${extension}`),
-);
+const wanted = EXTENSIONS.map((extension) => `libassimp.${extension}`);
 const missing = wanted.filter((name) => !existsSync(new URL(name, source)));
 if (missing.length > 0) {
   throw new Error(
     `missing Emscripten artifacts in src/wasm/: ${missing.join(', ')}. ` +
-      'Run `pnpm run build:wasm -- --all` (needs Docker), or download the CI `wasm-*` artifacts into src/wasm/.',
+      'Run `pnpm run build:wasm` (needs Docker), or download the CI `wasm` artifact into src/wasm/.',
   );
 }
 
 mkdirSync(fileURLToPath(destination), { recursive: true });
+mkdirSync(fileURLToPath(demo), { recursive: true });
 for (const name of wanted) copyFileSync(new URL(name, source), new URL(name, destination));
+for (const name of wanted) copyFileSync(new URL(name, source), new URL(name, demo));
 copyFileSync(
   new URL('../src/cjs-error.cjs', import.meta.url),
   new URL('../dist/cjs-error.cjs', import.meta.url),
@@ -34,4 +34,4 @@ copyFileSync(
   new URL('../src/cjs-error.d.cts', import.meta.url),
   new URL('../dist/cjs-error.d.cts', import.meta.url),
 );
-console.log(`copied ${wanted.length} Emscripten artifacts and the CommonJS shim into dist/`);
+console.log('copied the Emscripten pair to dist and docs, plus the CommonJS shim');

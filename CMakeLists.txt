@@ -18,9 +18,6 @@ project(libassimp CXX C)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Which variants.json entry this build compiles. CMakePresets.json sets it along
-# with the matching ASSIMP_BUILD_<FORMAT>_<SIDE> cache entries.
-set(LIBASSIMP_VARIANT "full" CACHE STRING "variants.json entry to build")
 option(LIBASSIMP_NATIVE_TESTS "Build the host-native ctest driver" OFF)
 option(LIBASSIMP_FAST "Skip the slow optimization passes; local iteration only" OFF)
 
@@ -50,10 +47,26 @@ if(EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBASSIMP_COMMON_FLAGS}")
 endif()
 
+if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS)
+  # Public glb/gltf are glTF 2 only. These are compile definitions (not CMake
+  # cache switches) in Assimp and must exist before its targets are created.
+  add_compile_definitions(ASSIMP_BUILD_NO_GLTF1_IMPORTER ASSIMP_BUILD_NO_GLTF1_EXPORTER)
+endif()
+
 add_subdirectory(assimp)
 
+if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS)
+  # Assimp's GLTF CMake group combines v1 and v2 sources. The v1 headers honour
+  # ASSIMP_BUILD_NO_GLTF1_*, but the pinned v1 exporter .cpp only checks the
+  # broad GLTF guard and otherwise fails after its declarations are removed.
+  # Remove only the v1 sources at this outer boundary; glTFCommon and glTF2 stay.
+  get_target_property(LIBASSIMP_ASSIMP_SOURCES assimp SOURCES)
+  list(FILTER LIBASSIMP_ASSIMP_SOURCES EXCLUDE REGEX "AssetLib/glTF/glTF(Asset|AssetWriter|Importer|Exporter)\\.(h|inl|cpp)$")
+  set_property(TARGET assimp PROPERTY SOURCES ${LIBASSIMP_ASSIMP_SOURCES})
+endif()
+
 if(EMSCRIPTEN)
-  set(LIBASSIMP_TARGET "libassimp-${LIBASSIMP_VARIANT}")
+  set(LIBASSIMP_TARGET "libassimp")
   add_executable(${LIBASSIMP_TARGET} src/cpp/libassimp.cpp)
   target_link_libraries(${LIBASSIMP_TARGET} PRIVATE assimp)
   set_target_properties(${LIBASSIMP_TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
@@ -64,6 +77,7 @@ if(EMSCRIPTEN)
     ${LIBASSIMP_LINK_OPTIMIZE}
     -fwasm-exceptions
     -msimd128
+    -sWASM_LEGACY_EXCEPTIONS=1
     -sMODULARIZE=1
     -sEXPORT_ES6=1
     -sEXPORT_NAME=libassimp
@@ -78,10 +92,11 @@ if(EMSCRIPTEN)
     -sEXIT_RUNTIME=0
     -sINVOKE_RUN=0
     -sWASM_BIGINT=1
+    -sERROR_ON_UNDEFINED_SYMBOLS=0
     -lembind
     --no-entry
     --emit-symbol-map
-    "SHELL:--emit-tsd ${LIBASSIMP_TARGET}.d.ts"
+    "SHELL:-sEXPORTED_FUNCTIONS=_libassimp_run_plan"
     "SHELL:-sBINARYEN_EXTRA_PASSES=--strip-debug,--strip-producers,--skip-pass=code-folding"
   )
 
@@ -107,7 +122,7 @@ elseif(LIBASSIMP_NATIVE_TESTS)
           obj-to-obj
           obj-to-stl
           obj-to-ply
-          3mf-without-lib3mf-fails-cleanly
+          gltf2-manifold-to-3mf
           obj-to-assjson
           obj-to-usda
           obj-to-usdz
@@ -123,6 +138,10 @@ elseif(LIBASSIMP_NATIVE_TESTS)
           no-files
           unsupported-format
           garbage-input
+          gltf1-rejected
+          import-once-three-targets
+          repeated-stl-targets
+          later-target-atomic
   )
     add_test(NAME ${case} COMMAND libassimp-native-test ${case})
   endforeach()

@@ -5,28 +5,54 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import matrix from './content/docs/format-matrix.json';
+import { llmStringifyMdx } from './lib/llm-stringify-mdx';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const committed = resolve(import.meta.dirname, 'content/docs/format-matrix.json');
 
 /** Regenerating reads the built entries, so the check needs a built package. */
-const built = ['index', 'importer', 'exporter'].every((entry) =>
-  existsSync(resolve(ROOT, `dist/${entry}.mjs`)),
-);
+const built = existsSync(resolve(ROOT, 'dist/index.mjs'));
 const generatedTest = built ? it : it.skip;
 
 describe('format matrix', () => {
-  it('carries a table for every build', () => {
-    expect(Object.keys(matrix)).toEqual(['full', 'importer', 'exporter']);
-    for (const tables of Object.values(matrix)) {
-      expect(tables.import.length).toBeGreaterThan(0);
-      expect(tables.export.length).toBeGreaterThan(0);
-    }
+  it('carries the import and export tables', () => {
+    expect(Object.keys(matrix)).toEqual(['import', 'export']);
+    expect(matrix.import.length).toBeGreaterThan(0);
+    expect(matrix.export.length).toBeGreaterThan(0);
   });
 
-  it('keeps the aliases the export vocabulary documents', () => {
-    const ids = new Set(matrix.full.export.map(({ id }) => id));
-    for (const id of ['glb2', 'gltf2', 'stp', 'collada']) expect(ids.has(id)).toBe(true);
+  it('uses the exact canonical export vocabulary and option routes', () => {
+    expect(matrix.export.map(({ id }) => id)).toEqual([
+      '3ds',
+      '3mf',
+      'assjson',
+      'dae',
+      'fbx',
+      'glb',
+      'gltf',
+      'obj',
+      'ply',
+      'step',
+      'stl',
+      'usda',
+      'usdz',
+      'x',
+      'x3d',
+    ]);
+    expect(Object.keys(matrix.export.find(({ id }) => id === 'stl')?.exportOptions ?? {})).toContain(
+      'binary',
+    );
+    expect(Object.keys(matrix.export.find(({ id }) => id === 'obj')?.exportOptions ?? {})).toContain(
+      'materials',
+    );
+    expect(JSON.stringify(matrix)).not.toMatch(/glb1|gltf1|glb2|gltf2|objnomtl|plyb|stlb/u);
+  });
+
+  it('projects the visible table data for text-only readers', () => {
+    const project = (name: 'ImportMatrix' | 'ExportMatrix') =>
+      llmStringifyMdx({ attributes: [], name, type: 'mdxJsxFlowElement' });
+    expect(project('ImportMatrix')).toContain('Wavefront Object: `.obj`');
+    expect(project('ExportMatrix')).toContain('`glb`: `result.glb` — glTF 2 binary container');
   });
 
   generatedTest('regenerates to the committed file, when the package is built', () => {

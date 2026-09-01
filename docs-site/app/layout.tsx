@@ -6,7 +6,7 @@ import './global.css';
 
 export const metadata: Metadata = {
   description:
-    'Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.',
+    'Assimp for TypeScript and WebAssembly: import 69 3D formats and export 15 formats in browsers and Node.js.',
   icons: {
     // iOS masks the icon itself, so this one is full-bleed and opaque.
     apple: { sizes: '180x180', url: '/apple-touch-icon.png' },
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
       { url: '/favicon.ico', sizes: '32x32' },
     ],
   },
-  metadataBase: new URL('https://libassimp.vercel.app'),
+  metadataBase: new URL('https://libassimp.xyz'),
   title: { default: 'libassimp', template: `%s — libassimp` },
 };
 

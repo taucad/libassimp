@@ -6,6 +6,23 @@ import { fileURLToPath } from 'node:url';
 const THRESHOLD = 0.1;
 const MARKER = '<!-- libassimp-benchmark -->';
 
+export const averageBenchmarks = (reports) => {
+  if (reports.length === 0) throw new Error('at least one benchmark report is required');
+  const [first] = reports;
+  for (const report of reports.slice(1)) {
+    if (
+      report.name !== first.name ||
+      report.outputBytes !== first.outputBytes ||
+      report.outputFnv !== first.outputFnv
+    ) {
+      throw new Error('cannot average benchmark reports with different identities or output fingerprints');
+    }
+  }
+  const average = (key) =>
+    Math.round((reports.reduce((sum, report) => sum + report[key], 0) / reports.length) * 1_000) / 1_000;
+  return { ...first, medianMs: average('medianMs'), initMs: average('initMs') };
+};
+
 export const compareBenchmark = (current, base) => {
   if (!base || current.name !== base.name) {
     return {
@@ -33,10 +50,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const basePath = process.argv[3];
   const outputPath = process.argv[4];
   if (!currentPath || !outputPath) {
-    throw new Error('usage: node scripts/compare-benchmark.mjs <current.json> <base.json|-> <output.md>');
+    throw new Error(
+      'usage: node scripts/compare-benchmark.mjs <current.json[,current.json]> <base.json[,base.json]|-> <output.md>',
+    );
   }
-  const current = JSON.parse(readFileSync(currentPath, 'utf8'));
-  const base = basePath && basePath !== '-' ? JSON.parse(readFileSync(basePath, 'utf8')) : undefined;
+  const readReports = (paths) =>
+    averageBenchmarks(paths.split(',').map((path) => JSON.parse(readFileSync(path, 'utf8'))));
+  const current = readReports(currentPath);
+  const base = basePath && basePath !== '-' ? readReports(basePath) : undefined;
   const result = compareBenchmark(current, base);
   writeFileSync(outputPath, `${result.markdown}\n`);
   process.stdout.write(`${result.markdown}\n`);

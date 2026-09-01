@@ -2,13 +2,12 @@
   "version": 6,
   "configurePresets": [
     {
-      "name": "wasm-full",
-      "displayName": "wasm full",
+      "name": "wasm",
+      "displayName": "wasm",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/wasm-full",
+      "binaryDir": "${sourceDir}/build/wasm",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "LIBASSIMP_VARIANT": "full",
         "CMAKE_C_COMPILER_LAUNCHER": "ccache",
         "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         "BUILD_SHARED_LIBS": "OFF",
@@ -41,91 +40,6 @@
         "ASSIMP_BUILD_TERRAGEN_IMPORTER": "OFF",
         "ASSIMP_BUILD_USD_IMPORTER": "ON",
         "ASSIMP_BUILD_VRML_IMPORTER": "ON"
-      }
-    },
-    {
-      "name": "wasm-importer",
-      "displayName": "wasm importer",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/wasm-importer",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "LIBASSIMP_VARIANT": "importer",
-        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
-        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
-        "BUILD_SHARED_LIBS": "OFF",
-        "ASSIMP_BUILD_TESTS": "OFF",
-        "ASSIMP_BUILD_ASSIMP_TOOLS": "OFF",
-        "ASSIMP_BUILD_ZLIB": "ON",
-        "ASSIMP_BUILD_DRACO": "OFF",
-        "ASSIMP_NO_EXPORT": "OFF",
-        "ASSIMP_INSTALL": "OFF",
-        "ASSIMP_WARNINGS_AS_ERRORS": "OFF",
-        "ASSIMP_BUILD_3MF_LIB3MF": "ON",
-        "ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT": "OFF",
-        "ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT": "ON",
-        "ASSIMP_BUILD_ASSBIN_EXPORTER": "OFF",
-        "ASSIMP_BUILD_ASSBIN_IMPORTER": "OFF",
-        "ASSIMP_BUILD_ASSJSON_EXPORTER": "ON",
-        "ASSIMP_BUILD_ASSXML_EXPORTER": "OFF",
-        "ASSIMP_BUILD_ASSXML_IMPORTER": "OFF",
-        "ASSIMP_BUILD_GLTF_EXPORTER": "ON",
-        "ASSIMP_BUILD_IFC_IMPORTER": "ON",
-        "ASSIMP_BUILD_IRRMESH_EXPORTER": "OFF",
-        "ASSIMP_BUILD_IRRMESH_IMPORTER": "OFF",
-        "ASSIMP_BUILD_IRR_EXPORTER": "OFF",
-        "ASSIMP_BUILD_IRR_IMPORTER": "OFF",
-        "ASSIMP_BUILD_M3D_EXPORTER": "OFF",
-        "ASSIMP_BUILD_M3D_IMPORTER": "OFF",
-        "ASSIMP_BUILD_PBRT_EXPORTER": "OFF",
-        "ASSIMP_BUILD_PBRT_IMPORTER": "OFF",
-        "ASSIMP_BUILD_RAW_EXPORTER": "OFF",
-        "ASSIMP_BUILD_RAW_IMPORTER": "OFF",
-        "ASSIMP_BUILD_TERRAGEN_EXPORTER": "OFF",
-        "ASSIMP_BUILD_TERRAGEN_IMPORTER": "OFF",
-        "ASSIMP_BUILD_USD_IMPORTER": "ON",
-        "ASSIMP_BUILD_VRML_IMPORTER": "ON"
-      }
-    },
-    {
-      "name": "wasm-exporter",
-      "displayName": "wasm exporter",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/wasm-exporter",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "LIBASSIMP_VARIANT": "exporter",
-        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
-        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
-        "BUILD_SHARED_LIBS": "OFF",
-        "ASSIMP_BUILD_TESTS": "OFF",
-        "ASSIMP_BUILD_ASSIMP_TOOLS": "OFF",
-        "ASSIMP_BUILD_ZLIB": "ON",
-        "ASSIMP_BUILD_DRACO": "OFF",
-        "ASSIMP_NO_EXPORT": "OFF",
-        "ASSIMP_INSTALL": "OFF",
-        "ASSIMP_WARNINGS_AS_ERRORS": "OFF",
-        "ASSIMP_BUILD_3MF_LIB3MF": "ON",
-        "ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT": "ON",
-        "ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT": "OFF",
-        "ASSIMP_BUILD_ASSBIN_EXPORTER": "OFF",
-        "ASSIMP_BUILD_ASSBIN_IMPORTER": "OFF",
-        "ASSIMP_BUILD_ASSXML_EXPORTER": "OFF",
-        "ASSIMP_BUILD_ASSXML_IMPORTER": "OFF",
-        "ASSIMP_BUILD_GLTF_IMPORTER": "ON",
-        "ASSIMP_BUILD_IRRMESH_EXPORTER": "OFF",
-        "ASSIMP_BUILD_IRRMESH_IMPORTER": "OFF",
-        "ASSIMP_BUILD_IRR_EXPORTER": "OFF",
-        "ASSIMP_BUILD_IRR_IMPORTER": "OFF",
-        "ASSIMP_BUILD_M3D_EXPORTER": "OFF",
-        "ASSIMP_BUILD_M3D_IMPORTER": "OFF",
-        "ASSIMP_BUILD_PBRT_EXPORTER": "OFF",
-        "ASSIMP_BUILD_PBRT_IMPORTER": "OFF",
-        "ASSIMP_BUILD_RAW_EXPORTER": "OFF",
-        "ASSIMP_BUILD_RAW_IMPORTER": "OFF",
-        "ASSIMP_BUILD_TERRAGEN_EXPORTER": "OFF",
-        "ASSIMP_BUILD_TERRAGEN_IMPORTER": "OFF",
-        "ASSIMP_BUILD_USD_IMPORTER": "ON"
       }
     },
     {
@@ -135,7 +49,6 @@
       "binaryDir": "${sourceDir}/build/native-test",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "LIBASSIMP_VARIANT": "native-test",
         "LIBASSIMP_NATIVE_TESTS": "ON",
         "CMAKE_C_COMPILER_LAUNCHER": "ccache",
         "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
@@ -146,7 +59,7 @@
         "ASSIMP_NO_EXPORT": "OFF",
         "ASSIMP_INSTALL": "OFF",
         "ASSIMP_WARNINGS_AS_ERRORS": "OFF",
-        "ASSIMP_BUILD_3MF_LIB3MF": "OFF",
+        "ASSIMP_BUILD_3MF_LIB3MF": "ON",
         "ASSIMP_BUILD_ZLIB": "OFF",
         "ASSIMP_BUILD_3MF_EXPORTER": "ON",
         "ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT": "OFF",
@@ -187,16 +100,8 @@
   ],
   "buildPresets": [
     {
-      "name": "wasm-full",
-      "configurePreset": "wasm-full"
-    },
-    {
-      "name": "wasm-importer",
-      "configurePreset": "wasm-importer"
-    },
-    {
-      "name": "wasm-exporter",
-      "configurePreset": "wasm-exporter"
+      "name": "wasm",
+      "configurePreset": "wasm"
     },
     {
       "name": "native-test",

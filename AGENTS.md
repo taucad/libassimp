@@ -11,23 +11,23 @@ pnpm nx run libassimp:validate-pack
 
 ## Architecture
 
-`src/` is the ESM TypeScript facade: three entries (`index`, `importer`,
-`exporter`) over one shared `create-assimp` module, which loads the matching
-Emscripten build through a bundler-opaque glue import. `src/cpp/` is the embind
+`src/` is the ESM TypeScript facade: one `index` entry over the shared
+`create-assimp` module, which loads `libassimp.wasm` through a bundler-opaque
+glue import. `src/cpp/` is the embind
 binding — one `convert` free function that returns copied bytes, so no handle
 ever reaches a consumer. `assimp/` is the engine, a git submodule tracking
 `taucad/assimp`.
 
-`variants.json` is the single source for what each build contains.
-`scripts/variants-to-presets.mjs` derives `CMakePresets.json` from it and the
+`assimp-builds.json` is the single source for the production and native-test format sets.
+`scripts/assimp-builds-to-presets.mjs` derives `CMakePresets.json` from it and the
 docs format matrix reads it, so adding a format the engine gained is one JSON
 edit; the export unions in `src/formats.ts` are asserted against the compiled
 build rather than derived from it.
 
 `scripts/build-wasm.mjs` runs the digest-pinned toolchain from
 `emsdk-image.txt` and writes `src/wasm/`, which is git-ignored and CI-built:
-`ci.yml`'s `build-wasm` matrix is the only place wasm is produced, and
-`validate-pack` asserts the glue and binaries are present in the candidate
+`ci.yml`'s `build-wasm` job is the only place Wasm is produced, and
+`validate-pack` asserts the glue and binary are present in the candidate
 tarball. `docs-site/` is a static Fumadocs site generated from the public
 TypeScript exports.
 

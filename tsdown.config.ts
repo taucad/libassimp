@@ -4,7 +4,7 @@ const config: UserConfig = {
   clean: true,
   deps: { neverBundle: [/^\.\/wasm\//u] },
   dts: true,
-  entry: ['src/index.ts', 'src/importer.ts', 'src/exporter.ts'],
+  entry: ['src/index.ts'],
   format: 'esm',
   // Off deliberately: minification strips the `webpackIgnore` and `vite-ignore`
   // pragmas on the glue import, and a bundler that loses them either follows

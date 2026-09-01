@@ -2,21 +2,11 @@
   {
     "name": "public ESM facade",
     "path": "dist/index.mjs",
-    "limit": "620 B"
-  },
-  {
-    "name": "importer entry",
-    "path": "dist/importer.mjs",
-    "limit": "640 B"
-  },
-  {
-    "name": "exporter entry",
-    "path": "dist/exporter.mjs",
-    "limit": "630 B"
+    "limit": "330 B"
   },
   {
     "name": "instance factory",
     "path": "dist/create-assimp.mjs",
-    "limit": "960 B"
+    "limit": "2035 B"
   }
 ]

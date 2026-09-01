@@ -48,6 +48,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    environment:
+      name: release-pr
+      deployment: false
     steps:
       - name: Mint tau-release-bot token
         id: bot
@@ -55,6 +58,10 @@ jobs:
         with:
           app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
           private-key: ${{ secrets.RELEASE_BOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -93,9 +100,8 @@ jobs:
         if: steps.plans.outputs.pending == 'true'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: wasm-*
+          name: wasm
           path: src/wasm
-          merge-multiple: true
           github-token: ${{ github.token }}
           run-id: ${{ github.event.workflow_run.id || inputs.ci_run_id }}
 
@@ -107,7 +113,7 @@ jobs:
           previous_version=$(node -p "require('./package.json').version")
           {
             echo 'plans<<PLANSEOF'
-            grep -H '^libassimp:' .nx/version-plans/*.md | sed 's/^/- /'
+            grep -H -E '^(__default__|libassimp):' .nx/version-plans/*.md | sed 's/^/- /' || true
             echo 'PLANSEOF'
           } >> "$GITHUB_OUTPUT"
 
@@ -120,9 +126,9 @@ jobs:
           # Stage the release files explicitly: the quality gate inside
           # release:prepare can regenerate committed artifacts that must stay
           # out of the release commit.
-          git add CHANGELOG.md package.json pnpm-lock.yaml
+          git add CHANGELOG.md package.json
           staged=$(git diff --cached --name-only)
-          allowed='^(CHANGELOG\.md|package\.json|pnpm-lock\.yaml|\.nx/version-plans/.+\.md)$'
+          allowed='^(CHANGELOG\.md|package\.json|\.nx/version-plans/.+\.md)$'
           unexpected=$(grep -Ev "$allowed" <<< "$staged" || true)
           if [ -n "$unexpected" ]; then
             echo "::error::release generation changed unexpected files: $unexpected"
@@ -140,9 +146,9 @@ jobs:
             echo "previous_version=$previous_version"
             echo 'commit_log<<LOGEOF'
             if git rev-parse --verify --quiet "refs/tags/v$previous_version" >/dev/null; then
-              git log -100 "v$previous_version..main" --pretty='- %h %s'
+              git log -100 "v$previous_version..origin/main" --pretty='- %h %s'
             else
-              git log -100 main --pretty='- %h %s'
+              git log -100 origin/main --pretty='- %h %s'
             fi
             echo 'LOGEOF'
           } >> "$GITHUB_OUTPUT"

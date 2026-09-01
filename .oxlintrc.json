@@ -8,6 +8,7 @@
     "docs-site/.next/**",
     "docs-site/.source/**",
     "docs-site/out/**",
+    "docs-site/public/demo/**",
     "src/wasm/**"
   ],
   "plugins": ["typescript", "unicorn"],

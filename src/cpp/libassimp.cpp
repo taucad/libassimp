@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The whole binding: one convert entry point and one format table, over an
-// in-memory IOSystem. The core is plain C++ so the native ctest leg exercises
-// the same code path; the embind layer at the bottom is a thin adapter.
+// One owned plan imports a scene once and exports its ordered targets. A replay
+// reuses the staged bytes/configuration while reconstructing attempt-local
+// Assimp objects, so pending work can never leak a partial result.
 
 #include "libassimp.hpp"
 
@@ -22,32 +22,17 @@
 #include <assimp/Importer.hpp>
 #include <assimp/cimport.h>
 #include <assimp/importerdesc.h>
-#include <assimp/postprocess.h>
+#include <assimp/matrix4x4.h>
 #include <assimp/scene.h>
 
 #include <exception>
 #include <sstream>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
-
-#include "memory-io.hpp"
 
 namespace libassimp {
 namespace {
-
-// Fixed in 0.1.0; a postProcess option is an additive 0.2.0 change.
-constexpr unsigned int kPostProcess = aiProcess_Triangulate | aiProcess_GenUVCoords |
-                                      aiProcess_JoinIdenticalVertices | aiProcess_SortByPType;
-
-/** Friendly names for assimp export ids. `glb`/`gltf` name glTF 2.0, so glTF 1.0 moves to `glb1`/`gltf1`. */
-std::string resolveAlias(const std::string& format) {
-  if (format == "glb") return "glb2";
-  if (format == "gltf") return "gltf2";
-  if (format == "glb1") return "glb";
-  if (format == "gltf1") return "gltf";
-  if (format == "step") return "stp";
-  if (format == "dae") return "collada";
-  return format;
-}
 
 const aiExportFormatDesc* findExportFormat(const Assimp::Exporter& exporter, const std::string& id) {
   for (std::size_t index = 0; index < exporter.GetExportFormatCount(); ++index) {
@@ -57,31 +42,165 @@ const aiExportFormatDesc* findExportFormat(const Assimp::Exporter& exporter, con
   return nullptr;
 }
 
-Result fail(std::string code, std::string message) {
+Result fail(std::string code, std::string message, int formatIndex = -1, std::string format = {}) {
   Result result;
   result.code = std::move(code);
   result.message = std::move(message);
+  result.formatIndex = formatIndex;
+  result.format = std::move(format);
   return result;
 }
 
-void applyProperties(const Properties& properties, Assimp::ExportProperties& target) {
-  for (const auto& [name, value] : properties) {
-    if (const bool* boolean = std::get_if<bool>(&value)) target.SetPropertyBool(name.c_str(), *boolean);
-    else if (const int* integer = std::get_if<int>(&value)) target.SetPropertyInteger(name.c_str(), *integer);
-    else if (const double* number = std::get_if<double>(&value))
-      target.SetPropertyFloat(name.c_str(), static_cast<ai_real>(*number));
-    else target.SetPropertyString(name.c_str(), std::get<std::string>(value));
+aiMatrix4x4 toMatrix(const Matrix& value) {
+  return aiMatrix4x4(
+      static_cast<ai_real>(value[0]), static_cast<ai_real>(value[1]),
+      static_cast<ai_real>(value[2]), static_cast<ai_real>(value[3]),
+      static_cast<ai_real>(value[4]), static_cast<ai_real>(value[5]),
+      static_cast<ai_real>(value[6]), static_cast<ai_real>(value[7]),
+      static_cast<ai_real>(value[8]), static_cast<ai_real>(value[9]),
+      static_cast<ai_real>(value[10]), static_cast<ai_real>(value[11]),
+      static_cast<ai_real>(value[12]), static_cast<ai_real>(value[13]),
+      static_cast<ai_real>(value[14]), static_cast<ai_real>(value[15]));
+}
+
+template <typename TargetProperties>
+void applyProperties(const Properties& properties, TargetProperties& target) {
+  for (const auto& property : properties) {
+    const std::string& name = property.first;
+    const PropertyValue& value = property.second;
+    std::visit(
+        [&](const auto& typed) {
+          using Value = std::decay_t<decltype(typed)>;
+          if constexpr (std::is_same_v<Value, bool>) {
+            target.SetPropertyBool(name.c_str(), typed);
+          } else if constexpr (std::is_same_v<Value, int>) {
+            target.SetPropertyInteger(name.c_str(), typed);
+          } else if constexpr (std::is_same_v<Value, double>) {
+            target.SetPropertyFloat(name.c_str(), static_cast<ai_real>(typed));
+          } else if constexpr (std::is_same_v<Value, std::string>) {
+            target.SetPropertyString(name.c_str(), typed);
+          } else {
+            target.SetPropertyMatrix(name.c_str(), toMatrix(typed));
+          }
+        },
+        value);
   }
 }
 
+std::vector<NamedBytes> orderedOutputs(const MemoryFiles& store, const std::string& primaryName) {
+  std::vector<NamedBytes> files;
+  for (const NamedBytes& output : store.outputs()) {
+    if (output.name == primaryName) files.push_back(output);
+  }
+  for (const NamedBytes& output : store.outputs()) {
+    if (output.name != primaryName) files.push_back(output);
+  }
+  return files;
+}
+
 }  // namespace
+
+Plan::Plan(std::string entryName, std::vector<NamedBytes> files, Properties importProperties,
+           unsigned int postProcess, std::vector<Target> targets, Resolver resolve)
+    : entryName_(std::move(entryName)),
+      importProperties_(std::move(importProperties)),
+      postProcess_(postProcess),
+      targets_(std::move(targets)),
+      resolve_(std::move(resolve)) {
+  for (NamedBytes& file : files) files_.push_back(std::move(file));
+}
+
+PlanStatus Plan::run() noexcept {
+  result_ = {};
+  if (files_.empty()) {
+    result_ = fail("NO_FILES", "convert needs at least one input file.");
+    return PlanStatus::Failed;
+  }
+  if (targets_.empty()) {
+    result_ = fail("INVALID_OPTIONS", "convertFormats needs at least one target.");
+    return PlanStatus::Failed;
+  }
+
+  const char* phase = "IMPORT_FAILED";
+  int activeFormatIndex = -1;
+  std::string activeFormat;
+  try {
+    if (!pendingName_.empty()) {
+      Bytes resolved;
+      const ResolveStatus status = resolve_(pendingName_, resolved);
+      if (status == ResolveStatus::Pending) return PlanStatus::Pending;
+      if (status == ResolveStatus::Found) {
+        files_.push_back(NamedBytes{pendingName_, std::move(resolved)});
+      }
+      pendingName_.clear();
+    }
+    MemoryFiles inputs(files_, resolve_);
+    Assimp::Importer importer;
+    applyProperties(importProperties_, importer);
+    importer.SetIOHandler(new MemoryIO(inputs, false));
+    ++importAttempts_;
+    const aiScene* scene = importer.ReadFile(entryName_, postProcess_);
+    // Assimp deliberately catches every exception raised while probing IO.
+    // A missing stream is its native control flow; the side-band flag lets the
+    // host replay only when that miss represented unresolved async work.
+    if (inputs.pending()) {
+      pendingName_ = inputs.pendingName();
+      return PlanStatus::Pending;
+    }
+    if (scene == nullptr) {
+      result_ = fail(phase, importer.GetErrorString());
+      return PlanStatus::Failed;
+    }
+
+    Result completed;
+    completed.ok = true;
+    completed.formats.reserve(targets_.size());
+    for (std::size_t index = 0; index < targets_.size(); ++index) {
+      const Target& target = targets_[index];
+      activeFormatIndex = static_cast<int>(index);
+      activeFormat = target.format;
+      phase = "EXPORT_FAILED";
+      Assimp::Exporter exporter;
+      const aiExportFormatDesc* description = findExportFormat(exporter, target.nativeId);
+      if (description == nullptr) {
+        std::ostringstream message;
+        message << "Unsupported export format '" << target.format << "'.";
+        result_ = fail("UNSUPPORTED_FORMAT", message.str(), static_cast<int>(index), target.format);
+        return PlanStatus::Failed;
+      }
+
+      const std::string outputName = "result." + std::string(description->fileExtension);
+      MemoryFiles outputs(files_, resolve_);
+      outputs.neverResolve(outputName);
+      Assimp::ExportProperties exportProperties;
+      applyProperties(target.properties, exportProperties);
+      exporter.SetIOHandler(new MemoryIO(outputs, true));
+      if (exporter.Export(scene, target.nativeId, outputName, 0u, &exportProperties) != aiReturn_SUCCESS) {
+        result_ = fail(phase, exporter.GetErrorString(), static_cast<int>(index), target.format);
+        return PlanStatus::Failed;
+      }
+      std::vector<NamedBytes> files = orderedOutputs(outputs, outputName);
+      if (files.empty()) {
+        result_ = fail(phase, "The exporter produced no output.", static_cast<int>(index), target.format);
+        return PlanStatus::Failed;
+      }
+      completed.formats.push_back(ConvertedFormat{target.format, std::move(files)});
+    }
+    result_ = std::move(completed);
+    return PlanStatus::Completed;
+  } catch (const std::exception& error) {
+    result_ = fail(phase, error.what(), activeFormatIndex, activeFormat);
+  } catch (...) {
+    result_ = fail(phase, "Unknown error.", activeFormatIndex, activeFormat);
+  }
+  return PlanStatus::Failed;
+}
 
 std::vector<FormatInfo> importFormats() {
   std::vector<FormatInfo> formats;
   for (std::size_t index = 0; index < aiGetImportFormatCount(); ++index) {
     const aiImporterDesc* description = aiGetImportFormatDescription(index);
     if (description == nullptr || description->mFileExtensions == nullptr) continue;
-    // Importers have no stable id, only a space-separated extension list; one entry per extension.
     std::istringstream extensions(description->mFileExtensions);
     for (std::string extension; extensions >> extension;) {
       formats.push_back(FormatInfo{extension, extension, description->mName});
@@ -101,74 +220,37 @@ std::vector<FormatInfo> exportFormats() {
   return formats;
 }
 
-Result convert(const std::string& entryName, std::vector<NamedBytes> files, const std::string& format,
-               const Properties& properties, const Resolver& resolve) {
-  if (files.empty()) return fail("NO_FILES", "convert needs at least one input file.");
-
-  MemoryFiles store(std::move(files), resolve);
-  Assimp::Exporter exporter;
-
-  const std::string formatId = resolveAlias(format);
-  const aiExportFormatDesc* description = findExportFormat(exporter, formatId);
-  if (description == nullptr) {
-    std::ostringstream message;
-    message << "Unsupported export format '" << format << "'. This build exports:";
-    for (const FormatInfo& info : exportFormats()) message << ' ' << info.id;
-    message << ". Aliases: glb, gltf, glb1, gltf1, step, dae.";
-    return fail("UNSUPPORTED_FORMAT", message.str());
-  }
-  const std::string outputName = "result." + std::string(description->fileExtension);
-  // Exporters stat their own output before writing; the host's resolve callback should never
-  // be asked for a name we are about to produce.
-  store.neverResolve(outputName);
-
-  const char* phase = "IMPORT_FAILED";
-  try {
-    Assimp::Importer importer;
-    importer.SetIOHandler(new MemoryIO(store, false));
-    const aiScene* scene = importer.ReadFile(entryName, kPostProcess);
-    if (scene == nullptr) return fail(phase, importer.GetErrorString());
-
-    phase = "EXPORT_FAILED";
-    Assimp::ExportProperties exportProperties;
-    exportProperties.SetPropertyBool("JSON_SKIP_WHITESPACES", true);
-    applyProperties(properties, exportProperties);
-    exporter.SetIOHandler(new MemoryIO(store, true));
-    if (exporter.Export(scene, formatId, outputName, 0u, &exportProperties) != aiReturn_SUCCESS) {
-      return fail(phase, exporter.GetErrorString());
-    }
-  } catch (const std::exception& error) {
-    return fail(phase, error.what());
-  } catch (...) {
-    return fail(phase, "Unknown error.");
-  }
-
-  Result result;
-  result.ok = true;
-  // Primary output first, sidecars (glTF .bin, OBJ .mtl) after, in write order.
-  for (const NamedBytes& output : store.outputs()) {
-    if (output.name == outputName) result.files.push_back(output);
-  }
-  for (const NamedBytes& output : store.outputs()) {
-    if (output.name != outputName) result.files.push_back(output);
-  }
-  if (result.files.empty()) return fail("EXPORT_FAILED", "The exporter produced no output.");
-  return result;
-}
-
 }  // namespace libassimp
 
 #ifdef __EMSCRIPTEN__
 
 #include <emscripten/bind.h>
+#include <emscripten/emscripten.h>
 #include <emscripten/val.h>
+
+#include <cstdint>
+#include <memory>
+#include <unordered_map>
+
+extern "C" {
+__attribute__((import_module("libassimp"), import_name("dispatch"))) int libassimp_host_dispatch(
+    int operation, std::uint32_t first, std::uint32_t second);
+}
 
 namespace {
 
 using emscripten::val;
 
+constexpr int kResolveBegin = 1;
+constexpr int kResolveSize = 2;
+constexpr int kResolveCopy = 3;
+constexpr int kResolveRelease = 4;
+constexpr int kPending = -1;
+
+std::unordered_map<std::uint32_t, std::unique_ptr<libassimp::Plan>> plans;
+std::uint32_t nextPlan = 1;
+
 val bytesToJs(const libassimp::Bytes& bytes) {
-  // A view into the heap would dangle the moment the module grows memory, so hand back a copy.
   return val(emscripten::typed_memory_view(bytes.size(), bytes.data())).call<val>("slice");
 }
 
@@ -176,87 +258,116 @@ libassimp::Bytes bytesFromJs(const val& value) {
   return emscripten::convertJSArrayToNumberVector<std::uint8_t>(value);
 }
 
-val formatsToJs(const std::vector<libassimp::FormatInfo>& formats) {
-  val list = val::array();
-  for (const libassimp::FormatInfo& format : formats) {
-    val entry = val::object();
-    entry.set("id", format.id);
-    entry.set("extension", format.extension);
-    entry.set("description", format.description);
-    list.call<void>("push", entry);
-  }
-  return list;
+libassimp::PropertyValue propertyFromJs(const val& property) {
+  const std::string kind = property["kind"].as<std::string>();
+  const val value = property["value"];
+  if (kind == "boolean") return value.as<bool>();
+  if (kind == "integer") return value.as<int>();
+  if (kind == "number") return value.as<double>();
+  if (kind == "string") return value.as<std::string>();
+  libassimp::Matrix matrix{};
+  for (unsigned index = 0; index < matrix.size(); ++index) matrix[index] = value[index].as<double>();
+  return matrix;
 }
 
-val convertJs(const std::string& entryName, val files, const std::string& format, val properties, val resolve) {
-  std::vector<libassimp::NamedBytes> inputs;
-  const unsigned length = files["length"].as<unsigned>();
-  inputs.reserve(length);
+libassimp::Properties propertiesFromJs(const val& values) {
+  libassimp::Properties properties;
+  const unsigned length = values["length"].as<unsigned>();
+  properties.reserve(length);
   for (unsigned index = 0; index < length; ++index) {
-    val file = files[index];
-    inputs.push_back(libassimp::NamedBytes{file["name"].as<std::string>(), bytesFromJs(file["bytes"])});
+    const val property = values[index];
+    properties.emplace_back(property["name"].as<std::string>(), propertyFromJs(property));
+  }
+  return properties;
+}
+
+libassimp::ResolveStatus resolveFromHost(const std::string& name, libassimp::Bytes& output) {
+  const int handle = libassimp_host_dispatch(
+      kResolveBegin, static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(name.data())),
+      static_cast<std::uint32_t>(name.size()));
+  if (handle == kPending) return libassimp::ResolveStatus::Pending;
+  if (handle == 0) return libassimp::ResolveStatus::Missing;
+  const int size = libassimp_host_dispatch(kResolveSize, static_cast<std::uint32_t>(handle), 0u);
+  if (size < 0) throw std::runtime_error("Resolver returned a negative byte length.");
+  output.resize(static_cast<std::size_t>(size));
+  const int copied = libassimp_host_dispatch(
+      kResolveCopy, static_cast<std::uint32_t>(handle),
+      output.empty()
+          ? 0u
+          : static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(output.data())));
+  libassimp_host_dispatch(kResolveRelease, static_cast<std::uint32_t>(handle), 0u);
+  if (copied != size) throw std::runtime_error("Resolver copied an unexpected byte length.");
+  return libassimp::ResolveStatus::Found;
+}
+
+std::uint32_t preparePlanJs(const std::string& entryName, val files, val options) {
+  std::vector<libassimp::NamedBytes> inputs;
+  const unsigned fileCount = files["length"].as<unsigned>();
+  inputs.reserve(fileCount);
+  for (unsigned index = 0; index < fileCount; ++index) {
+    const val file = files[index];
+    inputs.push_back({file["name"].as<std::string>(), bytesFromJs(file["bytes"])});
   }
 
-  libassimp::Properties exportProperties;
-  if (!properties.isUndefined() && !properties.isNull()) {
-    const val keys = val::global("Object").call<val>("keys", properties);
-    const unsigned count = keys["length"].as<unsigned>();
-    for (unsigned index = 0; index < count; ++index) {
-      const std::string key = keys[index].as<std::string>();
-      const val value = properties[key];
-      const std::string type = value.typeOf().as<std::string>();
-      if (type == "boolean") exportProperties.emplace_back(key, value.as<bool>());
-      else if (type == "string") exportProperties.emplace_back(key, value.as<std::string>());
-      else if (type == "number") {
-        if (val::global("Number").call<bool>("isInteger", value)) {
-          exportProperties.emplace_back(key, value.as<int>());
-        } else {
-          exportProperties.emplace_back(key, value.as<double>());
-        }
-      }
-    }
+  std::vector<libassimp::Target> targets;
+  const val targetValues = options["targets"];
+  const unsigned targetCount = targetValues["length"].as<unsigned>();
+  targets.reserve(targetCount);
+  for (unsigned index = 0; index < targetCount; ++index) {
+    const val target = targetValues[index];
+    targets.push_back({target["format"].as<std::string>(), target["nativeId"].as<std::string>(),
+                       propertiesFromJs(target["properties"])});
   }
 
-  libassimp::Resolver resolver;
-  if (!resolve.isUndefined() && !resolve.isNull()) {
-    resolver = [resolve](const std::string& name, libassimp::Bytes& out) {
-      const val loaded = resolve(name);
-      if (loaded.isUndefined() || loaded.isNull()) return false;
-      out = bytesFromJs(loaded);
-      return true;
-    };
-  }
+  const std::uint32_t handle = nextPlan++;
+  plans.emplace(handle, std::make_unique<libassimp::Plan>(
+                            entryName, std::move(inputs), propertiesFromJs(options["importProperties"]),
+                            options["postProcess"].as<unsigned>(), std::move(targets), resolveFromHost));
+  return handle;
+}
 
-  const libassimp::Result result =
-      libassimp::convert(entryName, std::move(inputs), format, exportProperties, resolver);
-
-  val files_out = val::array();
-  for (const libassimp::NamedBytes& file : result.files) {
-    val entry = val::object();
-    entry.set("name", file.name);
-    entry.set("bytes", bytesToJs(file.bytes));
-    files_out.call<void>("push", entry);
-  }
+val takePlanResultJs(std::uint32_t handle) {
+  const auto found = plans.find(handle);
+  if (found == plans.end()) throw std::runtime_error("Unknown conversion plan.");
+  const libassimp::Result& result = found->second->result();
   val output = val::object();
   output.set("ok", result.ok);
   output.set("code", result.code);
   output.set("message", result.message);
-  output.set("files", files_out);
+  if (result.formatIndex >= 0) output.set("formatIndex", result.formatIndex);
+  if (!result.format.empty()) output.set("format", result.format);
+  val formats = val::array();
+  for (const libassimp::ConvertedFormat& converted : result.formats) {
+    val format = val::object();
+    format.set("format", converted.format);
+    val files = val::array();
+    for (const libassimp::NamedBytes& file : converted.files) {
+      val item = val::object();
+      item.set("name", file.name);
+      item.set("bytes", bytesToJs(file.bytes));
+      files.call<void>("push", item);
+    }
+    format.set("files", files);
+    formats.call<void>("push", format);
+  }
+  output.set("formats", formats);
   return output;
 }
 
-val formatsJs() {
-  val output = val::object();
-  output.set("import", formatsToJs(libassimp::importFormats()));
-  output.set("export", formatsToJs(libassimp::exportFormats()));
-  return output;
-}
+void destroyPlanJs(std::uint32_t handle) { plans.erase(handle); }
 
 }  // namespace
 
+extern "C" EMSCRIPTEN_KEEPALIVE int libassimp_run_plan(std::uint32_t handle) {
+  const auto found = plans.find(handle);
+  if (found == plans.end()) return static_cast<int>(libassimp::PlanStatus::Failed);
+  return static_cast<int>(found->second->run());
+}
+
 EMSCRIPTEN_BINDINGS(libassimp) {
-  emscripten::function("convert", &convertJs);
-  emscripten::function("formats", &formatsJs);
+  emscripten::function("preparePlan", &preparePlanJs);
+  emscripten::function("takePlanResult", &takePlanResultJs);
+  emscripten::function("destroyPlan", &destroyPlanJs);
 }
 
 #endif  // __EMSCRIPTEN__

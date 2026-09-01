@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <variant>
 #include <vector>
@@ -24,7 +28,8 @@
 
 namespace libassimp {
 
-using PropertyValue = std::variant<bool, int, double, std::string>;
+using Matrix = std::array<double, 16>;
+using PropertyValue = std::variant<bool, int, double, std::string, Matrix>;
 using Properties = std::vector<std::pair<std::string, PropertyValue>>;
 
 struct FormatInfo {
@@ -33,18 +38,48 @@ struct FormatInfo {
   std::string description;
 };
 
-struct Result {
-  bool ok = false;
-  /** Empty on success, else NO_FILES | UNSUPPORTED_FORMAT | IMPORT_FAILED | EXPORT_FAILED. */
-  std::string code;
-  std::string message;
-  /** Primary output first. */
+struct Target {
+  std::string format;
+  std::string nativeId;
+  Properties properties;
+};
+
+struct ConvertedFormat {
+  std::string format;
   std::vector<NamedBytes> files;
 };
 
-/** Import `entryName` out of `files` and export it as `format`. Never throws. */
-Result convert(const std::string& entryName, std::vector<NamedBytes> files, const std::string& format,
-               const Properties& properties, const Resolver& resolve);
+struct Result {
+  bool ok = false;
+  std::string code;
+  std::string message;
+  int formatIndex = -1;
+  std::string format;
+  std::vector<ConvertedFormat> formats;
+};
+
+enum class PlanStatus : int { Pending = -1, Completed = 1, Failed = 2 };
+
+/** Owned request bytes/configuration. Each run reconstructs attempt-local Assimp state. */
+class Plan {
+ public:
+  Plan(std::string entryName, std::vector<NamedBytes> files, Properties importProperties,
+       unsigned int postProcess, std::vector<Target> targets, Resolver resolve);
+  PlanStatus run() noexcept;
+  const Result& result() const { return result_; }
+  std::size_t importAttempts() const { return importAttempts_; }
+
+ private:
+  std::string entryName_;
+  std::deque<NamedBytes> files_;
+  Properties importProperties_;
+  unsigned int postProcess_;
+  std::vector<Target> targets_;
+  Resolver resolve_;
+  std::string pendingName_;
+  Result result_;
+  std::size_t importAttempts_ = 0;
+};
 
 std::vector<FormatInfo> importFormats();
 std::vector<FormatInfo> exportFormats();

@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "if [ ! -f ../dist/index.d.mts ]; then pnpm --dir .. exec tsdown; fi && node scripts/measure-sizes.mjs && next build && node scripts/emit-mdx-aliases.mjs && VERIFY_STATIC_OUTPUT=true vitest run api-coverage.test.ts sizes.test.ts",
+    "build": "if [ ! -f ../dist/index.d.mts ]; then pnpm --dir .. exec tsdown; fi && node scripts/prepare-demo-artifacts.mjs && node scripts/measure-sizes.mjs && next build && node scripts/emit-mdx-aliases.mjs && VERIFY_STATIC_OUTPUT=true vitest run api-coverage.test.ts sizes.test.ts",
     "dev": "next dev",
-    "predev": "node scripts/measure-sizes.mjs",
+    "predev": "node scripts/prepare-demo-artifacts.mjs && node scripts/measure-sizes.mjs",
     "format-matrix": "node scripts/format-matrix.mjs",
     "generate:source": "fumadocs-mdx",
     "lint": "eslint .",

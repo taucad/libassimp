@@ -1,7 +1,7 @@
 {
   "name": "libassimp",
-  "version": "0.0.0",
-  "description": "Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.",
+  "version": "0.2.0",
+  "description": "Assimp for TypeScript and WebAssembly: import 69 3D formats and export 15 formats in browsers and Node.js.",
   "keywords": [
     "3d",
     "3mf",
@@ -16,7 +16,7 @@
     "wasm",
     "webassembly"
   ],
-  "homepage": "https://libassimp.vercel.app",
+  "homepage": "https://libassimp.xyz",
   "bugs": {
     "url": "https://github.com/taucad/libassimp/issues"
   },
@@ -51,31 +51,7 @@
       },
       "default": "./dist/index.mjs"
     },
-    "./importer": {
-      "import": {
-        "types": "./dist/importer.d.mts",
-        "default": "./dist/importer.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs-error.d.cts",
-        "default": "./dist/cjs-error.cjs"
-      },
-      "default": "./dist/importer.mjs"
-    },
-    "./exporter": {
-      "import": {
-        "types": "./dist/exporter.d.mts",
-        "default": "./dist/exporter.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs-error.d.cts",
-        "default": "./dist/cjs-error.cjs"
-      },
-      "default": "./dist/exporter.mjs"
-    },
-    "./wasm": "./dist/wasm/libassimp-full.wasm",
-    "./importer/wasm": "./dist/wasm/libassimp-importer.wasm",
-    "./exporter/wasm": "./dist/wasm/libassimp-exporter.wasm",
+    "./wasm": "./dist/wasm/libassimp.wasm",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -84,8 +60,9 @@
   },
   "scripts": {
     "benchmark": "node bench/gated.mjs",
-    "build": "tsdown && node scripts/copy-wasm.mjs",
-    "build:wasm": "node scripts/build-wasm.mjs",
+    "build": "pnpm run check:capabilities && tsdown && node scripts/copy-wasm.mjs",
+    "build:wasm": "pnpm run check:capabilities && node scripts/build-wasm.mjs",
+    "check:capabilities": "node scripts/generate-assimp-capabilities.mjs --check",
     "check:dead-code": "pnpm run docs:source && knip",
     "check:size": "size-limit && node scripts/check-wasm-size.mjs",
     "check": "nx run libassimp:quality",
@@ -93,8 +70,9 @@
     "docs:source": "pnpm --filter libassimp-docs generate:source",
     "docs:test": "pnpm --filter libassimp-docs test",
     "format:check": "oxfmt --check .",
+    "generate:capabilities": "node scripts/generate-assimp-capabilities.mjs",
     "lint": "pnpm run docs:source && oxlint --deny-warnings --type-aware && eslint .",
-    "pkgcheck": "pnpm run validate-pack && publint && attw --pack . --profile esm-only --entrypoints . ./importer ./exporter",
+    "pkgcheck": "pnpm run validate-pack && publint && attw --pack . --profile esm-only --entrypoints .",
     "plan:check": "nx release plan:check",
     "prose": "./scripts/check-prose.sh",
     "test": "vitest run",

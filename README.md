@@ -8,20 +8,17 @@
   <a href="https://tau.new"><img src="https://img.shields.io/badge/Tau-ecosystem-6d28d9" alt="Part of the Tau ecosystem"></a>
 </p>
 
-Assimp compiled to WebAssembly: import 40+ 3D formats and export glTF, 3MF, USD, FBX, STL and more.
+Assimp for TypeScript and WebAssembly: import 69 3D formats and export 15 formats in browsers and Node.js.
 
-| I want to…               | Start here                                                          |
-| ------------------------ | ------------------------------------------------------------------- |
-| Install the package      | [Install](#install)                                                 |
-| Run the smallest example | [Quick start](#quick-start)                                         |
-| Choose a supported host  | [Compatibility](#compatibility)                                     |
-| Contribute or release    | [CONTRIBUTING.md](CONTRIBUTING.md) / [MAINTAINER.md](MAINTAINER.md) |
+| I want to…                             | Start here                                                          |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| Convert one model                      | [Quick start](#quick-start)                                         |
+| Export several formats from one import | [Import once, export many](#import-once-export-many)                |
+| Load sidecars over a network           | [Resolve sidecars asynchronously](#resolve-sidecars-asynchronously) |
+| Build a dynamic converter UI           | [Static capabilities](#static-capabilities)                         |
+| Maintain or release the package        | [Maintainer guide](MAINTAINER.md)                                   |
 
 ## Install
-
-```bash
-npm install libassimp
-```
 
 ```bash
 pnpm add libassimp
@@ -31,7 +28,6 @@ pnpm add libassimp
 
 ```typescript
 import { convert } from 'libassimp';
-
 import { readFile, writeFile } from 'node:fs/promises';
 
 const bytes = new Uint8Array(await readFile('model.obj'));
@@ -39,37 +35,72 @@ const { files } = await convert({ name: 'model.obj', bytes }, { to: 'glb' });
 await writeFile(files[0].name, files[0].bytes);
 ```
 
-Three entries ship the same API and differ only in the formats compiled in:
-`libassimp` imports and exports everything, `libassimp/importer` carries every
-importer with the glTF exporters, and `libassimp/exporter` carries every
-exporter with the glTF importers. Import the narrowest one that covers the
-conversion to ship the smallest binary.
+## Import once, export many
+
+```typescript
+import { convertFormats } from 'libassimp';
+import { readFile } from 'node:fs/promises';
+
+const bytes = new Uint8Array(await readFile('model.fbx'));
+const [glb, binaryStl, obj] = await convertFormats(
+  { name: 'model.fbx', bytes },
+  {
+    targets: [
+      { to: 'glb' },
+      { to: 'stl', exportOptions: { binary: true } },
+      { to: 'obj', exportOptions: { materials: false } },
+    ],
+  },
+);
+
+console.log(glb.format, binaryStl.format, obj.files[0].name);
+```
+
+The positional result tuple preserves target order and literal format types. The source is copied and parsed once; exports run sequentially and the call is atomic.
+
+## Resolve sidecars asynchronously
+
+```typescript
+import { convert } from 'libassimp';
+
+const response = await fetch('https://assets.example/model.gltf');
+const bytes = new Uint8Array(await response.arrayBuffer());
+const { files } = await convert(
+  { name: 'model.gltf', bytes },
+  {
+    to: 'glb',
+    resolve: async (name) => {
+      const sidecar = await fetch(new URL(name, response.url));
+      return sidecar.ok ? new Uint8Array(await sidecar.arrayBuffer()) : undefined;
+    },
+  },
+);
+```
+
+The same artifact automatically suspends with JSPI when the host supports it and transparently replays from a per-call resolver cache otherwise. `createAssimp` still accepts only `wasmUrl`, `wasmBinary`, and `onLog`.
+
+## Static capabilities
+
+`assimpCapabilities`, `conversionEdges`, and `defaultPostProcess` are generated from the pinned Assimp source and are available without loading Wasm. Public targets are canonical: binary/ASCII choices use `exportOptions.binary`, OBJ materials use `exportOptions.materials`, and `glb`/`gltf` always mean glTF 2.
+
+The single `libassimp` entry reads all 69 compiled extensions and writes all 15 canonical formats through `libassimp.wasm`.
 
 ## Compatibility
 
-See [compatibility.md](compatibility.md). Every check mark in that table maps
-to a named job in `.github/workflows/ci.yml`.
+See the canonical [compatibility matrix](compatibility.md) for hosts, package entries, JSPI acceleration, replay fallback, and Wasm feature floors.
 
 ## Versioning and stability
 
-Versions follow Semantic Versioning. Before 1.0, a minor release may contain a
-breaking API change; each major line records those changes in
-[BREAKING_CHANGES.md](BREAKING_CHANGES.md).
+The package is prerelease. Public names, defaults, and generated capability metadata are reviewed API; see [breaking changes](BREAKING_CHANGES.md).
 
 ## Security and provenance
 
-Report vulnerabilities through GitHub private vulnerability reporting. Verify
-registry signatures with `npm audit signatures`.
+Releases are built by GitHub Actions with npm provenance. Report vulnerabilities through [the security policy](SECURITY.md).
 
 ## Documentation
 
-- [Documentation](https://libassimp.vercel.app)
-- [Source](https://github.com/taucad/libassimp)
-- [Changelog](CHANGELOG.md)
-- [Issues](https://github.com/taucad/libassimp/issues)
+Read the [documentation](https://libassimp.xyz), [contribution guide](CONTRIBUTING.md), or [maintainer guide](MAINTAINER.md).
 
 ## License
 
-Apache-2.0. See [license](license) and [NOTICE](NOTICE) for bundled materials.
-
-Part of the [Tau ecosystem](https://tau.new).
+Apache-2.0. Part of the [Tau ecosystem](https://tau.new).

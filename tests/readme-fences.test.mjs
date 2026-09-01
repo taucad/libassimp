@@ -52,19 +52,22 @@ describe('documentation fences', () => {
           typeRoots: [join(root, 'node_modules/@types')],
           paths: {
             libassimp: [join(root, 'dist/index.d.mts')],
-            'libassimp/importer': [join(root, 'dist/importer.d.mts')],
-            'libassimp/exporter': [join(root, 'dist/exporter.d.mts')],
           },
         },
         include: ['*.ts'],
       }),
     );
     const tsc = join(root, 'node_modules/typescript/bin/tsc');
-    expect(() =>
+    let diagnostics = '';
+    try {
       execFileSync(process.execPath, [tsc, '--project', join(work, 'tsconfig.json')], {
         encoding: 'utf8',
         stdio: 'pipe',
-      }),
-    ).not.toThrow();
+      });
+    } catch (error) {
+      diagnostics = `${error?.stdout ?? ''}${error?.stderr ?? ''}`;
+      if (diagnostics === '') throw error;
+    }
+    expect(diagnostics).toBe('');
   });
 });
