@@ -122,7 +122,7 @@ elseif(LIBASSIMP_NATIVE_TESTS)
           obj-to-obj
           obj-to-stl
           obj-to-ply
-          3mf-without-lib3mf-fails-cleanly
+          gltf2-manifold-to-3mf
           obj-to-assjson
           obj-to-usda
           obj-to-usdz

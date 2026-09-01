@@ -11,7 +11,9 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 // CMakeLists.txt), engine c06c37a38, measured 2026-08-25 NZST on macOS arm64; 1%
 // headroom. Against the 2026-08-23 pre-removal/bridge build, raw sizes fell by
 // 132,548 B for the retained full-format build.
-const CEILING = { raw: 11_813_270, gzip9: 3_095_278, brotli11: 2_082_890 };
+// gzip ceiling: EXT_mesh_manifold candidate at 3,102,943 B on CI Node 26 zlib,
+// with the same 1% headroom. Raw and Brotli remain within their existing limits.
+const CEILING = { raw: 11_813_270, gzip9: 3_133_973, brotli11: 2_082_890 };
 // Closure keeps every glue under 39 kB; above 50 kB it silently stopped.
 const GLUE_CEILING = 50_000;
 

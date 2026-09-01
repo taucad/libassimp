@@ -69,6 +69,7 @@ for (const { assimpCapabilities, conversionEdges } of entries) {
   execFileSync(process.execPath, ['static.mjs'], { cwd: work, stdio: 'inherit' });
 
   const fixture = fileURLToPath(new URL('./tests/fixtures/cube.obj', root));
+  const manifoldFixture = fileURLToPath(new URL('./tests/fixtures/two-material-manifold.glb', root));
   writeFileSync(
     join(work, 'consumer.mjs'),
     `import assert from 'node:assert/strict';
@@ -86,6 +87,15 @@ const stl = await convert({ name: 'model.glb', bytes: gltf.files[0].bytes }, { t
 assert.equal(stl.files[0].name, 'result.stl');
 const roundTrip = await convert({ name: stl.files[0].name, bytes: stl.files[0].bytes }, { to: 'glb' });
 assert.equal(Buffer.from(roundTrip.files[0].bytes.subarray(0, 4)).toString('latin1'), 'glTF');
+
+const manifold = new Uint8Array(await readFile(process.argv[3]));
+const threeMf = await convert({ name: 'TwoMaterialBox.glb', bytes: manifold }, { to: '3mf' });
+assert.equal(Buffer.from(threeMf.files[0].bytes.subarray(0, 2)).toString('latin1'), 'PK');
+const manifoldRoundTrip = await convert(
+  { name: threeMf.files[0].name, bytes: threeMf.files[0].bytes },
+  { to: 'glb' },
+);
+assert.equal(Buffer.from(manifoldRoundTrip.files[0].bytes.subarray(0, 4)).toString('latin1'), 'glTF');
 
 const assimp = await createAssimp();
 try {
@@ -108,7 +118,7 @@ const wasm = await readFile(wasmUrl);
 assert.ok(WebAssembly.validate(wasm), 'libassimp/wasm is not a valid WebAssembly module');
 `,
   );
-  execFileSync(process.execPath, ['consumer.mjs', fixture], { cwd: work, stdio: 'inherit' });
+  execFileSync(process.execPath, ['consumer.mjs', fixture, manifoldFixture], { cwd: work, stdio: 'inherit' });
 
   writeFileSync(
     join(work, 'consumer.cjs'),
