@@ -1,3 +1,13 @@
+## 0.2.0 (2026-09-01)
+
+### 🚀 Features
+
+- Preserve EXT_mesh_manifold topology and material runs when exporting glTF to 3MF. ([#24](https://github.com/taucad/libassimp/pull/24))
+
+### ❤️ Thank You
+
+- Richard Fontein @rifont
+
 ## 0.1.0 (2026-08-25)
 
 ### 🚀 Features
