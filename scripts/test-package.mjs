@@ -69,9 +69,7 @@ for (const { assimpCapabilities, conversionEdges } of entries) {
   execFileSync(process.execPath, ['static.mjs'], { cwd: work, stdio: 'inherit' });
 
   const fixture = fileURLToPath(new URL('./tests/fixtures/cube.obj', root));
-  const manifoldFixture = fileURLToPath(
-    new URL('./assimp/test/models/glTF2/EXT_mesh_manifold/TwoMaterialBox.glb', root),
-  );
+  const manifoldFixture = fileURLToPath(new URL('./tests/fixtures/two-material-manifold.glb', root));
   writeFileSync(
     join(work, 'consumer.mjs'),
     `import assert from 'node:assert/strict';
