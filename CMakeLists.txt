@@ -21,6 +21,9 @@ string(JSON LIBASSIMP_NAPI_VERSION GET "${LIBASSIMP_PACKAGE_JSON}" binary napi_v
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(MSVC)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 
 option(LIBASSIMP_NATIVE_TESTS "Build the host-native GoogleTest suite" OFF)
 option(LIBASSIMP_NATIVE_ADDON "Build the Node-API addon" OFF)
@@ -158,7 +161,7 @@ endif()
 
 if(LIBASSIMP_NATIVE_TESTS)
   set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
   set(GOOGLETEST_VERSION 1.14.0)
   add_subdirectory(
     assimp/contrib/googletest/googletest

@@ -44,6 +44,7 @@ runs:
       env:
         ARTIFACT: ${{ inputs.name }}${{ inputs.pattern }}
         ARTIFACT_PATH: ${{ inputs.path }}
+        ANNOTATE: 'false'
         EXPECT: ${{ inputs.expect }}
       run: |
         if bash .github/actions/download-verified-artifact/verify-artifact.sh; then

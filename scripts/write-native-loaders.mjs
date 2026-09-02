@@ -23,18 +23,13 @@ const idents = [
 
 rmSync(outputDir, { force: true, recursive: true });
 mkdirSync(outputDir, { recursive: true });
-for (const [jsBinding, esm] of [
-  ['index.js', true],
-  ['index.cjs', false],
-]) {
-  await writeJsBinding({
-    binaryName: manifest.napi.binaryName,
-    esm,
-    idents,
-    jsBinding,
-    outputDir,
-    packageName: manifest.napi.packageName,
-    platform: true,
-    version: manifest.version,
-  });
-}
+await writeJsBinding({
+  binaryName: manifest.napi.binaryName,
+  esm: true,
+  idents,
+  jsBinding: 'index.js',
+  outputDir,
+  packageName: manifest.napi.packageName,
+  platform: true,
+  version: manifest.version,
+});

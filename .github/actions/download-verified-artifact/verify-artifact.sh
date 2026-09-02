@@ -3,7 +3,11 @@
 set -euo pipefail
 
 fail() {
-  echo "::error::artifact '$ARTIFACT' did not land in '$ARTIFACT_PATH': $1"
+  if [[ "${ANNOTATE:-true}" == 'true' ]]; then
+    echo "::error::artifact '$ARTIFACT' did not land in '$ARTIFACT_PATH': $1"
+  else
+    echo "artifact '$ARTIFACT' did not land in '$ARTIFACT_PATH': $1"
+  fi
   exit 1
 }
 

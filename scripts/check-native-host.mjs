@@ -96,14 +96,7 @@ const inspectWindows = () => {
     .map((line) => line.trim().toLowerCase())
     .filter((line) => line.endsWith('.dll'))
     .toSorted((left, right) => left.localeCompare(right));
-  const allowed = new Set([
-    'kernel32.dll',
-    'msvcp140.dll',
-    'node.exe',
-    'ucrtbase.dll',
-    'vcruntime140.dll',
-    'vcruntime140_1.dll',
-  ]);
+  const allowed = new Set(['kernel32.dll', 'node.exe', 'ucrtbase.dll']);
   assert.deepEqual(
     dependencies.filter(
       (dependency) => !allowed.has(dependency) && !dependency.startsWith('api-ms-win-crt-'),

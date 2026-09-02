@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -44,6 +45,7 @@ namespace {
 using Replies =
     std::unordered_map<std::string, std::optional<libassimp::Bytes>>;
 constexpr napi_type_tag kPlanType{0xbff5b876d76342c3ULL, 0xa44fd1210e0915d1ULL};
+std::mutex assimpMutex;
 
 #ifdef LIBASSIMP_CPP_COVERAGE
 std::atomic<bool> coverageFailNextExecute{false};
@@ -294,6 +296,7 @@ public:
     if (coverageFailNextExecute.exchange(false))
       throw std::runtime_error("coverage execution failure");
 #endif
+    const std::lock_guard<std::mutex> lock(assimpMutex);
     status_ = plan_->run();
   }
 
@@ -458,8 +461,13 @@ Napi::Value coverageExecutionFailure(const Napi::CallbackInfo &info) {
 #endif
 
 Napi::Object initialize(Napi::Env env, Napi::Object exports) {
-  const std::vector<libassimp::FormatInfo> importFormats = libassimp::importFormats();
-  const std::vector<libassimp::FormatInfo> exportFormats = libassimp::exportFormats();
+  std::vector<libassimp::FormatInfo> importFormats;
+  std::vector<libassimp::FormatInfo> exportFormats;
+  {
+    const std::lock_guard<std::mutex> lock(assimpMutex);
+    importFormats = libassimp::importFormats();
+    exportFormats = libassimp::exportFormats();
+  }
   exports.Set("buildIdentity", LIBASSIMP_NATIVE_BUILD_IDENTITY);
   exports.Set("napiVersion", NAPI_VERSION);
   exports.Set("packageVersion", LIBASSIMP_PACKAGE_VERSION);

@@ -16,9 +16,12 @@ const directory = resolve(root, configuredDirectory);
 
 const findTool = (name, configured) => {
   if (configured) return configured;
-  if (process.platform !== 'darwin') return name;
-  const result = spawnSync('xcrun', ['--find', name], { encoding: 'utf8' });
-  return result.status === 0 ? result.stdout.trim() : name;
+  const result =
+    process.platform === 'darwin'
+      ? spawnSync('xcrun', ['--find', name], { encoding: 'utf8' })
+      : spawnSync(process.env.CC ?? 'clang', [`-print-prog-name=${name}`], { encoding: 'utf8' });
+  const candidate = result.stdout?.trim();
+  return result.status === 0 && candidate ? candidate : name;
 };
 const profdata = findTool('llvm-profdata', process.env.LLVM_PROFDATA);
 const cov = findTool('llvm-cov', process.env.LLVM_COV);

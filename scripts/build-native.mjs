@@ -27,6 +27,18 @@ if (arguments_.has('--sanitize') && process.platform === 'darwin') {
   if (!existsSync(runtime)) throw new Error(`AddressSanitizer runtime was not found: ${runtime}`);
   nodeEnvironment.DYLD_INSERT_LIBRARIES = runtime;
 }
+if (arguments_.has('--sanitize') && process.platform === 'linux') {
+  if (process.arch !== 'x64') throw new Error('Linux sanitizer runtime lookup requires x64');
+  const compiler = process.env.CC ?? 'clang';
+  const probe = spawnSync(compiler, ['-print-file-name=libclang_rt.asan-x86_64.so'], {
+    encoding: 'utf8',
+  });
+  if (probe.error) throw probe.error;
+  if (probe.status !== 0) throw new Error(`${compiler} failed: ${probe.stderr?.trim() ?? 'unknown error'}`);
+  const runtime = probe.stdout.trim();
+  if (!existsSync(runtime)) throw new Error(`AddressSanitizer runtime was not found: ${runtime}`);
+  nodeEnvironment.LD_PRELOAD = [runtime, process.env.LD_PRELOAD].filter(Boolean).join(':');
+}
 
 const run = (command, args, environment = process.env) => {
   const result = spawnSync(command, args, { cwd: root, env: environment, stdio: 'inherit' });
@@ -77,7 +89,7 @@ if (arguments_.has('--debug') || arguments_.has('--coverage') || arguments_.has(
 }
 run('cmake', ['--preset', 'native', '-B', binaryDirectory, '-DLIBASSIMP_NATIVE_ADDON=ON', ...definitions]);
 run('cmake', ['--build', binaryDirectory, '--parallel']);
-if (nativeTests) run('ctest', ['--test-dir', binaryDirectory, '--output-on-failure'], nodeEnvironment);
+if (nativeTests) run('ctest', ['--test-dir', binaryDirectory, '--output-on-failure']);
 
 const addonFiles = readdirSync(outputDirectory, { recursive: true }).filter(
   (path) => path.split(/[\\/]/u).at(-1) === 'libassimp.node',
@@ -90,7 +102,7 @@ if (![...arguments_].some((value) => ['--coverage', '--debug', '--sanitize'].inc
   if (process.platform === 'darwin') run('xcrun', ['strip', '-x', addon]);
   if (process.platform === 'linux') run('strip', ['--strip-unneeded', addon]);
 }
-run('node', [resolve(root, 'scripts/check-cpp-exports.mjs'), addon], nodeEnvironment);
+run('node', [resolve(root, 'scripts/check-cpp-exports.mjs'), addon]);
 if (![...arguments_].some((value) => ['--coverage', '--debug', '--sanitize'].includes(value))) {
   run('node', [resolve(root, 'scripts/check-native-host.mjs'), addon]);
 }

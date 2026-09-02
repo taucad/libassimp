@@ -3,8 +3,8 @@ import path from 'node:path';
 // Initial public package contract from the blueprint's Target Package Manifest.
 // Change the list and ceiling together in the causing pull request.
 // Origin: the generated capability registry and validator split measured in the
-// native-routed candidate; 27 exact files, with no spare allowance.
-const PACKAGE_FILE_COUNT_CEILING = 27;
+// native-routed candidate; 26 exact files, with no spare allowance.
+const PACKAGE_FILE_COUNT_CEILING = 26;
 
 export const PACKAGE_FILES = [
   'BREAKING_CHANGES.md',
@@ -28,7 +28,6 @@ export const PACKAGE_FILES = [
   'dist/index.node.d.mts',
   'dist/index.node.mjs',
   'dist/native-backend.mjs',
-  'dist/native/index.cjs',
   'dist/native/index.js',
   'dist/wasm/libassimp.js',
   'dist/wasm/libassimp.wasm',

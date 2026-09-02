@@ -3,7 +3,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -30,11 +29,6 @@ const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 const native = await import('../dist/index.node.mjs');
 const wasm = await import('../dist/index.mjs');
-const packageManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-const cjsBinding = createRequire(import.meta.url)('../dist/native/index.cjs');
-assert.equal(cjsBinding.buildIdentity, `${process.platform}-${process.arch}-napi8`);
-assert.equal(cjsBinding.napiVersion, 8);
-assert.equal(cjsBinding.packageVersion, packageManifest.version);
 const bytes = new Uint8Array(readFileSync(new URL('./fixtures/cube.obj', import.meta.url)));
 const request = [{ name: 'cube.obj', bytes }, { to: 'glb' }];
 const nativeAssimp = await native.createAssimp({ backend: 'native' });

@@ -616,7 +616,7 @@ jobs:
                 exit 1
               fi
             else
-              npm publish "./tarballs/$filename" --access public --provenance
+              npm publish "./tarballs/$filename" --access public --provenance </dev/null
             fi
           done < /tmp/packages
 

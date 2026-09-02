@@ -6,7 +6,7 @@ const config: NextConfig = {
   output: 'export',
   reactStrictMode: true,
   turbopack: {
-    resolveAlias: { libassimp: './dist/index.mjs' },
+    resolveAlias: { libassimp: '../dist/index.mjs' },
     root: new URL('..', import.meta.url).pathname,
   },
 };

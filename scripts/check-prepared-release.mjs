@@ -80,8 +80,8 @@ export const preparedReleaseFindings = ({ packedFiles, root }) => {
       findings.push(`root optionalDependencies: ${name} is not a configured target package`);
     }
   }
-  for (const loader of ['dist/native/index.js', 'dist/native/index.cjs']) {
-    if (!existsSync(join(rootDirectory, loader))) findings.push(`${loader} is missing`);
+  if (!existsSync(join(rootDirectory, 'dist/native/index.js'))) {
+    findings.push('dist/native/index.js is missing');
   }
   for (const file of packedFiles.filter((entry) => entry.endsWith('.node'))) {
     findings.push(`root pack: ${file} is a native binary`);

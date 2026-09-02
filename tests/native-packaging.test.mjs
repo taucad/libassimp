@@ -71,6 +71,12 @@ describe('native target source', () => {
 
   it('keeps workflows target-derived and release assembly ordered', () => {
     const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+    const action = readFileSync(
+      new URL('../.github/actions/download-verified-artifact/action.yml', import.meta.url),
+      'utf8',
+    );
+    const buildNative = readFileSync(new URL('../scripts/build-native.mjs', import.meta.url), 'utf8');
+    const cmake = readFileSync(new URL('../CMakeLists.txt', import.meta.url), 'utf8');
     const exportsCheck = readFileSync(new URL('../scripts/check-cpp-exports.mjs', import.meta.url), 'utf8');
     const smoke = readFileSync(new URL('../scripts/test-package.mjs', import.meta.url), 'utf8');
     assert(workflow.includes('fromJSON(needs.preflight.outputs.build-matrix)'));
@@ -91,10 +97,17 @@ describe('native target source', () => {
     assert.equal(manifest.exports['.'].import.browser.default, './dist/index.mjs');
     assert.equal(manifest.exports['.'].import.node.default, './dist/index.node.mjs');
     assert.equal(manifest.exports['.'].import.node.types, './dist/index.node.d.mts');
+    assert.deepEqual(Object.keys(manifest.exports['.'].import), ['browser', 'node', 'types', 'default']);
     assert(smoke.includes('utilityProcess.fork'));
     assert(smoke.includes("run(process.execPath, ['install.js']"));
+    assert(smoke.includes("join(work, 'node_modules', 'electron', 'cli.js')"));
+    assert(!smoke.includes('electron.cmd'));
     assert(smoke.includes("NAPI_RS_ENFORCE_VERSION_CHECK: '1'"));
     assert(!smoke.includes('ELECTRON_RUN_AS_NODE'));
+    assert(buildNative.includes('nodeEnvironment.LD_PRELOAD'));
+    assert(cmake.includes('CMAKE_MSVC_RUNTIME_LIBRARY'));
+    assert(cmake.includes('set(gtest_force_shared_crt OFF'));
+    assert(action.includes("ANNOTATE: 'false'"));
     assert(workflow.includes('ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756'));
     assert(workflow.includes('LIBASSIMP_REGISTRY_VERSION: ${{ needs.preflight.outputs.version }}'));
     assert(!workflow.includes('linux-x64-napi8'));
@@ -121,11 +134,12 @@ describe('native target source', () => {
     assert(manifest.scripts.prepublishOnly.endsWith('node scripts/validate-pack.mjs'));
   });
 
-  it('delegates both native loaders to writeJsBinding', () => {
+  it('delegates the ESM native loader to writeJsBinding', () => {
     const source = readFileSync(new URL('../scripts/write-native-loaders.mjs', import.meta.url), 'utf8');
     assert(source.includes("import { writeJsBinding } from '@napi-rs/cli'"));
-    assert(source.includes("['index.js', true]"));
-    assert(source.includes("['index.cjs', false]"));
+    assert(source.includes("jsBinding: 'index.js'"));
+    assert(source.includes('esm: true'));
+    assert(!source.includes('index.cjs'));
     assert(!source.includes('process.platform'));
     for (const name of [
       'buildIdentity',
@@ -191,7 +205,6 @@ describe('prepared release and tarball integrity set', () => {
     });
     mkdirSync(join(root, 'dist', 'native'), { recursive: true });
     writeFileSync(join(root, 'dist', 'native', 'index.js'), 'generated\n');
-    writeFileSync(join(root, 'dist', 'native', 'index.cjs'), 'generated\n');
     for (const target of packages) {
       const targetDirectory = join(root, 'npm', target.suffix);
       mkdirSync(targetDirectory, { recursive: true });

@@ -49,14 +49,12 @@ const run = (command, arguments_, options) =>
     ...options,
     stdio: 'inherit',
   });
-const runNpm = (arguments_, options) =>
-  process.platform === 'win32'
-    ? run(
-        process.execPath,
-        [join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'), ...arguments_],
-        options,
-      )
-    : run('npm', arguments_, options);
+const runNpm = (arguments_, options) => {
+  if (process.platform !== 'win32') return run('npm', arguments_, options);
+  const npmCli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  if (!existsSync(npmCli)) throw new Error(`npm CLI was not found beside Node: ${npmCli}`);
+  return run(process.execPath, [npmCli, ...arguments_], options);
+};
 const suffix = requireNativeSuffix(process.env);
 const mode = resolveSmokeMode(process.env);
 const work = mkdtempSync(join(tmpdir(), 'libassimp-package-'));
@@ -240,11 +238,10 @@ app.whenReady().then(() => {
     }
     const electron =
       configuredElectron === undefined
-        ? join(work, 'node_modules', '.bin', process.platform === 'win32' ? 'electron.cmd' : 'electron')
-        : resolve(configuredElectron);
-    const actualVersion = execFileSync(electron, ['--version'], {
+        ? { arguments: [join(work, 'node_modules', 'electron', 'cli.js')], command: process.execPath }
+        : { arguments: [], command: resolve(configuredElectron) };
+    const actualVersion = execFileSync(electron.command, [...electron.arguments, '--version'], {
       encoding: 'utf8',
-      shell: process.platform === 'win32',
     }).trim();
     if (actualVersion !== `v${version}`) {
       throw new Error(`expected Electron v${version}, received ${actualVersion}`);
@@ -262,8 +259,9 @@ app.whenReady().then(() => {
       },
       timeout: 180_000,
     };
-    if (process.platform === 'linux') run('xvfb-run', ['-a', electron, ...arguments_], options);
-    else run(electron, arguments_, options);
+    if (process.platform === 'linux') {
+      run('xvfb-run', ['-a', electron.command, ...electron.arguments, ...arguments_], options);
+    } else run(electron.command, [...electron.arguments, ...arguments_], options);
   } else {
     run(process.execPath, ['consumer.mjs', fixture, scale, materialFixture, materialSidecar], {
       cwd: work,

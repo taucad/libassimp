@@ -19,7 +19,7 @@ const stable = {
 describe('CI release policy', () => {
   it('publishes exact frozen tarballs with provenance and the root ordered last', () => {
     const workflow = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
-    assert(workflow.includes('npm publish "./tarballs/$filename" --access public --provenance'));
+    assert(workflow.includes('npm publish "./tarballs/$filename" --access public --provenance </dev/null'));
     assert(workflow.includes("Number(a === 'libassimp') - Number(b === 'libassimp')"));
     assert(workflow.includes('id-token: write'));
   });
