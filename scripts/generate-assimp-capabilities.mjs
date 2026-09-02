@@ -931,7 +931,7 @@ const generate = (check) => {
   validateEvidence(evidence, overrides);
   const generated = formatTypescript(renderGenerated(evidence, overrides));
   if (check) {
-    const current = readFileSync(outputPath, 'utf8');
+    const current = normalizeSourceText(readFileSync(outputPath, 'utf8'));
     if (current !== generated)
       throw new Error(`${sourceName(outputPath)} is stale; run pnpm generate:capabilities.`);
     console.log(`${sourceName(outputPath)} is current (${sha256(generated)}).`);
