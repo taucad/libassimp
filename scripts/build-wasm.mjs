@@ -251,7 +251,7 @@ for (const [name, bytes] of [
   const text = bytes.toString('latin1');
   for (const path of [root.replace(/\/$/, ''), '/src/', '/__w/']) {
     if (new RegExp(`(?<![\\w./-])${RegExp.escape(path)}`, 'u').test(text)) {
-      throw new Error(`${target} ${name} embeds the build path ${path}`);
+      throw new Error([target, name, 'embeds the build path', path].join(' '));
     }
   }
 }

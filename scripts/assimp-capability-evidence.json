@@ -1,8 +1,8 @@
 {
-  "engineSha": "ef850a10da52f43eb32ae0ac4b22090edb28d2de",
-  "sourceSha256": "a02189f08563c36c7f0dbed5a17b7c50daebf55c18f7f58cda89795ddf054482",
+  "engineSha": "637cb076d9dce8870190ba25788ffafdc9d48bdc",
+  "sourceSha256": "e54141abcb144ab9eb41592cc01c01e7c4dafda37d850d67ab6945d6fbb009e1",
   "sourceSha256ByPath": {
-    "assimp-builds.json": "12ad123069f3f4685c239f4a844362bad68021bf79acc20694ef0a39544efb21",
+    "assimp-builds.json": "80194988321739a036709113fc0c32d536b2f654d9cb726968dbc5488d3c8c21",
     "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "5dc9b5a66e066a0e5bb5f83de6bb9de1a29d3b7837a4dfa543006f640b3a1edd",
     "assimp/code/AssetLib/AC/ACLoader.cpp": "874aeda14e635ec6d3ad2c0ae47add63f1095693bb088adb6c8db4317494c551",
     "assimp/code/AssetLib/ASE/ASELoader.cpp": "3f24015f200645dbc3d382435d851ca8c8cc7c8e816e095458d41c3b98df5b46",
@@ -19,7 +19,7 @@
     "assimp/code/AssetLib/FBX/FBXMaterial.cpp": "41b156ca6292be3bc2b10fc1ca058a5c9098882d60a2e591cc986aa3cae511cd",
     "assimp/code/AssetLib/FBX/FBXModel.cpp": "22cc1f2fe8a00d4fab623de91aee68bc93d7bc0b506a06a5cb9c7401ed270f39",
     "assimp/code/AssetLib/FBX/FBXNodeAttribute.cpp": "3b9654b978c9af0a121bd3c52f7f3292fca6133fe2cc4ba9a7da8d199a1534dc",
-    "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp": "ebe2377c631a6b21efd1a4a12462affd090ed17a60369578613d58b73ebab3e4",
+    "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp": "3802cade4ae6c51b1d6fe23c18b38085976ecbf1ea1ba4cd88a020470f046e46",
     "assimp/code/AssetLib/glTF2/glTF2Importer.cpp": "d8927e385804d24b300318690baf5832636b07f57fc998b7b45e790228e49965",
     "assimp/code/AssetLib/IFC/IFCLoader.cpp": "08504694b6a611e575c21d44cf2056a7cc490431e0b42862c3724a1bb78ccca6",
     "assimp/code/AssetLib/LWO/LWOLoader.cpp": "5c4c00dfc37459b3f837510fdade543f4305585e3569a967f391fb3f3c1aa9fb",
@@ -688,7 +688,7 @@
       "defaults": [false],
       "owners": ["glTF2"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1450"]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1453"]
     },
     {
       "nativeName": "GLTF2_TARGET_NORMAL_EXP",
@@ -697,7 +697,7 @@
       "defaults": [false],
       "owners": ["glTF2"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1452"]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1455"]
     },
     {
       "nativeName": "GLTF2_TARGETNAMES_EXP",
@@ -706,7 +706,7 @@
       "defaults": [false],
       "owners": ["glTF2"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1454"]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1457"]
     },
     {
       "nativeName": "IMPORT_3DS_UNIT_SCALE_TO_METERS",
@@ -1941,7 +1941,7 @@
       "defaults": [false],
       "owners": ["glTF2"],
       "symbols": ["AI_CONFIG_EXPORT_GLTF_UNLIMITED_SKINNING_BONES_PER_VERTEX"],
-      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1441"]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1444"]
     }
   ],
   "postProcess": [

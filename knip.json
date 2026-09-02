@@ -6,6 +6,7 @@
       "entry": [
         "bench/*.mjs",
         "scripts/*.mjs",
+        "src/cpp/*.test.mjs",
         "src/**/*.test.ts",
         "src/**/*.test-d.ts",
         "tests/**/*.test.mjs",
@@ -13,7 +14,7 @@
         "*.test.ts"
       ],
       "ignore": ["assimp/**", "src/cjs-error.d.cts"],
-      "ignoreBinaries": ["cmake", "ctest", "ninja"],
+      "ignoreBinaries": ["cmake", "ctest", "ninja", "xcrun"],
       "ignoreDependencies": ["@nx/js", "libassimp-candidate", "react", "react-dom"]
     },
     "docs-site": {

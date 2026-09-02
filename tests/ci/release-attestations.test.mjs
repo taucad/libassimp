@@ -58,7 +58,12 @@ const audit = {
     },
   ],
 };
-const options = { audit, manifest: { packages: [candidate] }, commit, runId: '123' };
+const options = {
+  audit,
+  manifest: { packages: { libassimp: { integrity: candidate.integrity, version: candidate.version } } },
+  commit,
+  runId: '123',
+};
 
 describe('release attestation verification', () => {
   it('binds every candidate to the exact repository, workflow, run, commit, and digest', () => {

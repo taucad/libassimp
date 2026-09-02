@@ -16,15 +16,19 @@ describe('assimp-builds-to-presets', () => {
     expect(readFileSync(presetsPath, 'utf8')).toBe(before);
   });
 
-  it('gives production Wasm and native tests their exact entry points', () => {
+  it('gives production Wasm, native tests, and production native their exact entry points', () => {
     const presets = JSON.parse(readFileSync(presetsPath, 'utf8'));
-    expect(presets.configurePresets.map((preset) => preset.name)).toEqual(['wasm', 'native-test']);
-    expect(presets.buildPresets.map((preset) => preset.configurePreset)).toEqual(['wasm', 'native-test']);
+    expect(presets.configurePresets.map((preset) => preset.name)).toEqual(['wasm', 'native-test', 'native']);
+    expect(presets.buildPresets.map((preset) => preset.configurePreset)).toEqual([
+      'wasm',
+      'native-test',
+      'native',
+    ]);
     expect(presets.testPresets.map((preset) => preset.configurePreset)).toEqual(['native-test']);
   });
 
-  it('disables every format on the shared disable list in both builds', () => {
-    for (const name of ['wasm', 'native-test']) {
+  it('disables every format on the shared disable list in every build', () => {
+    for (const name of ['wasm', 'native-test', 'native']) {
       const cacheVariables = buildCacheVariables(name);
       for (const id of builds.disable.ids) {
         const keys =
@@ -36,14 +40,16 @@ describe('assimp-builds-to-presets', () => {
     }
   });
 
-  it('builds every admitted production format and the bounded native subset', () => {
-    expect(buildCacheVariables('wasm')).toMatchObject({
-      ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT: 'ON',
-      ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT: 'ON',
-      ASSIMP_BUILD_USD_IMPORTER: 'ON',
-      ASSIMP_BUILD_VRML_IMPORTER: 'ON',
-      ASSIMP_BUILD_IFC_IMPORTER: 'ON',
-    });
+  it('builds every admitted production format natively and in Wasm', () => {
+    for (const name of ['wasm', 'native']) {
+      expect(buildCacheVariables(name)).toMatchObject({
+        ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT: 'ON',
+        ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT: 'ON',
+        ASSIMP_BUILD_USD_IMPORTER: 'ON',
+        ASSIMP_BUILD_VRML_IMPORTER: 'ON',
+        ASSIMP_BUILD_IFC_IMPORTER: 'ON',
+      });
+    }
     expect(buildCacheVariables('native-test')).toMatchObject({
       ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT: 'OFF',
       ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT: 'OFF',

@@ -5,12 +5,13 @@
     "ids": ["M3D", "RAW", "IRR", "IRRMESH", "TERRAGEN", "PBRT", "ASSBIN", "ASSXML", "M3D_EXPORTER"]
   },
   "cacheVariables": {
-    "$comment": "Applied to the Wasm preset. ASSIMP_BUILD_ZLIB builds zlib from source rather than probing the host. ASSIMP_BUILD_DRACO stays at assimp's own default (OFF): Draco support pulls a FetchContent dependency and costs size for a glTF sub-feature no consumer has asked for — recorded as a decision, revisit behind the size ratchets.",
+    "$comment": "Applied to every build. ASSIMP_IGNORE_GIT_HASH keeps exporter bytes identical when a source archive has no .git directory. ASSIMP_BUILD_ZLIB builds zlib from source rather than probing the host. ASSIMP_BUILD_DRACO stays at assimp's own default (OFF): Draco support pulls a FetchContent dependency and costs size for a glTF sub-feature no consumer has asked for — recorded as a decision, revisit behind the size ratchets.",
     "BUILD_SHARED_LIBS": "OFF",
     "ASSIMP_BUILD_TESTS": "OFF",
     "ASSIMP_BUILD_ASSIMP_TOOLS": "OFF",
     "ASSIMP_BUILD_ZLIB": "ON",
     "ASSIMP_BUILD_DRACO": "OFF",
+    "ASSIMP_IGNORE_GIT_HASH": "ON",
     "ASSIMP_NO_EXPORT": "OFF",
     "ASSIMP_INSTALL": "OFF",
     "ASSIMP_WARNINGS_AS_ERRORS": "OFF",

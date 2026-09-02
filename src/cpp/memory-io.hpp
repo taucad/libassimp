@@ -25,6 +25,7 @@
 #include <cstring>
 #include <deque>
 #include <functional>
+#include <limits>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -56,9 +57,16 @@ class MemoryFiles {
       if (input.name == name) return &input.bytes;
     }
     const std::string base = basename(name);
+    const Bytes* basenameMatch = nullptr;
     for (const NamedBytes& input : inputs_) {
-      if (basename(input.name) == base) return &input.bytes;
+      if (basename(input.name) != base) continue;
+      if (basenameMatch != nullptr) {
+        basenameMatch = nullptr;
+        break;
+      }
+      basenameMatch = &input.bytes;
     }
+    if (basenameMatch != nullptr) return basenameMatch;
     if (pending_ || !resolve_ || missing_.count(name) != 0) return nullptr;
     Bytes resolved;
     const ResolveStatus status = resolve_(name, resolved);
@@ -123,19 +131,26 @@ class MemoryWriteStream : public Assimp::IOStream {
   std::size_t Read(void*, std::size_t, std::size_t) override { return 0; }
 
   std::size_t Write(const void* buffer, std::size_t size, std::size_t count) override {
+    if (size != 0 && count > std::numeric_limits<std::size_t>::max() / size) return 0;
     const std::size_t total = size * count;
-    if (position_ + total > out_.size()) out_.resize(position_ + total);
+    if (total > std::numeric_limits<std::size_t>::max() - position_) return 0;
+    const std::size_t end = position_ + total;
+    if (end > out_.size()) out_.resize(end);
+    if (total == 0) return count;
     std::memcpy(out_.data() + position_, buffer, total);
-    position_ += total;
+    position_ = end;
     return count;
   }
 
   aiReturn Seek(std::size_t offset, aiOrigin origin) override {
     // aiOrigin_END counts backwards from the end, matching Assimp::MemoryIOStream.
+    if (origin == aiOrigin_END && offset > out_.size()) return AI_FAILURE;
+    if (origin == aiOrigin_CUR && offset > std::numeric_limits<std::size_t>::max() - position_) {
+      return AI_FAILURE;
+    }
     const std::size_t target = origin == aiOrigin_CUR  ? position_ + offset
                                : origin == aiOrigin_END ? out_.size() - offset
                                                         : offset;
-    if (origin == aiOrigin_END && offset > out_.size()) return AI_FAILURE;
     if (target > out_.size()) out_.resize(target);
     position_ = target;
     return AI_SUCCESS;

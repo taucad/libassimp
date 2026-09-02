@@ -11,16 +11,23 @@ import type {
   NativeRuntime,
 } from './convert.js';
 import { prepareConversion, ResolutionContext, runPreparedConversion } from './convert.js';
+import { AssimpError } from './assimp-error.js';
 import type { AllExportFormat, ExportFormatInfo, FormatInfo } from './generated/assimp-capabilities.js';
 
 /** Settings for {@link Assimp} creation. @public */
 export type CreateAssimpOptions = {
+  /** Runtime preference. Node defaults to `auto`; browsers always use Wasm. */
+  readonly backend?: 'auto' | 'native' | 'wasm';
   /** Wasm location. Defaults to the single artifact shipped beside this entry. */
   readonly wasmUrl?: string | URL;
   /** Already-fetched bytes used instead of `wasmUrl`. */
   readonly wasmBinary?: ArrayBuffer | Uint8Array;
   /** Receives generated-runtime diagnostics. */
-  readonly onLog?: (entry: { readonly level: 'info' | 'error'; readonly message: string }) => void;
+  readonly onLog?: (entry: {
+    readonly level: 'info' | 'warning' | 'error';
+    readonly message: string;
+    readonly cause?: unknown;
+  }) => void;
 };
 
 /** Singular conversion callable narrowed to one package entry. @public */
@@ -39,6 +46,10 @@ export type ConvertFormatsFunction<ExportFormat extends AllExportFormat> = <
 
 /** Loaded conversion instance. @public */
 export type Assimp<ImportFormat extends string, ExportFormat extends AllExportFormat> = {
+  /** Runtime that actually serves this instance. */
+  readonly backend: 'native' | 'wasm';
+  /** Native target/API identity, absent for Wasm instances. */
+  readonly buildIdentity?: string;
   readonly convert: ConvertFunction<ExportFormat>;
   readonly convertFormats: ConvertFormatsFunction<ExportFormat>;
   readonly formats: {
@@ -72,6 +83,15 @@ type EntryFormats<ImportFormat extends string, ExportFormat extends AllExportFor
   import: readonly FormatInfo<ImportFormat>[];
   export: readonly ExportFormatInfo<ExportFormat>[];
 }>;
+
+type EntryConfig<ImportFormat extends string, ExportFormat extends AllExportFormat> = EntryFormats<
+  ImportFormat,
+  ExportFormat
+> &
+  Readonly<{ loadRuntime?: RuntimeLoader }>;
+
+/** Create one loaded runtime for a package entry. @internal */
+export type RuntimeLoader = (options: CreateAssimpOptions) => Promise<NativeRuntime>;
 
 const sink =
   (onLog: CreateAssimpOptions['onLog'], level: 'info' | 'error') =>
@@ -196,16 +216,22 @@ export const loadModule = async (
     const wasm = WebAssembly as JspiWebAssembly;
     const invoke = jspi && wasm.promising !== undefined ? wasm.promising(raw) : raw;
     return {
-      native,
+      backend: 'wasm',
+      preparePlan: (entryName, files, nativeOptions) => native.preparePlan(entryName, files, nativeOptions),
       runPlan: async (handle, context) => {
         if (active !== undefined) throw new Error('libassimp instance re-entry is not allowed.');
         active = context;
         try {
-          return await invoke(handle);
+          return await invoke(handle as number);
         } finally {
           active = undefined;
         }
       },
+      takePlanResult: (handle) => native.takePlanResult(handle as number),
+      destroyPlan: (handle) => {
+        native.destroyPlan(handle as number);
+      },
+      dispose: () => undefined,
     };
   } catch (error) {
     options.onLog?.({ level: 'error', message: error instanceof Error ? error.message : String(error) });
@@ -219,13 +245,35 @@ const disposedError = (): Error => new Error('assimp instance disposed; create a
 export const createEntry = <ImportFormat extends string, ExportFormat extends AllExportFormat>(
   glueUrl: URL,
   wasmUrl: URL,
-  formats: EntryFormats<ImportFormat, ExportFormat>,
+  config: EntryConfig<ImportFormat, ExportFormat>,
 ) => {
+  const formats: EntryFormats<ImportFormat, ExportFormat> = {
+    import: config.import,
+    export: config.export,
+  };
+  const loadRuntime: RuntimeLoader =
+    config.loadRuntime ??
+    ((options) => {
+      if (options.backend === 'native') {
+        return Promise.reject(
+          new AssimpError(
+            'IMPORT_FAILED',
+            'backend: native is unavailable from the browser-safe libassimp entry.',
+            { cause: new Error('The default libassimp entry contains no Node loader.') },
+          ),
+        );
+      }
+      return loadModule(glueUrl, wasmUrl, options);
+    });
   const supportedFormats = new Set<string>(formats.export.map(({ id }) => id));
   const createAssimp = async (
     options: CreateAssimpOptions = {},
   ): Promise<Assimp<ImportFormat, ExportFormat>> => {
-    let runtime: NativeRuntime | undefined = await loadModule(glueUrl, wasmUrl, options);
+    const backend: unknown = options.backend;
+    if (backend !== undefined && backend !== 'auto' && backend !== 'native' && backend !== 'wasm') {
+      throw new AssimpError('INVALID_OPTIONS', 'Invalid backend; expected auto, native, or wasm.');
+    }
+    let runtime: NativeRuntime | undefined = await loadRuntime(options);
     let disposed = false;
     let tail: Promise<void> = Promise.resolve();
 
@@ -271,11 +319,14 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
       if (disposed) return;
       disposed = true;
       void tail.then(() => {
+        runtime?.dispose();
         runtime = undefined;
       });
     };
 
     return {
+      backend: runtime.backend,
+      ...(runtime.buildIdentity === undefined ? {} : { buildIdentity: runtime.buildIdentity }),
       convert,
       convertFormats,
       formats,

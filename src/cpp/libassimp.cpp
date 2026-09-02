@@ -37,10 +37,14 @@ namespace {
 const aiExportFormatDesc* findExportFormat(const Assimp::Exporter& exporter, const std::string& id) {
   for (std::size_t index = 0; index < exporter.GetExportFormatCount(); ++index) {
     const aiExportFormatDesc* description = exporter.GetExportFormatDescription(index);
-    if (description != nullptr && id == description->id) return description;
+    if (id == description->id) return description;
   }
   return nullptr;
 }
+
+#ifdef LIBASSIMP_CPP_COVERAGE
+void exportNothing(const char*, Assimp::IOSystem*, const aiScene*, const Assimp::ExportProperties*) {}
+#endif
 
 Result fail(std::string code, std::string message, int formatIndex = -1, std::string format = {}) {
   Result result;
@@ -110,7 +114,7 @@ Plan::Plan(std::string entryName, std::vector<NamedBytes> files, Properties impo
   for (NamedBytes& file : files) files_.push_back(std::move(file));
 }
 
-PlanStatus Plan::run() noexcept {
+PlanStatus Plan::run() {
   result_ = {};
   if (files_.empty()) {
     result_ = fail("NO_FILES", "convert needs at least one input file.");
@@ -161,6 +165,10 @@ PlanStatus Plan::run() noexcept {
       activeFormat = target.format;
       phase = "EXPORT_FAILED";
       Assimp::Exporter exporter;
+#ifdef LIBASSIMP_CPP_COVERAGE
+      exporter.RegisterExporter(
+          Assimp::Exporter::ExportFormatEntry("__test_empty", "Coverage-only empty exporter", "empty", exportNothing));
+#endif
       const aiExportFormatDesc* description = findExportFormat(exporter, target.nativeId);
       if (description == nullptr) {
         std::ostringstream message;
@@ -200,7 +208,6 @@ std::vector<FormatInfo> importFormats() {
   std::vector<FormatInfo> formats;
   for (std::size_t index = 0; index < aiGetImportFormatCount(); ++index) {
     const aiImporterDesc* description = aiGetImportFormatDescription(index);
-    if (description == nullptr || description->mFileExtensions == nullptr) continue;
     std::istringstream extensions(description->mFileExtensions);
     for (std::string extension; extensions >> extension;) {
       formats.push_back(FormatInfo{extension, extension, description->mName});
@@ -214,7 +221,6 @@ std::vector<FormatInfo> exportFormats() {
   std::vector<FormatInfo> formats;
   for (std::size_t index = 0; index < exporter.GetExportFormatCount(); ++index) {
     const aiExportFormatDesc* description = exporter.GetExportFormatDescription(index);
-    if (description == nullptr) continue;
     formats.push_back(FormatInfo{description->id, description->fileExtension, description->description});
   }
   return formats;

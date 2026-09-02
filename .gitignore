@@ -4,10 +4,13 @@
 .nx/*
 !.nx/version-plans/
 !.nx/version-plans/*.md
+.pnpm-store/
 .vercel
 build/
 coverage/
 dist/
+native-artifacts/
+npm/
 docs-site/.next/
 docs-site/.source/
 docs-site/next-env.d.ts
@@ -15,3 +18,7 @@ docs-site/out/
 node_modules/
 *.tsbuildinfo
 src/wasm/
+test-tarballs.json
+tests/out/
+*.node
+*.profraw

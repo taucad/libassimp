@@ -17,9 +17,11 @@ const stable = {
 };
 
 describe('CI release policy', () => {
-  it('publishes candidate tarballs through explicit relative paths', () => {
+  it('publishes exact frozen tarballs with provenance and the root ordered last', () => {
     const workflow = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
-    assert(workflow.includes('npm publish "./candidate/$filename" --access public --provenance'));
+    assert(workflow.includes('npm publish "./tarballs/$filename" --access public --provenance'));
+    assert(workflow.includes("Number(a === 'libassimp') - Number(b === 'libassimp')"));
+    assert(workflow.includes('id-token: write'));
   });
 
   it('publishes one exact release commit on main', () => {
@@ -57,6 +59,14 @@ describe('CI release policy', () => {
         version: '0.1.0',
       },
     );
+  });
+
+  it('never publishes a manual dispatch', () => {
+    assert.deepEqual(deriveRelease({ ...stable, event: 'workflow_dispatch', ref: 'refs/heads/feature' }), {
+      kind: 'dispatch',
+      npmPublish: false,
+      version: '0.1.0',
+    });
   });
 
   it('rejects extra release files', () => {

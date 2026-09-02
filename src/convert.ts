@@ -203,15 +203,34 @@ export class ResolutionContext {
     return pending;
   }
 
+  /** Resolve and stage one native replay answer without exposing resolver state. @internal */
+  public stageNative(name: string, supply: (bytes: Uint8Array | undefined) => void): void {
+    const resolution = this.begin(name, true);
+    if (typeof resolution !== 'number') this.pendingSinceRun.delete(resolution);
+    const pending = Promise.resolve(resolution).then((handle) => {
+      if (handle < 0) return handle;
+      const bytes = handle === 0 ? undefined : this.handles.get(handle);
+      supply(bytes);
+      if (handle > 0) this.handles.delete(handle);
+      return handle;
+    });
+    this.pendingSinceRun.add(pending);
+  }
+
   public getFailure(): ResolutionContext['failure'] {
     return this.failure;
   }
 }
 
-/** Loaded raw bridge plus one active resolver slot. @internal */
+/** Backend-neutral staged-plan bridge used by the public facade. @internal */
 export type NativeRuntime = Readonly<{
-  native: NativeModule;
-  runPlan: (handle: number, context: ResolutionContext) => Promise<number>;
+  backend: 'native' | 'wasm';
+  buildIdentity?: string;
+  preparePlan: (entryName: string, files: readonly AssimpFile[], options: NativePlanOptions) => unknown;
+  runPlan: (handle: unknown, context: ResolutionContext) => Promise<number>;
+  takePlanResult: (handle: unknown) => NativeResult;
+  destroyPlan: (handle: unknown) => void;
+  dispose: () => void;
 }>;
 
 /** A validated request that has not copied bytes into Wasm. @internal */
@@ -268,7 +287,7 @@ export const runPreparedConversion = async <
   request: PreparedConversion<Targets>,
 ): Promise<ConvertFormatsResult<Targets>> => {
   const context = new ResolutionContext(request.resolve);
-  const handle = runtime.native.preparePlan(request.files[0].name, request.files, request.nativeOptions);
+  const handle = runtime.preparePlan(request.files[0].name, request.files, request.nativeOptions);
   try {
     for (;;) {
       const status = await runtime.runPlan(handle, context);
@@ -283,7 +302,7 @@ export const runPreparedConversion = async <
       const settledFailure = context.getFailure();
       if (settledFailure !== undefined) throw resolverFailure(settledFailure);
     }
-    const result = runtime.native.takePlanResult(handle);
+    const result = runtime.takePlanResult(handle);
     if (!result.ok) {
       throw new AssimpError(result.code as AssimpFailureCode, result.message, {
         ...(result.formatIndex === undefined ? {} : { formatIndex: result.formatIndex }),
@@ -292,6 +311,6 @@ export const runPreparedConversion = async <
     }
     return result.formats as ConvertFormatsResult<Targets>;
   } finally {
-    runtime.native.destroyPlan(handle);
+    runtime.destroyPlan(handle);
   }
 };

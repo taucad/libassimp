@@ -202,6 +202,7 @@ describe('loader boundaries', () => {
 describe('createAssimp loading and lifetime', () => {
   it('exposes generated canonical directional format tables', async () => {
     using assimp = await createAssimp();
+    expect(assimp.backend).toBe('wasm');
     expect(assimp.formats.export.map(({ id }) => id)).toEqual([
       '3ds',
       '3mf',
@@ -221,6 +222,18 @@ describe('createAssimp loading and lifetime', () => {
     ]);
     expect(assimp.formats.import.map(({ id }) => id)).toContain('obj');
     expect(assimp.formats.export.find(({ id }) => id === 'stl')?.exportOptions).toHaveProperty('binary');
+  });
+
+  it('rejects forced native loading from the browser-safe entry', async () => {
+    await expect(createAssimp({ backend: 'native' })).rejects.toMatchObject({
+      message: 'backend: native is unavailable from the browser-safe libassimp entry.',
+    });
+  });
+
+  it('rejects an invalid runtime preference before loading', async () => {
+    await expect(createAssimp({ backend: 'gpu' as 'wasm' })).rejects.toMatchObject({
+      code: 'INVALID_OPTIONS',
+    });
   });
 
   it.each([

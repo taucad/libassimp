@@ -4378,7 +4378,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_TARGETNAMES_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1454',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1457',
     },
     includeTargetNormals: {
       publicName: 'includeTargetNormals',
@@ -4390,7 +4390,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_TARGET_NORMAL_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1452',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1455',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4431,7 +4431,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_SPARSE_ACCESSOR_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1450',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1453',
     },
     unlimitedSkinningBonesPerVertex: {
       publicName: 'unlimitedSkinningBonesPerVertex',
@@ -4444,7 +4444,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export'],
       description:
         'Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1441',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1444',
     },
     useGltfPbrSpecularGlossiness: {
       publicName: 'useGltfPbrSpecularGlossiness',
@@ -4485,7 +4485,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_TARGETNAMES_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1454',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1457',
     },
     includeTargetNormals: {
       publicName: 'includeTargetNormals',
@@ -4497,7 +4497,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_TARGET_NORMAL_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1452',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1455',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4538,7 +4538,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_SPARSE_ACCESSOR_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1450',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1453',
     },
     unlimitedSkinningBonesPerVertex: {
       publicName: 'unlimitedSkinningBonesPerVertex',
@@ -4551,7 +4551,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export'],
       description:
         'Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1441',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1444',
     },
     useGltfPbrSpecularGlossiness: {
       publicName: 'useGltfPbrSpecularGlossiness',

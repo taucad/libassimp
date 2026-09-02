@@ -3,6 +3,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { readNapiTargets } from './lib/napi-targets.mjs';
+
 const PROVENANCE_TYPE = 'https://slsa.dev/provenance/v1';
 const BUILD_TYPE = 'https://slsa-framework.github.io/github-actions-buildtypes/workflow/v1';
 const BUILDER_ID = 'https://github.com/actions/runner/github-hosted';
@@ -72,8 +74,8 @@ const verifyPackage = ({ audit, candidate, commit, runId }) => {
 export const verifyReleaseAttestations = ({ audit, manifest, commit, runId }) => {
   assert((audit.invalid ?? []).length === 0, 'npm reported invalid signatures');
   assert((audit.missing ?? []).length === 0, 'npm reported missing signatures');
-  for (const candidate of manifest.packages) {
-    verifyPackage({ audit, candidate, commit, runId });
+  for (const [name, candidate] of Object.entries(manifest.packages)) {
+    verifyPackage({ audit, candidate: { name, ...candidate }, commit, runId });
   }
 };
 
@@ -81,9 +83,17 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const [auditPath, manifestPath, commit, runId] = process.argv.slice(2);
     assert(auditPath && manifestPath && commit && runId, 'expected audit, manifest, commit, run');
+    const { manifest: rootManifest, packages } = readNapiTargets(new URL('../package.json', import.meta.url));
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const expected = new Set([rootManifest.name, ...packages.map(({ name }) => name)]);
+    assert(
+      expected.size === Object.keys(manifest.packages).length &&
+        Object.keys(manifest.packages).every((name) => expected.has(name)),
+      'tarball manifest differs from package.json.napi targets',
+    );
     verifyReleaseAttestations({
       audit: JSON.parse(readFileSync(auditPath, 'utf8')),
-      manifest: JSON.parse(readFileSync(manifestPath, 'utf8')),
+      manifest,
       commit,
       runId,
     });

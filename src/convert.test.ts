@@ -198,7 +198,9 @@ describe('validation and atomic errors', () => {
 
   it.each([
     [{ importGlobalKeyframe: 1.5 }, 'expected integer'],
+    [{ importGlobalKeyframe: 2_147_483_648 }, 'expected signed 32-bit integer'],
     [{ globalScaleFactorKey: Number.POSITIVE_INFINITY }, 'expected finite number'],
+    [{ globalScaleFactorKey: 1e300 }, 'expected finite float32 number'],
     [{ importOgreMaterialFile: 1 }, 'expected string'],
     [{ ppPtvRootTransformation: 'matrix' }, 'expected 16 finite numbers'],
     [{ ppPtvRootTransformation: Array.from({ length: 15 }, () => 0) }, 'expected 16 finite numbers'],
@@ -206,11 +208,24 @@ describe('validation and atomic errors', () => {
       { ppPtvRootTransformation: [...Array.from({ length: 15 }, () => 0), Number.NaN] },
       'expected 16 finite numbers',
     ],
+    [
+      { ppPtvRootTransformation: [...Array.from({ length: 15 }, () => 0), 1e300] },
+      'expected 16 finite float32 numbers',
+    ],
     [{ '3dsUpAxis': 'q' }, 'expected one of x, y, z'],
   ] as const)('validates every generated import storage shape', (importOptions, message) => {
     expect(() => validatePlanOptions({ targets: [{ to: 'glb' }], importOptions }, new Set(['glb']))).toThrow(
       message,
     );
+  });
+
+  it('accepts a representable finite float32 import value', () => {
+    expect(() =>
+      validatePlanOptions(
+        { targets: [{ to: 'glb' }], importOptions: { globalScaleFactorKey: 1 } },
+        new Set(['glb']),
+      ),
+    ).not.toThrow();
   });
 
   it('collects structural, enum, maximum, unknown-step, and duplicate-step errors', () => {
@@ -370,17 +385,20 @@ describe('resolver and staged-plan internals', () => {
       new Set(['glb']),
     );
 
-  const runtime = (overrides: Partial<NativeRuntime['native']> & { runPlan: NativeRuntime['runPlan'] }) => {
+  const runtime = (
+    overrides: Partial<Pick<NativeRuntime, 'destroyPlan' | 'preparePlan' | 'takePlanResult'>> & {
+      runPlan: NativeRuntime['runPlan'];
+    },
+  ) => {
     const destroyed: number[] = [];
     const { runPlan, ...nativeOverrides } = overrides;
     const value: NativeRuntime = {
-      native: {
-        _libassimp_run_plan: () => 0,
-        preparePlan: () => 7,
-        takePlanResult: () => ({ ok: true, code: '', message: '', formats: [{ format: 'glb', files: [] }] }),
-        destroyPlan: (handle) => destroyed.push(handle),
-        ...nativeOverrides,
-      },
+      backend: 'wasm',
+      preparePlan: () => 7,
+      takePlanResult: () => ({ ok: true, code: '', message: '', formats: [{ format: 'glb', files: [] }] }),
+      destroyPlan: (handle) => destroyed.push(handle as number),
+      dispose: () => undefined,
+      ...nativeOverrides,
       runPlan,
     };
     return { destroyed, value };

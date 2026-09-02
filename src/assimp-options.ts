@@ -74,6 +74,8 @@ const steps = internalPostProcessDescriptors as unknown as Readonly<
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const maxFloat32 = 3.402_823_466_385_288_6e38;
+
 type ValueValidation = Readonly<{
   path: string;
   value: unknown;
@@ -86,13 +88,25 @@ const validateValue = ({ path, value, descriptor, errors }: ValueValidation): bo
     errors.push(`${path}: expected boolean`);
     return false;
   }
-  if (descriptor.kind === 'integer' && (typeof value !== 'number' || !Number.isInteger(value))) {
-    errors.push(`${path}: expected integer`);
-    return false;
+  if (descriptor.kind === 'integer') {
+    if (typeof value !== 'number' || !Number.isInteger(value)) {
+      errors.push(`${path}: expected integer`);
+      return false;
+    }
+    if (value < -2_147_483_648 || value > 2_147_483_647) {
+      errors.push(`${path}: expected signed 32-bit integer`);
+      return false;
+    }
   }
-  if (descriptor.kind === 'number' && (typeof value !== 'number' || !Number.isFinite(value))) {
-    errors.push(`${path}: expected finite number`);
-    return false;
+  if (descriptor.kind === 'number') {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      errors.push(`${path}: expected finite number`);
+      return false;
+    }
+    if (Math.abs(value) > maxFloat32) {
+      errors.push(`${path}: expected finite float32 number`);
+      return false;
+    }
   }
   if (descriptor.kind === 'string' && typeof value !== 'string') {
     errors.push(`${path}: expected string`);
@@ -105,6 +119,10 @@ const validateValue = ({ path, value, descriptor, errors }: ValueValidation): bo
       !value.every((entry) => typeof entry === 'number' && Number.isFinite(entry))
     ) {
       errors.push(`${path}: expected 16 finite numbers`);
+      return false;
+    }
+    if ((value as number[]).some((entry) => Math.abs(entry) > maxFloat32)) {
+      errors.push(`${path}: expected 16 finite float32 numbers`);
       return false;
     }
   }

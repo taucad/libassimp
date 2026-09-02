@@ -26,6 +26,11 @@
     "type": "git",
     "url": "git+https://github.com/taucad/libassimp.git"
   },
+  "binary": {
+    "napi_versions": [
+      8
+    ]
+  },
   "files": [
     "dist",
     "README.md",
@@ -43,6 +48,8 @@
     ".": {
       "import": {
         "types": "./dist/index.d.mts",
+        "browser": "./dist/index.mjs",
+        "node": "./dist/index.node.mjs",
         "default": "./dist/index.mjs"
       },
       "require": {
@@ -60,7 +67,8 @@
   },
   "scripts": {
     "benchmark": "node bench/gated.mjs",
-    "build": "pnpm run check:capabilities && tsdown && node scripts/copy-wasm.mjs",
+    "build": "pnpm run check:capabilities && tsdown && node scripts/copy-wasm.mjs && node scripts/write-native-loaders.mjs",
+    "build:native": "node scripts/build-native.mjs",
     "build:wasm": "pnpm run check:capabilities && node scripts/build-wasm.mjs",
     "check:capabilities": "node scripts/generate-assimp-capabilities.mjs --check",
     "check:dead-code": "pnpm run docs:source && knip",
@@ -79,24 +87,28 @@
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:coverage": "vitest run --coverage",
     "test:package": "node scripts/test-package.mjs",
+    "test:native-parity": "node tests/native-parity.mjs",
     "typecheck": "tsc --noEmit",
     "validate-pack": "node scripts/validate-pack.mjs",
     "workflows": "./scripts/check-workflows.sh",
     "release:prepare": "node scripts/prepare-release.mjs",
-    "prepublishOnly": "nx run libassimp:validate-pack"
+    "prepublishOnly": "node -e \"if(process.env.GITHUB_ACTIONS!=='true')throw Error('libassimp publishes only from GitHub Actions')\" && node scripts/check-prepared-release.mjs && node scripts/validate-pack.mjs"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
     "@eslint/js": "9.32.0",
+    "@napi-rs/cli": "3.8.6",
     "@nx/js": "23.1.1",
     "@size-limit/file": "13.0.3",
     "@types/mdx": "2.0.14",
     "@types/node": "24.13.3",
     "@vitest/browser-playwright": "4.1.10",
     "@vitest/coverage-v8": "4.1.10",
+    "cmake-js": "8.0.0",
     "eslint": "9.32.0",
     "globals": "17.11.0",
     "knip": "6.17.1",
+    "node-addon-api": "8.9.2",
     "nx": "23.1.1",
     "oxfmt": "0.36.0",
     "oxlint": "1.70.0",
@@ -110,8 +122,20 @@
     "typescript-eslint": "8.61.1",
     "vitest": "4.1.10"
   },
+  "napi": {
+    "binaryName": "libassimp",
+    "packageName": "libassimp",
+    "targets": [
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-pc-windows-msvc"
+    ]
+  },
   "engines": {
     "node": ">=22.14.0"
   },
-  "packageManager": "pnpm@11.7.0"
+  "packageManager": "pnpm@11.7.0",
+  "assimp": {
+    "commit": "637cb076d9dce8870190ba25788ffafdc9d48bdc"
+  }
 }

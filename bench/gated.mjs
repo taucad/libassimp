@@ -1,11 +1,22 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { fnv64 } from '../tests/fnv64.mjs';
 
 // Self-referencing import: the package's own `exports` map resolves this to
 // `dist/index.mjs`, so the benchmark measures exactly what ships.
-import { convert, createAssimp } from 'libassimp';
+const benchmarkEntry = process.env['LIBASSIMP_BENCH_ENTRY'];
+const backend = process.env['LIBASSIMP_BENCH_BACKEND'];
+if (backend !== undefined && backend !== 'native' && backend !== 'wasm') {
+  throw new Error('LIBASSIMP_BENCH_BACKEND must be native or wasm');
+}
+const entry = await import(benchmarkEntry ? pathToFileURL(resolve(benchmarkEntry)).href : 'libassimp');
+const createAssimp = (options = {}) =>
+  entry.createAssimp(backend === undefined ? options : { ...options, backend });
+const benchmarkAssimp = backend === undefined ? undefined : await createAssimp();
+const convert = benchmarkAssimp?.convert.bind(benchmarkAssimp) ?? entry.convert;
 
 // Generated from Tau's replicad/helical-gear example with:
 // pnpm nx run cli:tau -- export libs/tau-examples/src/kernels/replicad/helical-gear/main.ts --ext=glb --output=helical-gear.glb
@@ -159,3 +170,4 @@ const failures = [
   report.initMs > MAX_INIT_MS && `createAssimp median ${report.initMs}ms exceeds ${MAX_INIT_MS}ms`,
 ].filter(Boolean);
 if (failures.length > 0) throw new Error(failures.join('; '));
+benchmarkAssimp?.dispose();

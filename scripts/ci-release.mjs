@@ -1,20 +1,13 @@
 #!/usr/bin/env node
 
-import { appendFileSync, existsSync, readFileSync, readdirSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const SHA = /^[0-9a-f]{40}$/u;
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
 const RELEASE_SUBJECT = /^chore\(release\): libassimp v(.+?)(?: \(#\d+\))?$/u;
-const npmDirectory = new URL('../npm/', import.meta.url);
-const platformManifests = existsSync(npmDirectory)
-  ? readdirSync(npmDirectory, { withFileTypes: true })
-      .filter(
-        (entry) => entry.isDirectory() && existsSync(new URL(`./${entry.name}/package.json`, npmDirectory)),
-      )
-      .map((entry) => `npm/${entry.name}/package.json`)
-  : [];
-const RELEASE_FILES = new Set(['CHANGELOG.md', ...platformManifests, 'package.json']);
+const RELEASE_FILES = new Set(['CHANGELOG.md', 'package.json']);
+const ALLOWED_RELEASE_FILES = new Set([...RELEASE_FILES, 'pnpm-lock.yaml']);
 
 export const releaseFiles = [...RELEASE_FILES];
 
@@ -31,7 +24,7 @@ const validateRelease = ({ changedFiles, changelog, packageVersion, subject }) =
   assert(SEMVER.test(packageVersion), `release version is not stable SemVer: ${packageVersion}`);
   for (const file of RELEASE_FILES) assert(changedFiles.includes(file), `release commit must change ${file}`);
   assert(changedFiles.some(isVersionPlan), 'release commit must consume a Version Plan');
-  const unexpected = changedFiles.filter((file) => !RELEASE_FILES.has(file) && !isVersionPlan(file));
+  const unexpected = changedFiles.filter((file) => !ALLOWED_RELEASE_FILES.has(file) && !isVersionPlan(file));
   assert(unexpected.length === 0, `release commit has unexpected files: ${unexpected.join(', ')}`);
   assert(
     changelog
@@ -63,7 +56,10 @@ export const deriveRelease = ({
     };
   }
 
-  assert(event === 'push' || event === 'workflow_dispatch', `unsupported event: ${event}`);
+  if (event === 'workflow_dispatch') {
+    return { kind: 'dispatch', npmPublish: false, version: packageVersion };
+  }
+  assert(event === 'push', `unsupported event: ${event}`);
   assert(ref === 'refs/heads/main', `publication source must be protected main: ${ref}`);
   if (!release) {
     assert(!subject.startsWith('chore(release): libassimp v'), `malformed release subject: ${subject}`);

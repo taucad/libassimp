@@ -15,6 +15,7 @@
         "ASSIMP_BUILD_ASSIMP_TOOLS": "OFF",
         "ASSIMP_BUILD_ZLIB": "ON",
         "ASSIMP_BUILD_DRACO": "OFF",
+        "ASSIMP_IGNORE_GIT_HASH": "ON",
         "ASSIMP_NO_EXPORT": "OFF",
         "ASSIMP_INSTALL": "OFF",
         "ASSIMP_WARNINGS_AS_ERRORS": "OFF",
@@ -56,6 +57,7 @@
         "ASSIMP_BUILD_TESTS": "OFF",
         "ASSIMP_BUILD_ASSIMP_TOOLS": "OFF",
         "ASSIMP_BUILD_DRACO": "OFF",
+        "ASSIMP_IGNORE_GIT_HASH": "ON",
         "ASSIMP_NO_EXPORT": "OFF",
         "ASSIMP_INSTALL": "OFF",
         "ASSIMP_WARNINGS_AS_ERRORS": "OFF",
@@ -96,6 +98,48 @@
         "ASSIMP_BUILD_USD_EXPORTER": "ON",
         "ASSIMP_BUILD_USD_IMPORTER": "ON"
       }
+    },
+    {
+      "name": "native",
+      "displayName": "native addon",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/native",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER_LAUNCHER": "",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "",
+        "BUILD_SHARED_LIBS": "OFF",
+        "ASSIMP_BUILD_TESTS": "OFF",
+        "ASSIMP_BUILD_ASSIMP_TOOLS": "OFF",
+        "ASSIMP_BUILD_ZLIB": "ON",
+        "ASSIMP_BUILD_DRACO": "OFF",
+        "ASSIMP_IGNORE_GIT_HASH": "ON",
+        "ASSIMP_NO_EXPORT": "OFF",
+        "ASSIMP_INSTALL": "OFF",
+        "ASSIMP_WARNINGS_AS_ERRORS": "OFF",
+        "ASSIMP_BUILD_3MF_LIB3MF": "ON",
+        "ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT": "ON",
+        "ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT": "ON",
+        "ASSIMP_BUILD_ASSBIN_EXPORTER": "OFF",
+        "ASSIMP_BUILD_ASSBIN_IMPORTER": "OFF",
+        "ASSIMP_BUILD_ASSXML_EXPORTER": "OFF",
+        "ASSIMP_BUILD_ASSXML_IMPORTER": "OFF",
+        "ASSIMP_BUILD_IFC_IMPORTER": "ON",
+        "ASSIMP_BUILD_IRRMESH_EXPORTER": "OFF",
+        "ASSIMP_BUILD_IRRMESH_IMPORTER": "OFF",
+        "ASSIMP_BUILD_IRR_EXPORTER": "OFF",
+        "ASSIMP_BUILD_IRR_IMPORTER": "OFF",
+        "ASSIMP_BUILD_M3D_EXPORTER": "OFF",
+        "ASSIMP_BUILD_M3D_IMPORTER": "OFF",
+        "ASSIMP_BUILD_PBRT_EXPORTER": "OFF",
+        "ASSIMP_BUILD_PBRT_IMPORTER": "OFF",
+        "ASSIMP_BUILD_RAW_EXPORTER": "OFF",
+        "ASSIMP_BUILD_RAW_IMPORTER": "OFF",
+        "ASSIMP_BUILD_TERRAGEN_EXPORTER": "OFF",
+        "ASSIMP_BUILD_TERRAGEN_IMPORTER": "OFF",
+        "ASSIMP_BUILD_USD_IMPORTER": "ON",
+        "ASSIMP_BUILD_VRML_IMPORTER": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -106,6 +150,10 @@
     {
       "name": "native-test",
       "configurePreset": "native-test"
+    },
+    {
+      "name": "native",
+      "configurePreset": "native"
     }
   ],
   "testPresets": [
