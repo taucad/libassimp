@@ -62,11 +62,15 @@ describe('CI release policy', () => {
   });
 
   it('never publishes a manual dispatch', () => {
-    assert.deepEqual(deriveRelease({ ...stable, event: 'workflow_dispatch', ref: 'refs/heads/feature' }), {
+    assert.deepEqual(deriveRelease({ ...stable, event: 'workflow_dispatch' }), {
       kind: 'dispatch',
       npmPublish: false,
       version: '0.1.0',
     });
+    assert.throws(
+      () => deriveRelease({ ...stable, event: 'workflow_dispatch', ref: 'refs/heads/feature' }),
+      /protected main/u,
+    );
   });
 
   it('rejects extra release files', () => {
@@ -86,7 +90,6 @@ describe('fixed release version validation', () => {
     assert.equal(
       validateRequestedVersion({
         currentVersions: ['0.0.0'],
-        optionalDependencyVersions: [],
         plannedVersions: ['0.1.0'],
         requestedVersion: '0.1.0',
       }),
@@ -99,7 +102,6 @@ describe('fixed release version validation', () => {
       () =>
         validateRequestedVersion({
           currentVersions: ['0.0.0', '0.0.1'],
-          optionalDependencyVersions: ['0.0.0'],
           plannedVersions: ['0.1.0', '0.1.0'],
           requestedVersion: '0.1.0',
         }),

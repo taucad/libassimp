@@ -68,6 +68,16 @@ const options = {
 describe('release attestation verification', () => {
   it('binds every candidate to the exact repository, workflow, run, commit, and digest', () => {
     assert.doesNotThrow(() => verifyReleaseAttestations(options));
+    assert.doesNotThrow(() =>
+      verifyReleaseAttestations({
+        ...options,
+        manifest: {
+          packages: {
+            libassimp: { ...options.manifest.packages.libassimp, name: 'forged-package-name' },
+          },
+        },
+      }),
+    );
     assert.throws(
       () => verifyReleaseAttestations({ ...options, commit: 'b'.repeat(40) }),
       /wrong source commit/u,

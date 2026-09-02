@@ -211,7 +211,6 @@ export class ResolutionContext {
       if (handle < 0) return handle;
       const bytes = handle === 0 ? undefined : this.handles.get(handle);
       supply(bytes);
-      if (handle > 0) this.handles.delete(handle);
       return handle;
     });
     this.pendingSinceRun.add(pending);

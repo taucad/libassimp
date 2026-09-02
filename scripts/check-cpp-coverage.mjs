@@ -10,8 +10,9 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const testBinary = process.env.LIBASSIMP_TEST_BINARY;
 const addon = process.env.LIBASSIMP_NATIVE_ADDON;
-const directory = process.env.LIBASSIMP_COVERAGE_DIR;
-assert(testBinary && directory, 'LIBASSIMP_TEST_BINARY and LIBASSIMP_COVERAGE_DIR are required');
+const configuredDirectory = process.env.LIBASSIMP_COVERAGE_DIR;
+assert(testBinary && configuredDirectory, 'LIBASSIMP_TEST_BINARY and LIBASSIMP_COVERAGE_DIR are required');
+const directory = resolve(root, configuredDirectory);
 
 const findTool = (name, configured) => {
   if (configured) return configured;

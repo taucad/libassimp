@@ -75,7 +75,7 @@ export const verifyReleaseAttestations = ({ audit, manifest, commit, runId }) =>
   assert((audit.invalid ?? []).length === 0, 'npm reported invalid signatures');
   assert((audit.missing ?? []).length === 0, 'npm reported missing signatures');
   for (const [name, candidate] of Object.entries(manifest.packages)) {
-    verifyPackage({ audit, candidate: { name, ...candidate }, commit, runId });
+    verifyPackage({ audit, candidate: { ...candidate, name }, commit, runId });
   }
 };
 

@@ -34,10 +34,12 @@
 namespace libassimp {
 namespace {
 
+static_assert(std::is_same_v<ai_real, float>, "TypeScript validation assumes float32 ai_real storage");
+
 const aiExportFormatDesc* findExportFormat(const Assimp::Exporter& exporter, const std::string& id) {
   for (std::size_t index = 0; index < exporter.GetExportFormatCount(); ++index) {
     const aiExportFormatDesc* description = exporter.GetExportFormatDescription(index);
-    if (id == description->id) return description;
+    if (detail::exportFormatMatches(description, id)) return description;
   }
   return nullptr;
 }
@@ -114,7 +116,7 @@ Plan::Plan(std::string entryName, std::vector<NamedBytes> files, Properties impo
   for (NamedBytes& file : files) files_.push_back(std::move(file));
 }
 
-PlanStatus Plan::run() {
+PlanStatus Plan::run() noexcept {
   result_ = {};
   if (files_.empty()) {
     result_ = fail("NO_FILES", "convert needs at least one input file.");
@@ -207,11 +209,7 @@ PlanStatus Plan::run() {
 std::vector<FormatInfo> importFormats() {
   std::vector<FormatInfo> formats;
   for (std::size_t index = 0; index < aiGetImportFormatCount(); ++index) {
-    const aiImporterDesc* description = aiGetImportFormatDescription(index);
-    std::istringstream extensions(description->mFileExtensions);
-    for (std::string extension; extensions >> extension;) {
-      formats.push_back(FormatInfo{extension, extension, description->mName});
-    }
+    detail::appendImportFormats(formats, aiGetImportFormatDescription(index));
   }
   return formats;
 }
@@ -220,11 +218,31 @@ std::vector<FormatInfo> exportFormats() {
   Assimp::Exporter exporter;
   std::vector<FormatInfo> formats;
   for (std::size_t index = 0; index < exporter.GetExportFormatCount(); ++index) {
-    const aiExportFormatDesc* description = exporter.GetExportFormatDescription(index);
-    formats.push_back(FormatInfo{description->id, description->fileExtension, description->description});
+    detail::appendExportFormat(formats, exporter.GetExportFormatDescription(index));
   }
   return formats;
 }
+
+namespace detail {
+
+bool exportFormatMatches(const aiExportFormatDesc* description, const std::string& id) {
+  return description != nullptr && id == description->id;
+}
+
+void appendImportFormats(std::vector<FormatInfo>& formats, const aiImporterDesc* description) {
+  if (description == nullptr || description->mFileExtensions == nullptr) return;
+  std::istringstream extensions(description->mFileExtensions);
+  for (std::string extension; extensions >> extension;) {
+    formats.push_back(FormatInfo{extension, extension, description->mName});
+  }
+}
+
+void appendExportFormat(std::vector<FormatInfo>& formats, const aiExportFormatDesc* description) {
+  if (description == nullptr) return;
+  formats.push_back(FormatInfo{description->id, description->fileExtension, description->description});
+}
+
+}  // namespace detail
 
 }  // namespace libassimp
 

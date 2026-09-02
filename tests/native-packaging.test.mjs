@@ -14,7 +14,7 @@ import {
 } from '../scripts/check-native-host.mjs';
 import { inspectHeader } from '../scripts/inspect-native.mjs';
 import { readNapiTargets } from '../scripts/lib/napi-targets.mjs';
-import { nativeMatrices, ELECTRON_VERSION, NODE_VERSION } from '../scripts/native-matrix.mjs';
+import { nativeMatrices, ELECTRON_VERSION, NODE_VERSION, NODE_VERSIONS } from '../scripts/native-matrix.mjs';
 import { packTestTarballs } from '../scripts/pack-test-tarballs.mjs';
 import { PACKAGE_FILES } from '../scripts/package-files.mjs';
 import { waitForRegistry } from '../scripts/registry-wait.mjs';
@@ -52,12 +52,15 @@ describe('native target source', () => {
       build.map(({ target }) => target),
       packages.map(({ triple }) => triple),
     );
-    assert.equal(smoke.length, 6);
+    assert.equal(smoke.length, 12);
     assert.deepEqual(
       new Set(smoke.map(({ suffix }) => suffix)),
       new Set(packages.map(({ suffix }) => suffix)),
     );
-    assert(smoke.filter(({ node }) => node === NODE_VERSION).length === 6);
+    for (const node of NODE_VERSIONS) {
+      assert.equal(smoke.filter((lane) => lane.runtime === 'node' && lane.node === node).length, 3);
+    }
+    assert.equal(smoke.filter((lane) => lane.runtime === 'electron' && lane.node === NODE_VERSION).length, 3);
     assert(smoke.filter(({ electron }) => electron === ELECTRON_VERSION).length === 3);
     assert.equal(manifest.devDependencies['@napi-rs/cli'], '3.8.6');
     assert.equal(manifest.devDependencies['cmake-js'], '8.0.0');
@@ -75,9 +78,11 @@ describe('native target source', () => {
     assert(workflow.includes('pnpm exec cmake-js print-cmakejs-lib'));
     assert(workflow.includes('run: pnpm run build:native -- --test'));
     assert(!workflow.includes('pnpm run build:native -- --target'));
-    assert.equal(manifest.exports['.'].import.browser, './dist/index.mjs');
-    assert.equal(manifest.exports['.'].import.node, './dist/index.node.mjs');
+    assert.equal(manifest.exports['.'].import.browser.default, './dist/index.mjs');
+    assert.equal(manifest.exports['.'].import.node.default, './dist/index.node.mjs');
+    assert.equal(manifest.exports['.'].import.node.types, './dist/index.node.d.mts');
     assert(smoke.includes('utilityProcess.fork'));
+    assert(smoke.includes("run(process.execPath, ['install.js']"));
     assert(smoke.includes("NAPI_RS_ENFORCE_VERSION_CHECK: '1'"));
     assert(!smoke.includes('ELECTRON_RUN_AS_NODE'));
     assert(workflow.includes('ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756'));
@@ -267,16 +272,42 @@ describe('registry convergence', () => {
       },
       tarballs,
       view: (name) =>
-        attempt === 0 ? null : { dist: { attestations: {}, integrity: tarballs.packages[name].integrity } },
+        attempt === 0
+          ? null
+          : {
+              dist: {
+                attestations: {
+                  provenance: { predicateType: 'https://slsa.dev/provenance/v1' },
+                  url: 'https://registry.npmjs.org/-/npm/v1/attestations/libassimp@1.0.0',
+                },
+                integrity: tarballs.packages[name].integrity,
+              },
+            },
     });
     assert.deepEqual(logs, ['attempt 1: 0/2 packages available', 'attempt 2: 2/2 packages available']);
+  });
+
+  it('keeps missing and empty attestation metadata pending', async () => {
+    for (const attestations of [undefined, {}]) {
+      await assert.rejects(
+        waitForRegistry({
+          now: () => 0,
+          tarballs,
+          timeoutMs: 0,
+          view: (name) => ({
+            dist: { attestations, integrity: tarballs.packages[name].integrity },
+          }),
+        }),
+        /timed out waiting for/u,
+      );
+    }
   });
 
   it('fails closed on different registry bytes', async () => {
     await assert.rejects(
       waitForRegistry({
         tarballs,
-        view: () => ({ dist: { attestations: {}, integrity: 'sha512-different' } }),
+        view: () => ({ dist: { integrity: 'sha512-different' } }),
       }),
       /integrity differs/u,
     );

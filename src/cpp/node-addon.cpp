@@ -20,7 +20,6 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -31,7 +30,9 @@
 #include "libassimp.hpp"
 
 #ifndef LIBASSIMP_NATIVE_BUILD_IDENTITY
-#define LIBASSIMP_NATIVE_BUILD_IDENTITY "unknown-unknown-napi8"
+#define LIBASSIMP_STRINGIFY_VALUE(value) #value
+#define LIBASSIMP_STRINGIFY(value) LIBASSIMP_STRINGIFY_VALUE(value)
+#define LIBASSIMP_NATIVE_BUILD_IDENTITY "unknown-unknown-napi" LIBASSIMP_STRINGIFY(NAPI_VERSION)
 #endif
 
 #ifndef LIBASSIMP_PACKAGE_VERSION
@@ -43,7 +44,6 @@ namespace {
 using Replies =
     std::unordered_map<std::string, std::optional<libassimp::Bytes>>;
 constexpr napi_type_tag kPlanType{0xbff5b876d76342c3ULL, 0xa44fd1210e0915d1ULL};
-std::mutex assimpMutex;
 
 #ifdef LIBASSIMP_CPP_COVERAGE
 std::atomic<bool> coverageFailNextExecute{false};
@@ -277,6 +277,10 @@ Napi::Value preparePlan(const Napi::CallbackInfo &info) {
   return handle;
 }
 
+#ifdef LIBASSIMP_CPP_COVERAGE
+bool coverageFailNextQueue = false;
+#endif
+
 class RunWorker final : public Napi::AsyncWorker {
 public:
   RunWorker(Napi::Env env, std::shared_ptr<NativePlan> plan)
@@ -290,7 +294,6 @@ public:
     if (coverageFailNextExecute.exchange(false))
       throw std::runtime_error("coverage execution failure");
 #endif
-    const std::lock_guard<std::mutex> lock(assimpMutex);
     status_ = plan_->run();
   }
 
@@ -321,7 +324,6 @@ Napi::Value runPlan(const Napi::CallbackInfo &info) {
   const Napi::Promise promise = worker->promise();
   try {
 #ifdef LIBASSIMP_CPP_COVERAGE
-    extern bool coverageFailNextQueue;
     if (std::exchange(coverageFailNextQueue, false))
       throw Napi::Error::New(env, "coverage queue failure");
 #endif
@@ -433,8 +435,6 @@ Napi::Array formatsToJs(Napi::Env env,
 }
 
 #ifdef LIBASSIMP_CPP_COVERAGE
-bool coverageFailNextQueue = false;
-
 Napi::Value coverageWrongPlan(const Napi::CallbackInfo &info) {
   return Napi::External<PlanHandle>::New(info.Env(), nullptr);
 }
@@ -458,15 +458,10 @@ Napi::Value coverageExecutionFailure(const Napi::CallbackInfo &info) {
 #endif
 
 Napi::Object initialize(Napi::Env env, Napi::Object exports) {
-  std::vector<libassimp::FormatInfo> importFormats;
-  std::vector<libassimp::FormatInfo> exportFormats;
-  {
-    const std::lock_guard<std::mutex> lock(assimpMutex);
-    importFormats = libassimp::importFormats();
-    exportFormats = libassimp::exportFormats();
-  }
+  const std::vector<libassimp::FormatInfo> importFormats = libassimp::importFormats();
+  const std::vector<libassimp::FormatInfo> exportFormats = libassimp::exportFormats();
   exports.Set("buildIdentity", LIBASSIMP_NATIVE_BUILD_IDENTITY);
-  exports.Set("napiVersion", 8);
+  exports.Set("napiVersion", NAPI_VERSION);
   exports.Set("packageVersion", LIBASSIMP_PACKAGE_VERSION);
   exports.Set("preparePlan", Napi::Function::New(env, preparePlan));
   exports.Set("runPlan", Napi::Function::New(env, runPlan));

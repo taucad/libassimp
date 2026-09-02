@@ -49,9 +49,14 @@ jobs:
       - id: smoke-matrix
         run: node scripts/native-matrix.mjs --kind smoke
 
+  # The only place Wasm is built. Every downstream job consumes this artifact;
+  # nothing else runs Emscripten. The pinned image digest is mirrored by
+  # emsdk-image.txt, which the workflow checks validate.
   build-wasm:
     needs: preflight
     runs-on: ubuntu-24.04
+    # Origin: about 3x the measured cold full-format job after the -O2 link:
+    # compile takes roughly 25 minutes on 4 vCPU and link takes less than 1 minute.
     timeout-minutes: 90
     container:
       image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
@@ -60,9 +65,14 @@ jobs:
         with:
           submodules: true
           persist-credentials: false
-      - run: apt-get update && apt-get install -y --no-install-recommends ccache ninja-build
-      - id: engine
+      - name: Install the build tools the emsdk image omits
+        run: apt-get update && apt-get install -y --no-install-recommends ccache ninja-build
+      - name: Record the engine submodule commit
+        id: engine
         run: echo "sha=$(git -C assimp rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      # The artifacts are a pure function of these inputs, and determinism tests
+      # prove the outputs are reproducible. No restore key is allowed: a near miss
+      # is a wrong binary, and validate-pack checks the image and engine SHA.
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         id: wasm-cache
         with:
@@ -73,7 +83,8 @@ jobs:
         with:
           path: .ccache
           key: ccache-${{ runner.os }}-${{ hashFiles('emsdk-image.txt', 'assimp-builds.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**', '.gitmodules') }}-${{ steps.engine.outputs.sha }}
-      - if: steps.wasm-cache.outputs.cache-hit != 'true'
+      - name: Build libassimp.wasm
+        if: steps.wasm-cache.outputs.cache-hit != 'true'
         env:
           LIBASSIMP_EMSDK: host
         run: node scripts/build-wasm.mjs
@@ -87,6 +98,7 @@ jobs:
     needs: [preflight, build-wasm]
     runs-on: ubuntu-24.04
     steps:
+      # The format matrix reads the engine's own fixture corpus.
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
@@ -108,6 +120,7 @@ jobs:
           tests/native-packaging.test.mjs
       - name: Require a Version Plan for release-affecting changes
         if: needs.preflight.outputs.kind != 'release-pull-request' && needs.preflight.outputs.kind != 'release'
+        shell: bash
         env:
           BASE_REF: ${{ github.base_ref }}
           BEFORE_SHA: ${{ github.event.before }}
@@ -116,7 +129,14 @@ jobs:
           if [[ "$EVENT_NAME" == pull_request ]]; then
             pnpm nx release plan:check --base="origin/$BASE_REF" --head=HEAD
           elif [[ "$EVENT_NAME" == push ]]; then
-            git merge-base --is-ancestor "$BEFORE_SHA" HEAD
+            if [[ -z "$BEFORE_SHA" || "$BEFORE_SHA" == 0000000000000000000000000000000000000000 ]]; then
+              echo "::error::Cannot validate Version Plans without a previous push SHA"
+              exit 1
+            fi
+            git merge-base --is-ancestor "$BEFORE_SHA" HEAD || {
+              echo "::error::Cannot validate Version Plans across a force-push"
+              exit 1
+            }
             pnpm nx release plan:check --base="$BEFORE_SHA" --head=HEAD
           else
             pnpm nx release plan:check --base=HEAD~1 --head=HEAD
@@ -128,11 +148,14 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          # Origin: knip's `assimp/**` ignore needs the submodule present when
+          # `treatConfigHintsAsErrors` checks whether the pattern is useful.
           submodules: true
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
           node-version: '26'
+      # The docs site imports the package, so its build needs the glue and Wasm.
       - uses: ./.github/actions/download-verified-artifact
         with:
           name: wasm
@@ -416,32 +439,110 @@ jobs:
     if: github.event_name == 'pull_request'
     needs: assemble
     runs-on: ubuntu-24.04
+    env:
+      # Origin: seven local macOS arm64 runs measured 44.836-50.650 ms for the
+      # helical-gear workload. These preserve about 10x shared-runner headroom;
+      # the fail-closed same-runner +10% comparison remains the regression gate.
+      MAX_MEDIAN_MS: '500'
+      MAX_INIT_MS: '100'
     permissions:
       contents: read
       pull-requests: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          fetch-depth: 0
+          submodules: true
           persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '26'
+      - uses: ./.github/actions/download-verified-artifact
+        with:
+          name: wasm
+          path: src/wasm
       - uses: ./.github/actions/download-verified-artifact
         with:
           name: test-tarballs
           path: tarballs
           expect: test-tarballs.json
-      - id: gate
+      - name: Initialize the always-run benchmark report
+        run: |
+          printf '%s\n' '{"error":"benchmark did not complete"}' > /tmp/current-benchmark.json
+          printf '%s\n' '<!-- libassimp-benchmark -->' '### Benchmark' '' 'Benchmark did not complete.' > /tmp/benchmark.md
+      - name: Compare native and Wasm from the frozen tarballs
+        id: current
+        continue-on-error: true # Preserve the report before the final fail-closed step.
+        shell: bash
         run: |
           work="$(mktemp -d)"
           npm init --yes --prefix "$work" >/dev/null
           root="$(node -p "require('./tarballs/test-tarballs.json').packages.libassimp.filename")"
           platform="$(node -p "require('./tarballs/test-tarballs.json').packages['libassimp-linux-x64-gnu'].filename")"
           npm install --prefix "$work" --ignore-scripts --no-audit --no-fund "./tarballs/$root" "./tarballs/$platform"
-          LIBASSIMP_BENCH_ENTRY="$work/node_modules/libassimp/dist/index.node.mjs" \
-            LIBASSIMP_BENCH_MARKDOWN=/tmp/benchmark.md \
+          entry="$work/node_modules/libassimp/dist/index.node.mjs"
+          echo "entry=$entry" >> "$GITHUB_OUTPUT"
+          LIBASSIMP_BENCH_ENTRY="$entry" \
+            LIBASSIMP_BENCH_MARKDOWN=/tmp/native-benchmark.md \
             node bench/compare-backends.mjs > /tmp/current-benchmark.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - name: Build main on the same runner
+        id: base
+        continue-on-error: true # Preserve diagnostics if the detached base cannot be prepared.
+        shell: bash
+        run: |
+          base_directory="$(mktemp -d)"
+          git worktree add --detach "$base_directory" 'origin/${{ github.base_ref }}'
+          git -C "$base_directory" submodule update --init --recursive
+          # Wasm is CI-built and never committed. Reuse this run's exact binary
+          # so the timing comparison isolates the TypeScript facade.
+          mkdir -p "$base_directory/src/wasm"
+          cp src/wasm/libassimp.* "$base_directory/src/wasm/"
+          cd "$base_directory"
+          pnpm install --frozen-lockfile
+          pnpm exec tsdown
+          mkdir -p dist/wasm bench/fixtures
+          cp src/wasm/libassimp.js src/wasm/libassimp.wasm dist/wasm/
+          # The PR owns the workload. Both revisions run the same harness and
+          # fixture so changing the corpus cannot bypass the benchmark identity.
+          cp "$GITHUB_WORKSPACE/bench/gated.mjs" bench/gated.mjs
+          cp "$GITHUB_WORKSPACE/bench/fixtures/helical-gear.glb" bench/fixtures/helical-gear.glb
+          cp "$GITHUB_WORKSPACE/tests/fnv64.mjs" tests/fnv64.mjs
+          echo "directory=$base_directory" >> "$GITHUB_OUTPUT"
+      - name: Compare PR and main Wasm performance
+        id: regression
+        continue-on-error: true # The final step fails after the comment is preserved.
+        shell: bash
+        run: |
+          failed=0
+          entry='${{ steps.current.outputs.entry }}'
+          base_directory='${{ steps.base.outputs.directory }}'
+          LIBASSIMP_BENCH_ENTRY="$entry" LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/current-regression-1.json || failed=1
+          (cd "$base_directory" && node bench/gated.mjs > /tmp/base-benchmark-1.json) || failed=1
+          (cd "$base_directory" && node bench/gated.mjs > /tmp/base-benchmark-2.json) || failed=1
+          LIBASSIMP_BENCH_ENTRY="$entry" LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/current-regression-2.json || failed=1
+          node scripts/compare-benchmark.mjs \
+            /tmp/current-regression-1.json,/tmp/current-regression-2.json \
+            /tmp/base-benchmark-1.json,/tmp/base-benchmark-2.json \
+            /tmp/regression-benchmark.md || failed=1
+          exit "$failed"
+      - name: Compose the benchmark report
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+          const marker = '<!-- libassimp-benchmark -->';
+          const read = (path) => existsSync(path) ? readFileSync(path, 'utf8').replace(`${marker}\n`, '') : '';
+          const body = [read('/tmp/native-benchmark.md'), read('/tmp/regression-benchmark.md')].filter(Boolean).join('\n');
+          writeFileSync('/tmp/benchmark.md', `${marker}\n${body || '### Benchmark\n\nBenchmark did not complete.'}\n`);
+          NODE
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: native-wasm-benchmark
-          path: /tmp/current-benchmark.json
+          path: |
+            /tmp/*benchmark*.json
+            /tmp/*benchmark*.md
+            /tmp/*regression*.json
           if-no-files-found: error
       - if: always()
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
@@ -454,6 +555,8 @@ jobs:
             const existing = comments.find((comment) => comment.body?.includes(marker));
             if (existing) await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
             else await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+      - if: steps.current.outcome == 'failure' || steps.base.outcome == 'failure' || steps.regression.outcome == 'failure'
+        run: exit 1
 
   security:
     needs: preflight
@@ -475,10 +578,14 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/download-verified-artifact
         with:
           name: test-tarballs
           path: tarballs
+          expect: test-tarballs.json
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '26'
@@ -492,7 +599,14 @@ jobs:
           NODE
           while IFS=$'\t' read -r name version filename integrity; do
             published="$(npm view "$name@$version" dist.integrity 2>/dev/null || true)"
-            if [[ -n "$published" ]]; then test "$published" = "$integrity"; else npm publish "./tarballs/$filename" --access public --provenance; fi
+            if [[ -n "$published" ]]; then
+              if [[ "$published" != "$integrity" ]]; then
+                echo "::error::registry integrity differs for $name@$version"
+                exit 1
+              fi
+            else
+              npm publish "./tarballs/$filename" --access public --provenance
+            fi
           done < /tmp/packages
 
   registry-verify:
@@ -505,10 +619,11 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: ./.github/actions/download-verified-artifact
         with:
           name: test-tarballs
           path: tarballs
+          expect: test-tarballs.json
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '26'

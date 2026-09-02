@@ -180,9 +180,6 @@ if (process.parentPort !== undefined) process.exit(0);
     if (!/^\d+\.\d+\.\d+$/u.test(version ?? '')) {
       throw new Error('LIBASSIMP_ELECTRON_VERSION must be exact SemVer');
     }
-    const manifest = JSON.parse(readFileSync(join(work, 'package.json'), 'utf8'));
-    manifest.allowScripts = { [`electron@${version}`]: true };
-    writeFileSync(join(work, 'package.json'), `${JSON.stringify(manifest)}\n`);
     writeFileSync(
       join(work, 'electron-main.mjs'),
       `
@@ -221,15 +218,28 @@ app.whenReady().then(() => {
     );
     const configuredElectron = process.env['LIBASSIMP_ELECTRON_BINARY'];
     if (configuredElectron === undefined) {
-      run('npm', ['install', '--no-audit', '--no-fund', '--no-package-lock', `electron@${version}`], {
-        cwd: work,
-      });
+      run(
+        'npm',
+        [
+          'install',
+          '--ignore-scripts',
+          '--no-audit',
+          '--no-fund',
+          '--no-package-lock',
+          `electron@${version}`,
+        ],
+        { cwd: work },
+      );
+      run(process.execPath, ['install.js'], { cwd: join(work, 'node_modules', 'electron') });
     }
     const electron =
       configuredElectron === undefined
         ? join(work, 'node_modules', '.bin', process.platform === 'win32' ? 'electron.cmd' : 'electron')
         : resolve(configuredElectron);
-    const actualVersion = execFileSync(electron, ['--version'], { encoding: 'utf8' }).trim();
+    const actualVersion = execFileSync(electron, ['--version'], {
+      encoding: 'utf8',
+      shell: process.platform === 'win32',
+    }).trim();
     if (actualVersion !== `v${version}`) {
       throw new Error(`expected Electron v${version}, received ${actualVersion}`);
     }

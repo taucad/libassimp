@@ -57,6 +57,7 @@ export const deriveRelease = ({
   }
 
   if (event === 'workflow_dispatch') {
+    assert(ref === 'refs/heads/main', `manual validation source must be protected main: ${ref}`);
     return { kind: 'dispatch', npmPublish: false, version: packageVersion };
   }
   assert(event === 'push', `unsupported event: ${event}`);

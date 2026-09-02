@@ -20,11 +20,16 @@ export const parseTriple = (triple) => {
 export const readNapiTargets = (packageJsonPath) => {
   const manifest = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
   const { binaryName, packageName, targets } = manifest.napi ?? {};
+  const napiVersions = manifest.binary?.napi_versions;
   if (!binaryName || !packageName || !Array.isArray(targets) || targets.length === 0) {
     throw new Error(`${packageJsonPath} has no napi.binaryName, napi.packageName, or napi.targets`);
   }
+  if (napiVersions?.length !== 1 || !Number.isSafeInteger(napiVersions[0])) {
+    throw new Error(`${packageJsonPath} must declare exactly one binary.napi_versions value`);
+  }
   return {
     manifest,
+    napiVersion: napiVersions[0],
     packages: targets.map((triple) => {
       const target = parseTriple(triple);
       return {

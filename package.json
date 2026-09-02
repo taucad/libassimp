@@ -1,7 +1,7 @@
 {
   "name": "libassimp",
   "version": "0.2.0",
-  "description": "Assimp for TypeScript and WebAssembly: import 69 3D formats and export 15 formats in browsers and Node.js.",
+  "description": "Assimp for TypeScript with native Node-API and WebAssembly backends: import 69 3D formats and export 15 formats.",
   "keywords": [
     "3d",
     "3mf",
@@ -48,8 +48,14 @@
     ".": {
       "import": {
         "types": "./dist/index.d.mts",
-        "browser": "./dist/index.mjs",
-        "node": "./dist/index.node.mjs",
+        "browser": {
+          "types": "./dist/index.d.mts",
+          "default": "./dist/index.mjs"
+        },
+        "node": {
+          "types": "./dist/index.node.d.mts",
+          "default": "./dist/index.node.mjs"
+        },
         "default": "./dist/index.mjs"
       },
       "require": {

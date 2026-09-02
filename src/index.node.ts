@@ -19,5 +19,5 @@ const entry = createEntry<ImportFormat, ExportFormat>(glueUrl, wasmUrl, {
 export const convert = entry.convert;
 /** Import once and export an ordered non-empty target tuple. @public */
 export const convertFormats = entry.convertFormats;
-/** Create an independently queued native-or-Wasm conversion instance. @public */
+/** Create a native-or-Wasm conversion instance; native work is process-serialized. @public */
 export const createAssimp = entry.createAssimp;

@@ -29,21 +29,12 @@ const assertClean = () => {
   assert(status.length === 0, 'release preparation requires a clean worktree');
 };
 
-export const validateRequestedVersion = ({
-  currentVersions,
-  optionalDependencyVersions,
-  plannedVersions,
-  requestedVersion,
-}) => {
+export const validateRequestedVersion = ({ currentVersions, plannedVersions, requestedVersion }) => {
   assert(
     currentVersions.every((version) => semver.valid(version)),
     'invalid package version',
   );
   assert(new Set(currentVersions).size === 1, 'fixed release packages have different versions');
-  assert(
-    optionalDependencyVersions.every((version) => version === currentVersions[0]),
-    'native optional dependency versions do not match the fixed release group',
-  );
   assert(
     plannedVersions.every((version) => semver.valid(version)),
     'invalid Version Plan result',
@@ -80,13 +71,11 @@ const prepare = async ({ dryRun, requestedVersion }) => {
   if (!dryRun) assertClean();
 
   const currentVersions = packageVersions();
-  const optionalDependencyVersions = [];
   const preview = await releaseVersion({ ...GIT_OPTIONS, deleteVersionPlans: false, dryRun: true });
   const plannedVersions = PROJECTS.map((project) => preview.projectsVersionData[project]?.newVersion);
   const version = requestedVersion ?? versionFromPlans(plannedVersions);
   validateRequestedVersion({
     currentVersions,
-    optionalDependencyVersions,
     plannedVersions,
     requestedVersion: version,
   });

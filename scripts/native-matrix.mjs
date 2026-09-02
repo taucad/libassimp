@@ -9,6 +9,7 @@ import { readNapiTargets } from './lib/napi-targets.mjs';
 const RUNNER = { darwin: 'macos-15', linux: 'ubuntu-24.04', win32: 'windows-2022' };
 export const ELECTRON_VERSION = '38.7.2';
 export const NODE_VERSION = '22.14.0';
+export const NODE_VERSIONS = [NODE_VERSION, '24', '26'];
 
 export const nativeMatrices = (packageJson = new URL('../package.json', import.meta.url)) => {
   const { packages } = readNapiTargets(packageJson);
@@ -19,7 +20,7 @@ export const nativeMatrices = (packageJson = new URL('../package.json', import.m
     target: triple,
   }));
   const smoke = packages.flatMap(({ os, suffix }) => [
-    { lane: `node-${NODE_VERSION}`, node: NODE_VERSION, os: RUNNER[os], runtime: 'node', suffix },
+    ...NODE_VERSIONS.map((node) => ({ lane: `node-${node}`, node, os: RUNNER[os], runtime: 'node', suffix })),
     {
       electron: ELECTRON_VERSION,
       lane: `electron-${ELECTRON_VERSION}`,

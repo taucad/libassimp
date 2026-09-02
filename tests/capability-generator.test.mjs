@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
+  normalizeSourceText,
   validateOverrideCoverage,
   validateSourceEvidence,
 } from '../scripts/generate-assimp-capabilities.mjs';
@@ -30,6 +31,10 @@ const evidence = JSON.parse(readFileSync(`${root}scripts/assimp-capability-evide
 const overrides = JSON.parse(readFileSync(`${root}scripts/assimp-capability-overrides.json`, 'utf8'));
 
 describe('capability generator', () => {
+  it('hashes Windows and POSIX text identically', () => {
+    expect(normalizeSourceText('one\r\ntwo\r\n')).toBe('one\ntwo\n');
+  });
+
   it('generates byte-identical output twice', () => {
     const path = `${root}src/generated/assimp-capabilities.ts`;
     const before = readFileSync(path);

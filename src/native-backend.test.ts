@@ -74,6 +74,33 @@ describe('native addon adapter', () => {
     expect(destroyPlan).toHaveBeenCalledWith(handle);
   });
 
+  it('serializes process-wide work without poisoning the queue after rejection', async () => {
+    let finishFirst: ((status: number) => void) | undefined;
+    const firstRunPlan = vi.fn(
+      async () =>
+        new Promise<number>((resolve) => {
+          finishFirst = resolve;
+        }),
+    );
+    const secondRunPlan = vi.fn(async () => 1);
+    const context = new ResolutionContext(undefined);
+    const first = adaptNativeAddon(addon({ runPlan: firstRunPlan })).runPlan({}, context);
+    await vi.waitFor(() => {
+      expect(firstRunPlan).toHaveBeenCalledOnce();
+    });
+    const second = adaptNativeAddon(addon({ runPlan: secondRunPlan })).runPlan({}, context);
+    await Promise.resolve();
+    expect(secondRunPlan).not.toHaveBeenCalled();
+    finishFirst?.(1);
+    await expect(Promise.all([first, second])).resolves.toEqual([1, 1]);
+
+    const cause = new Error('worker failed');
+    await expect(
+      adaptNativeAddon(addon({ runPlan: async () => Promise.reject(cause) })).runPlan({}, context),
+    ).rejects.toBe(cause);
+    await expect(adaptNativeAddon(addon()).runPlan({}, context)).resolves.toBe(1);
+  });
+
   it('replays found and missing sidecars through the common conversion runner', async () => {
     const handle = {};
     const runPlan = vi.fn().mockResolvedValueOnce(-1).mockResolvedValueOnce(-1).mockResolvedValueOnce(1);
@@ -125,7 +152,8 @@ describe('native addon adapter', () => {
     context.stageNative('shared.bin', supplied);
     await Promise.all(context.takePending());
     expect(supplied).toHaveBeenCalledTimes(2);
-    expect(supplied).toHaveBeenCalledWith(new Uint8Array([3]));
+    expect(supplied).toHaveBeenNthCalledWith(1, new Uint8Array([3]));
+    expect(supplied).toHaveBeenNthCalledWith(2, new Uint8Array([3]));
 
     const invalid = new ResolutionContext(() => 'bad' as unknown as Uint8Array);
     invalid.stageNative('bad.bin', supplied);

@@ -18,6 +18,7 @@
     },
     "build:native": {
       "executor": "nx:run-commands",
+      "dependsOn": ["build"],
       "options": { "command": "pnpm run build:native" }
     },
     "test:native": {

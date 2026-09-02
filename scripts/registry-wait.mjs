@@ -8,7 +8,12 @@ import { parseArgs } from 'node:util';
 
 export const npmView = (name, version) => {
   try {
-    return JSON.parse(execFileSync('npm', ['view', `${name}@${version}`, '--json'], { encoding: 'utf8' }));
+    return JSON.parse(
+      execFileSync('npm', ['view', `${name}@${version}`, '--json'], {
+        encoding: 'utf8',
+        timeout: 30_000,
+      }),
+    );
   } catch {
     return null;
   }
@@ -32,7 +37,12 @@ export const waitForRegistry = async ({
       if (metadata?.dist?.integrity && metadata.dist.integrity !== packed.integrity) {
         throw new Error(`${name}@${packed.version}: registry integrity differs from the packed tarball`);
       }
-      if (metadata?.dist?.integrity === packed.integrity && metadata.dist.attestations) pending.delete(name);
+      if (
+        metadata?.dist?.integrity === packed.integrity &&
+        Object.keys(metadata.dist.attestations ?? {}).length > 0
+      ) {
+        pending.delete(name);
+      }
     }
     const total = Object.keys(tarballs.packages).length;
     log(`attempt ${attempt}: ${total - pending.size}/${total} packages available`);

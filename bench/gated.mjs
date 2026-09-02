@@ -169,5 +169,5 @@ const failures = [
   report.medianMs > MAX_MEDIAN_MS && `convert median ${report.medianMs}ms exceeds ${MAX_MEDIAN_MS}ms`,
   report.initMs > MAX_INIT_MS && `createAssimp median ${report.initMs}ms exceeds ${MAX_INIT_MS}ms`,
 ].filter(Boolean);
-if (failures.length > 0) throw new Error(failures.join('; '));
 benchmarkAssimp?.dispose();
+if (failures.length > 0) throw new Error(failures.join('; '));

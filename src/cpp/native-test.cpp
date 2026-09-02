@@ -21,6 +21,8 @@
 #include <vector>
 
 #include <assimp/postprocess.h>
+#include <assimp/cexport.h>
+#include <assimp/importerdesc.h>
 #include <gtest/gtest.h>
 
 #include "libassimp.hpp"
@@ -406,6 +408,16 @@ TEST(MemoryIOTest, CachesResolverOutcomesAndImplementsTheIOSystem) {
 TEST(FormatTest, ReportsCompiledFormats) {
   EXPECT_FALSE(libassimp::importFormats().empty());
   EXPECT_FALSE(libassimp::exportFormats().empty());
+}
+
+TEST(FormatTest, IgnoresDefensiveNullDescriptions) {
+  std::vector<libassimp::FormatInfo> formats;
+  EXPECT_FALSE(libassimp::detail::exportFormatMatches(nullptr, "glb2"));
+  libassimp::detail::appendImportFormats(formats, nullptr);
+  aiImporterDesc importer{};
+  libassimp::detail::appendImportFormats(formats, &importer);
+  libassimp::detail::appendExportFormat(formats, nullptr);
+  EXPECT_TRUE(formats.empty());
 }
 
 } // namespace

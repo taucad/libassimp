@@ -19,6 +19,23 @@ export type NativeAddon = Readonly<{
   destroyPlan: NativeRuntime['destroyPlan'];
 }>;
 
+const packageMetadata = createRequire(import.meta.url)('../package.json') as {
+  readonly binary: { readonly napi_versions: readonly [number] };
+  readonly version: string;
+};
+const expectedNapiVersion = packageMetadata.binary.napi_versions[0];
+let nativeTail: Promise<unknown> = Promise.resolve();
+
+// Keep Assimp work process-serial without parking libuv workers behind a native mutex.
+const runNative = <Result>(operation: () => Promise<Result>): Promise<Result> => {
+  const result = nativeTail.then(operation, operation);
+  nativeTail = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+};
+
 /** Generated loader import kept behind the Node-conditioned graph. @internal */
 export const loadNativeAddon = async (): Promise<NativeAddon> => {
   return (await import('./native/index.js')) as unknown as NativeAddon;
@@ -26,20 +43,20 @@ export const loadNativeAddon = async (): Promise<NativeAddon> => {
 
 /** Adapt pending-name/supply replay to the same runtime used by Wasm. @internal */
 export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
-  const expected = `${process.platform}-${process.arch}-napi8`;
-  const expectedPackageVersion = (createRequire(import.meta.url)('../package.json') as { version: string })
-    .version;
-  if (addon.napiVersion !== 8) {
-    throw new Error(`libassimp native Node-API version mismatch: expected 8, received ${addon.napiVersion}.`);
+  const expected = `${process.platform}-${process.arch}-napi${expectedNapiVersion}`;
+  if (addon.napiVersion !== expectedNapiVersion) {
+    throw new Error(
+      `libassimp native Node-API version mismatch: expected ${expectedNapiVersion}, received ${addon.napiVersion}.`,
+    );
   }
   if (addon.buildIdentity !== expected) {
     throw new Error(
       `libassimp native build identity mismatch: expected ${expected}, received ${addon.buildIdentity}.`,
     );
   }
-  if (addon.packageVersion !== expectedPackageVersion) {
+  if (addon.packageVersion !== packageMetadata.version) {
     throw new Error(
-      `libassimp native package version mismatch: expected ${expectedPackageVersion}, received ${addon.packageVersion}.`,
+      `libassimp native package version mismatch: expected ${packageMetadata.version}, received ${addon.packageVersion}.`,
     );
   }
   for (const name of [
@@ -59,7 +76,7 @@ export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
     buildIdentity: addon.buildIdentity,
     preparePlan: addon.preparePlan,
     runPlan: async (handle, context: ResolutionContext) => {
-      const status = await addon.runPlan(handle);
+      const status = await runNative(() => addon.runPlan(handle));
       if (status === -1) {
         const name = addon.pendingName(handle);
         if (name !== undefined) {

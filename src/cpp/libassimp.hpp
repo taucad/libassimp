@@ -26,6 +26,9 @@
 
 #include "memory-io.hpp"
 
+struct aiExportFormatDesc;
+struct aiImporterDesc;
+
 namespace libassimp {
 
 using Matrix = std::array<double, 16>;
@@ -65,7 +68,7 @@ class Plan {
  public:
   Plan(std::string entryName, std::vector<NamedBytes> files, Properties importProperties,
        unsigned int postProcess, std::vector<Target> targets, Resolver resolve);
-  PlanStatus run();
+  PlanStatus run() noexcept;
   const Result& result() const { return result_; }
   std::size_t importAttempts() const { return importAttempts_; }
 
@@ -83,5 +86,13 @@ class Plan {
 
 std::vector<FormatInfo> importFormats();
 std::vector<FormatInfo> exportFormats();
+
+namespace detail {
+
+bool exportFormatMatches(const aiExportFormatDesc* description, const std::string& id);
+void appendImportFormats(std::vector<FormatInfo>& formats, const aiImporterDesc* description);
+void appendExportFormat(std::vector<FormatInfo>& formats, const aiExportFormatDesc* description);
+
+}  // namespace detail
 
 }  // namespace libassimp
