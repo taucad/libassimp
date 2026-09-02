@@ -105,7 +105,9 @@ describe('native target source', () => {
     assert(smoke.includes("NAPI_RS_ENFORCE_VERSION_CHECK: '1'"));
     assert(!smoke.includes('ELECTRON_RUN_AS_NODE'));
     assert(buildNative.includes('nodeEnvironment.LD_PRELOAD'));
+    assert(buildNative.includes("'node_api.def'"));
     assert(cmake.includes('CMAKE_MSVC_RUNTIME_LIBRARY'));
+    assert(cmake.includes('CMAKE_JS_NODELIB_DEF'));
     assert(cmake.includes('set(gtest_force_shared_crt OFF'));
     assert(action.includes("ANNOTATE: 'false'"));
     assert(workflow.includes('ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756'));

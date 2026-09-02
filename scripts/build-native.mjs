@@ -68,12 +68,22 @@ if (!existsSync(resolve(nodeInclude.split(';')[0], 'node_api.h'))) {
 
 const binaryDirectory = resolve(root, process.env.LIBASSIMP_NATIVE_BUILD_DIR ?? 'build/native');
 const outputDirectory = process.env.CMAKE_JS_OUTPUT_DIR ?? binaryDirectory;
+const nodeLibrary = process.env.CMAKE_JS_LIB ?? '';
+let nodeLibraryDefinition = process.env.CMAKE_JS_NODELIB_DEF ?? '';
+if (process.platform === 'win32' && nodeLibrary !== '' && nodeLibraryDefinition === '') {
+  nodeLibraryDefinition = resolve(nodeInclude.split(';')[0], '..', 'def', 'node_api.def');
+  if (!existsSync(nodeLibraryDefinition)) {
+    throw new Error(`cmake-js Node-API definition was not found: ${nodeLibraryDefinition}`);
+  }
+}
 const { napiVersion } = readNapiTargets(new URL('../package.json', import.meta.url));
 const nativeTests = arguments_.has('--test') || arguments_.has('--coverage') || arguments_.has('--sanitize');
 const definitions = [
   `-DNODE_ADDON_API_DIR=${nodeAddonApi}`,
   `-DCMAKE_JS_INC=${nodeInclude}`,
-  `-DCMAKE_JS_LIB=${process.env.CMAKE_JS_LIB ?? ''}`,
+  `-DCMAKE_JS_LIB=${nodeLibrary}`,
+  `-DCMAKE_JS_NODELIB_DEF=${nodeLibraryDefinition}`,
+  `-DCMAKE_JS_NODELIB_TARGET=${nodeLibrary}`,
   `-DCMAKE_JS_SRC=${process.env.CMAKE_JS_SRC ?? ''}`,
   `-DCMAKE_JS_OUTPUT_DIR=${outputDirectory}`,
   `-DLIBASSIMP_NATIVE_BUILD_IDENTITY=${process.platform}-${process.arch}-napi${napiVersion}`,
