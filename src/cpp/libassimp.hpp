@@ -68,7 +68,7 @@ class Plan {
  public:
   Plan(std::string entryName, std::vector<NamedBytes> files, Properties importProperties,
        unsigned int postProcess, std::vector<Target> targets, Resolver resolve);
-  PlanStatus run() noexcept;
+  PlanStatus run();
   const Result& result() const { return result_; }
   std::size_t importAttempts() const { return importAttempts_; }
 

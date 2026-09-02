@@ -67,7 +67,6 @@ export const packTestTarballs = ({ out, pack = npmPack, root }) => {
   };
   const json = `${JSON.stringify(output, null, 2)}\n`;
   writeFileSync(join(outDirectory, 'test-tarballs.json'), json);
-  writeFileSync(join(rootDirectory, 'test-tarballs.json'), json);
   return output;
 };
 

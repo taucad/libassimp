@@ -3,7 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT_PACKAGE = 'libassimp';
@@ -47,9 +47,16 @@ export const selectTarballs = (manifest, suffix) => {
 const run = (command, arguments_, options) =>
   execFileSync(command, arguments_, {
     ...options,
-    shell: process.platform === 'win32',
     stdio: 'inherit',
   });
+const runNpm = (arguments_, options) =>
+  process.platform === 'win32'
+    ? run(
+        process.execPath,
+        [join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'), ...arguments_],
+        options,
+      )
+    : run('npm', arguments_, options);
 const suffix = requireNativeSuffix(process.env);
 const mode = resolveSmokeMode(process.env);
 const work = mkdtempSync(join(tmpdir(), 'libassimp-package-'));
@@ -64,8 +71,7 @@ try {
     const manifest = JSON.parse(readFileSync(join(mode.directory, 'test-tarballs.json'), 'utf8'));
     const selected = selectTarballs(manifest, suffix);
     configuredNames = Object.keys(manifest.packages).filter((name) => name !== ROOT_PACKAGE);
-    run(
-      'npm',
+    runNpm(
       [
         'install',
         ...INSTALL_FLAGS,
@@ -75,7 +81,7 @@ try {
       { cwd: work },
     );
   } else {
-    run('npm', ['install', ...INSTALL_FLAGS, `${ROOT_PACKAGE}@${mode.version}`], { cwd: work });
+    runNpm(['install', ...INSTALL_FLAGS, `${ROOT_PACKAGE}@${mode.version}`], { cwd: work });
     configuredNames = Object.keys(
       JSON.parse(readFileSync(join(work, 'node_modules', ROOT_PACKAGE, 'package.json'), 'utf8'))
         .optionalDependencies ?? {},
@@ -218,8 +224,7 @@ app.whenReady().then(() => {
     );
     const configuredElectron = process.env['LIBASSIMP_ELECTRON_BINARY'];
     if (configuredElectron === undefined) {
-      run(
-        'npm',
+      runNpm(
         [
           'install',
           '--ignore-scripts',
@@ -230,6 +235,7 @@ app.whenReady().then(() => {
         ],
         { cwd: work },
       );
+      // Run only Electron's pinned installer; all dependency scripts stay disabled.
       run(process.execPath, ['install.js'], { cwd: join(work, 'node_modules', 'electron') });
     }
     const electron =

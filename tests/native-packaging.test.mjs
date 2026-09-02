@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, it } from 'node:test';
@@ -71,6 +71,7 @@ describe('native target source', () => {
 
   it('keeps workflows target-derived and release assembly ordered', () => {
     const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+    const exportsCheck = readFileSync(new URL('../scripts/check-cpp-exports.mjs', import.meta.url), 'utf8');
     const smoke = readFileSync(new URL('../scripts/test-package.mjs', import.meta.url), 'utf8');
     assert(workflow.includes('fromJSON(needs.preflight.outputs.build-matrix)'));
     assert(workflow.includes('fromJSON(needs.preflight.outputs.smoke-matrix)'));
@@ -87,6 +88,9 @@ describe('native target source', () => {
     assert(!smoke.includes('ELECTRON_RUN_AS_NODE'));
     assert(workflow.includes('ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756'));
     assert(workflow.includes('LIBASSIMP_REGISTRY_VERSION: ${{ needs.preflight.outputs.version }}'));
+    assert(!workflow.includes('linux-x64-napi8'));
+    assert(workflow.includes('linux-x64-napi${LIBASSIMP_NAPI_VERSION}'));
+    assert(exportsCheck.includes("['-D', '--defined-only', '-j', binary]"));
     assert(
       workflow.includes("required.push('publish', 'registry-verify', 'registry-smoke', 'registry-release')"),
     );
@@ -221,6 +225,7 @@ describe('prepared release and tarball integrity set', () => {
         };
       },
     });
+    assert(!existsSync(join(root, 'test-tarballs.json')));
     assert.equal(Object.keys(result.packages).length, 4);
     assert.deepEqual(Object.keys(result.packages), Object.keys(result.packages).toSorted());
     assert.equal(result.packages.libassimp.size, manifest.name.length);

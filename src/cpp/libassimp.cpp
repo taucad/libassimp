@@ -116,7 +116,7 @@ Plan::Plan(std::string entryName, std::vector<NamedBytes> files, Properties impo
   for (NamedBytes& file : files) files_.push_back(std::move(file));
 }
 
-PlanStatus Plan::run() noexcept {
+PlanStatus Plan::run() {
   result_ = {};
   if (files_.empty()) {
     result_ = fail("NO_FILES", "convert needs at least one input file.");

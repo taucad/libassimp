@@ -194,6 +194,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     env:
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
       MACOSX_DEPLOYMENT_TARGET: '11.0'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -232,16 +233,18 @@ jobs:
           cmake -E remove_directory .node-headers
           cmake -E make_directory .node-headers native-output
           cp -R "$node_include/." .node-headers/
+          napi_version="$(node -p "require('./package.json').binary.napi_versions[0]")"
           docker run --rm --user "$(id -u):$(id -g)" \
             --volume "$GITHUB_WORKSPACE:/src" --workdir /src --env HOME=/tmp \
+            --env "LIBASSIMP_NAPI_VERSION=$napi_version" \
             quay.io/pypa/manylinux2014_x86_64@sha256:f6077fab327d7823d7cee287b93ef63efe3af0e234add7503121247c1475ebec \
             bash -lc 'cmake --preset native -G "Unix Makefiles" -B build/native-manylinux \
               -DNODE_ADDON_API_DIR=/src/node_modules/node-addon-api \
               -DCMAKE_JS_INC=/src/.node-headers -DCMAKE_JS_LIB= -DCMAKE_JS_SRC= \
               -DCMAKE_JS_OUTPUT_DIR=/src/native-output \
-              -DLIBASSIMP_NATIVE_BUILD_IDENTITY=linux-x64-napi8 \
+              -DLIBASSIMP_NATIVE_BUILD_IDENTITY="linux-x64-napi${LIBASSIMP_NAPI_VERSION}" \
               -DLIBASSIMP_NATIVE_TESTS=OFF -DLIBASSIMP_NATIVE_ADDON=ON && \
-              cmake --build build/native-manylinux --parallel && \
+              cmake --build build/native-manylinux --parallel 2 && \
               strip --strip-unneeded /src/native-output/libassimp.node'
           node scripts/check-cpp-exports.mjs native-output/libassimp.node
           node scripts/check-native-host.mjs native-output/libassimp.node
@@ -340,10 +343,11 @@ jobs:
           mkdir -p prepared/scripts
           node <<'NODE'
           const { cpSync, existsSync } = require('node:fs');
-          for (const entry of [...require('./package.json').files, 'package.json', 'npm', 'test-tarballs.json']) {
+          for (const entry of [...require('./package.json').files, 'package.json', 'npm']) {
             if (!existsSync(entry)) throw new Error(`prepared release is missing ${entry}`);
             cpSync(entry, `prepared/${entry}`, { recursive: true });
           }
+          cpSync('tarballs/test-tarballs.json', 'prepared/test-tarballs.json');
           for (const entry of ['scripts/validate-pack.mjs', 'scripts/package-files.mjs']) cpSync(entry, `prepared/${entry}`);
           NODE
           archive="prepared-release-$version.tgz"
@@ -440,9 +444,10 @@ jobs:
     needs: assemble
     runs-on: ubuntu-24.04
     env:
-      # Origin: seven local macOS arm64 runs measured 44.836-50.650 ms for the
-      # helical-gear workload. These preserve about 10x shared-runner headroom;
-      # the fail-closed same-runner +10% comparison remains the regression gate.
+      # Origin: seven local macOS arm64 runs measured 44.836-50.650 ms conversion
+      # and 67.883-68.856 ms initialization. The 500 ms conversion budget keeps
+      # about 10x runner headroom; the 100 ms init budget keeps about 45%.
+      # The fail-closed same-runner +10% comparison remains the regression gate.
       MAX_MEDIAN_MS: '500'
       MAX_INIT_MS: '100'
     permissions:
@@ -516,6 +521,7 @@ jobs:
           failed=0
           entry='${{ steps.current.outputs.entry }}'
           base_directory='${{ steps.base.outputs.directory }}'
+          : "${base_directory:?base build did not produce a directory}"
           LIBASSIMP_BENCH_ENTRY="$entry" LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/current-regression-1.json || failed=1
           (cd "$base_directory" && node bench/gated.mjs > /tmp/base-benchmark-1.json) || failed=1
           (cd "$base_directory" && node bench/gated.mjs > /tmp/base-benchmark-2.json) || failed=1

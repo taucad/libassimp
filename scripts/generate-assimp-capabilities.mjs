@@ -52,11 +52,15 @@ const readSource = (path) => normalizeSourceText(readFileSync(path, 'utf8'));
 const sourcePath = (containerPath) => `${root}${containerPath.slice(containerRoot.length + 1)}`;
 const sourceName = (path) => relative(root, path).replaceAll('\\', '/');
 const formatTypescript = (source) =>
-  execFileSync('pnpm', ['exec', 'oxfmt', `--stdin-filepath=${outputPath}`], {
-    cwd: root,
-    encoding: 'utf8',
-    input: source,
-  });
+  execFileSync(
+    process.execPath,
+    [fileURLToPath(import.meta.resolve('oxfmt/bin/oxfmt')), `--stdin-filepath=${outputPath}`],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      input: source,
+    },
+  );
 
 const cleanDoxygen = (comment) =>
   comment

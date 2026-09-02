@@ -13,7 +13,7 @@ const arguments_ =
     ? ['/nologo', '/exports', binary]
     : process.platform === 'darwin'
       ? ['-gjU', binary]
-      : ['-D', '--defined-only', binary];
+      : ['-D', '--defined-only', '-j', binary];
 const result = spawnSync(command, arguments_, { encoding: 'utf8' });
 if (result.error) throw result.error;
 assert.equal(result.status, 0, result.stderr);

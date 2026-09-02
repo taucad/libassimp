@@ -11,6 +11,7 @@ fail() {
 shopt -s nullglob dotglob
 landed=("$ARTIFACT_PATH"/*)
 [[ ${#landed[@]} -gt 0 ]] || fail 'the directory is empty'
-read -r -a expected_entries <<< "${EXPECT:-}"
-for entry in "${expected_entries[@]}"; do [[ -e "$ARTIFACT_PATH/$entry" ]] || fail "$entry is missing"; done
+while IFS= read -r entry; do
+  [[ -z "$entry" ]] || [[ -e "$ARTIFACT_PATH/$entry" ]] || fail "$entry is missing"
+done < <(printf '%s' "${EXPECT:-}" | tr '[:space:]' '\n')
 echo "artifact '$ARTIFACT' landed in '$ARTIFACT_PATH' (${#landed[@]} top-level entries)"
