@@ -160,6 +160,7 @@ jobs:
         with:
           name: wasm
           path: src/wasm
+          expect: libassimp.js libassimp.wasm libassimp.manifest.json
       - run: pnpm nx run libassimp:docs-prose
 
   node:
@@ -181,6 +182,7 @@ jobs:
         with:
           name: wasm
           path: src/wasm
+          expect: libassimp.js libassimp.wasm libassimp.manifest.json
       - run: pnpm nx run libassimp:test
       - run: pnpm nx run libassimp:typecheck
 
@@ -210,6 +212,7 @@ jobs:
         with:
           name: wasm
           path: src/wasm
+          expect: libassimp.js libassimp.wasm libassimp.manifest.json
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends ninja-build zlib1g-dev
       - run: pnpm run build
@@ -316,6 +319,7 @@ jobs:
         with:
           name: wasm
           path: src/wasm
+          expect: libassimp.js libassimp.wasm libassimp.manifest.json
       - uses: ./.github/actions/download-verified-artifact
         with:
           pattern: bindings-*
@@ -466,6 +470,7 @@ jobs:
         with:
           name: wasm
           path: src/wasm
+          expect: libassimp.js libassimp.wasm libassimp.manifest.json
       - uses: ./.github/actions/download-verified-artifact
         with:
           name: test-tarballs

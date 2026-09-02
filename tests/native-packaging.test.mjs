@@ -75,6 +75,15 @@ describe('native target source', () => {
     const smoke = readFileSync(new URL('../scripts/test-package.mjs', import.meta.url), 'utf8');
     assert(workflow.includes('fromJSON(needs.preflight.outputs.build-matrix)'));
     assert(workflow.includes('fromJSON(needs.preflight.outputs.smoke-matrix)'));
+    const workflowLines = workflow.split('\n');
+    for (let index = 0; index < workflowLines.length; ++index) {
+      if (workflowLines[index].trim() !== 'name: wasm') continue;
+      if (workflowLines[index + 1]?.trim() !== 'path: src/wasm') continue;
+      assert.equal(
+        workflowLines[index + 2]?.trim(),
+        'expect: libassimp.js libassimp.wasm libassimp.manifest.json',
+      );
+    }
     assert(!/^\s+- target: /mu.test(workflow));
     assert(workflow.includes('pnpm exec cmake-js print-cmakejs-lib'));
     assert(workflow.includes('run: pnpm run build:native -- --test'));
