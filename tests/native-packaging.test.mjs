@@ -70,7 +70,7 @@ describe('native target source', () => {
           os: 'ubuntu-24.04',
           runtime: 'node',
           scale: '1',
-          scaleBytes: '536870912',
+          scaleBytes: '671088640',
           suffix: 'linux-x64-gnu',
         },
       ],
