@@ -77,6 +77,8 @@ describe('native target source', () => {
     );
     const buildNative = readFileSync(new URL('../scripts/build-native.mjs', import.meta.url), 'utf8');
     const cmake = readFileSync(new URL('../CMakeLists.txt', import.meta.url), 'utf8');
+    const buildNativeLines = new Set(buildNative.split('\n').map((line) => line.trim()));
+    const cmakeLines = new Set(cmake.split('\n').map((line) => line.trim()));
     const exportsCheck = readFileSync(new URL('../scripts/check-cpp-exports.mjs', import.meta.url), 'utf8');
     const smoke = readFileSync(new URL('../scripts/test-package.mjs', import.meta.url), 'utf8');
     assert(workflow.includes('fromJSON(needs.preflight.outputs.build-matrix)'));
@@ -105,9 +107,19 @@ describe('native target source', () => {
     assert(smoke.includes("NAPI_RS_ENFORCE_VERSION_CHECK: '1'"));
     assert(!smoke.includes('ELECTRON_RUN_AS_NODE'));
     assert(buildNative.includes('nodeEnvironment.LD_PRELOAD'));
-    assert(buildNative.includes("'node_api.def'"));
-    assert(cmake.includes('CMAKE_MSVC_RUNTIME_LIBRARY'));
-    assert(cmake.includes('CMAKE_JS_NODELIB_DEF'));
+    assert(
+      buildNativeLines.has(
+        "nodeLibraryDefinition = resolve(nodeInclude.split(';')[0], '..', 'def', 'node_api.def');",
+      ),
+    );
+    assert(buildNativeLines.has('`-DCMAKE_JS_NODELIB_DEF=${nodeLibraryDefinition}`,'));
+    assert(cmakeLines.has('set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")'));
+    assert(cmakeLines.has('if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)'));
+    assert(
+      cmakeLines.has(
+        'COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS}',
+      ),
+    );
     assert(cmake.includes('set(gtest_force_shared_crt OFF'));
     assert(action.includes("ANNOTATE: 'false'"));
     assert(workflow.includes('ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756'));
