@@ -1,6 +1,6 @@
 {
-  "engineSha": "c07706788d57f3bafc5d7b22a4abd7b1e8fdedb8",
-  "sourceSha256": "d641b19805b8836f54deb3cbe76afa464b4f35460b3fb3106bbc14fe96be4820",
+  "engineSha": "e13eefa1d1188b9deb45689f1037b8f7d7c7ea7f",
+  "sourceSha256": "e41966a4fb5613b9430af3fe283c54eeed22583843919e1ec48de334e7e0d245",
   "sourceSha256ByPath": {
     "assimp-builds.json": "80194988321739a036709113fc0c32d536b2f654d9cb726968dbc5488d3c8c21",
     "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "5dc9b5a66e066a0e5bb5f83de6bb9de1a29d3b7837a4dfa543006f640b3a1edd",
