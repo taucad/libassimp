@@ -160,10 +160,13 @@ if (addon._coverageBlockNextExecute) {
     readFile(import.meta.filename).then(() => true),
     new Promise((resolve) => setTimeout(resolve, 500, false)),
   ]);
-  addon._coverageReleaseExecute();
+  try {
+    assert.equal(fsAvailable, true, 'queued conversions saturated the shared libuv pool');
+  } finally {
+    addon._coverageReleaseExecute();
+  }
   assert.equal(loaded, true, 'loading the addon waited for an active conversion');
   assert.deepEqual(await loadingWorkerExit, [0]);
-  assert.equal(fsAvailable, true, 'queued conversions saturated the shared libuv pool');
   await assert.rejects(runs[1], /coverage queue failure/);
   assert.deepEqual(await Promise.all([runs[0], ...runs.slice(2)]), Array(7).fill(1));
   assert.equal(await addon.runPlan(plans[1]), 1);
