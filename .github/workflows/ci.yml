@@ -397,13 +397,18 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node }}
-      - if: runner.os == 'Linux'
+      - if: runner.os == 'Linux' && matrix.runtime == 'electron'
         run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends xvfb
       - name: Smoke the frozen tarballs in a clean install
         env:
           LIBASSIMP_ELECTRON_VERSION: ${{ matrix.electron }}
           LIBASSIMP_NATIVE_SUFFIX: ${{ matrix.suffix }}
           LIBASSIMP_RUNTIME: ${{ matrix.runtime }}
+          # Origin: the local 512 MiB packed-addon witness peaked at 4,783,603,712
+          # bytes RSS. The 4 GiB floor proves native memory can exceed Wasm32.
+          LIBASSIMP_SCALE: ${{ matrix.scale }}
+          LIBASSIMP_SCALE_BYTES: ${{ matrix.scaleBytes }}
+          LIBASSIMP_MIN_SCALE_RSS_BYTES: ${{ matrix.minScaleRssBytes }}
           LIBASSIMP_TARBALL_DIR: tarballs
         run: node scripts/test-package.mjs
 
@@ -526,6 +531,7 @@ jobs:
           failed=0
           entry='${{ steps.current.outputs.entry }}'
           base_directory='${{ steps.base.outputs.directory }}'
+          : "${entry:?current benchmark did not produce an entry}"
           : "${base_directory:?base build did not produce a directory}"
           LIBASSIMP_BENCH_ENTRY="$entry" LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/current-regression-1.json || failed=1
           (cd "$base_directory" && node bench/gated.mjs > /tmp/base-benchmark-1.json) || failed=1
@@ -616,6 +622,11 @@ jobs:
                 exit 1
               fi
             else
+              existing="$(npm view "$name@$version" version 2>/dev/null || true)"
+              if [[ -n "$existing" ]]; then
+                echo "::error::registry returned $name@$version without dist.integrity"
+                exit 1
+              fi
               npm publish "./tarballs/$filename" --access public --provenance </dev/null
             fi
           done < /tmp/packages

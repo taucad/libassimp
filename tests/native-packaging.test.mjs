@@ -60,6 +60,21 @@ describe('native target source', () => {
     for (const node of NODE_VERSIONS) {
       assert.equal(smoke.filter((lane) => lane.runtime === 'node' && lane.node === node).length, 3);
     }
+    assert.deepEqual(
+      smoke.filter(({ scale }) => scale === '1'),
+      [
+        {
+          lane: 'node-26',
+          minScaleRssBytes: '4294967296',
+          node: '26',
+          os: 'ubuntu-24.04',
+          runtime: 'node',
+          scale: '1',
+          scaleBytes: '536870912',
+          suffix: 'linux-x64-gnu',
+        },
+      ],
+    );
     assert.equal(smoke.filter((lane) => lane.runtime === 'electron' && lane.node === NODE_VERSION).length, 3);
     assert(smoke.filter(({ electron }) => electron === ELECTRON_VERSION).length === 3);
     assert.equal(manifest.devDependencies['@napi-rs/cli'], '3.8.6');
@@ -117,13 +132,21 @@ describe('native target source', () => {
     assert(cmakeLines.has('if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)'));
     assert(
       cmakeLines.has(
-        'COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS}',
+        'separate_arguments(LIBASSIMP_STATIC_LINKER_OPTIONS NATIVE_COMMAND "${CMAKE_STATIC_LINKER_FLAGS}")',
+      ),
+    );
+    assert(
+      cmakeLines.has(
+        'COMMAND "${CMAKE_AR}" /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${LIBASSIMP_STATIC_LINKER_OPTIONS}',
       ),
     );
     assert(cmake.includes('set(gtest_force_shared_crt OFF'));
     assert(action.includes("ANNOTATE: 'false'"));
     assert(workflow.includes('ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756'));
     assert(workflow.includes('LIBASSIMP_REGISTRY_VERSION: ${{ needs.preflight.outputs.version }}'));
+    assert(workflow.includes("runner.os == 'Linux' && matrix.runtime == 'electron'"));
+    assert(workflow.includes('LIBASSIMP_SCALE_BYTES: ${{ matrix.scaleBytes }}'));
+    assert(workflow.includes('LIBASSIMP_MIN_SCALE_RSS_BYTES: ${{ matrix.minScaleRssBytes }}'));
     assert(!workflow.includes('linux-x64-napi8'));
     assert(workflow.includes('linux-x64-napi${LIBASSIMP_NAPI_VERSION}'));
     assert(exportsCheck.includes("['-D', '--defined-only', '-j', binary]"));
@@ -143,6 +166,8 @@ describe('native target source', () => {
       workflow.indexOf('pnpm exec napi pre-publish') <
         workflow.indexOf('node scripts/pack-test-tarballs.mjs'),
     );
+    assert(workflow.includes('registry returned $name@$version without dist.integrity'));
+    assert(workflow.indexOf('existing="$(npm view') < workflow.indexOf('npm publish'));
     assert(manifest.scripts.prepublishOnly.includes("process.env.GITHUB_ACTIONS!=='true'"));
     assert(manifest.scripts.prepublishOnly.includes('node scripts/check-prepared-release.mjs'));
     assert(manifest.scripts.prepublishOnly.endsWith('node scripts/validate-pack.mjs'));

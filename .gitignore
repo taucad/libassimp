@@ -18,7 +18,6 @@ docs-site/out/
 node_modules/
 *.tsbuildinfo
 src/wasm/
-test-tarballs.json
 tests/out/
 *.node
 *.profraw

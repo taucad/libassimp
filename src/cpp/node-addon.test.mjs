@@ -21,10 +21,12 @@ const { internalCanonicalExportRoutes } = await import('../../dist/generated/ass
 assert.equal(addon.napiVersion, 8);
 assert.equal(addon.buildIdentity, `${process.platform}-${process.arch}-napi8`);
 assert.equal(addon.packageVersion, packageManifest.version);
-assert(addon.importFormats.some(({ id }) => id === 'obj'));
-assert(addon.exportFormats.some(({ id }) => id === 'glb2'));
+const importFormats = addon.importFormats();
+const exportFormats = addon.exportFormats();
+assert(importFormats.some(({ id }) => id === 'obj'));
+assert(exportFormats.some(({ id }) => id === 'glb2'));
 assert.deepEqual(
-  addon.importFormats.map(({ id }) => id).toSorted(),
+  importFormats.map(({ id }) => id).toSorted(),
   capabilityEvidence.formats.import.map(({ id }) => id).toSorted(),
   'native importer inventory differs from the generated capability evidence',
 );
@@ -36,7 +38,7 @@ for (const route of internalCanonicalExportRoutes) {
   }
 }
 assert.deepEqual(
-  addon.exportFormats.map(({ id }) => id).toSorted(),
+  exportFormats.map(({ id }) => id).toSorted(),
   [...expectedExportIds].toSorted((left, right) => left.localeCompare(right)),
   'native exporter inventory differs from the generated capability routes',
 );
@@ -143,11 +145,24 @@ if (addon._coverageBlockNextExecute) {
     await new Promise(setImmediate);
   }
   assert(addon._coverageExecuteBlocked(), 'coverage worker did not reach its execution gate');
+  const loadingWorker = new Worker(
+    `const { parentPort, workerData } = require('node:worker_threads');
+     require(workerData.addon);
+     parentPort.postMessage('loaded');`,
+    { eval: true, workerData: { addon: addonPath } },
+  );
+  const loadingWorkerExit = once(loadingWorker, 'exit');
+  const loaded = await Promise.race([
+    once(loadingWorker, 'message').then(([message]) => message === 'loaded'),
+    new Promise((resolve) => setTimeout(resolve, 2_000, false)),
+  ]);
   const fsAvailable = await Promise.race([
     readFile(import.meta.filename).then(() => true),
     new Promise((resolve) => setTimeout(resolve, 500, false)),
   ]);
   addon._coverageReleaseExecute();
+  assert.equal(loaded, true, 'loading the addon waited for an active conversion');
+  assert.deepEqual(await loadingWorkerExit, [0]);
   assert.equal(fsAvailable, true, 'queued conversions saturated the shared libuv pool');
   await assert.rejects(runs[1], /coverage queue failure/);
   assert.deepEqual(await Promise.all([runs[0], ...runs.slice(2)]), Array(7).fill(1));

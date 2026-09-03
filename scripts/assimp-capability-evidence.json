@@ -1,6 +1,6 @@
 {
-  "engineSha": "c575d18302d77342e5832508a95efa0a2fcefe8a",
-  "sourceSha256": "a0da2c9ad57591c34593598ca80d30a7410b0fafaa78bf03260e962f4d64c73b",
+  "engineSha": "a206261669b51ee68c92dfaa8cbed89dfc534b85",
+  "sourceSha256": "67faac82e4d37f5baa2349017bf3bbca78dd29d10d0d5caae6d19c29063c0b08",
   "sourceSha256ByPath": {
     "assimp-builds.json": "80194988321739a036709113fc0c32d536b2f654d9cb726968dbc5488d3c8c21",
     "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "5dc9b5a66e066a0e5bb5f83de6bb9de1a29d3b7837a4dfa543006f640b3a1edd",
@@ -35,7 +35,7 @@
     "assimp/code/AssetLib/SMD/SMDLoader.cpp": "e3ffc8f5bc9a958dd0a8179a48922236359a2bc081c5914e778f71a9b41663e3",
     "assimp/code/AssetLib/STL/STLExporter.cpp": "6ea5c72e83bef3ced957b089922b85590e7a2bd9ca68f310272bd5a352e9de42",
     "assimp/code/AssetLib/Unreal/UnrealLoader.cpp": "2651b54ccdb63cf50742a31106b4261d55ce91fd5806bf0e52d52d33eaa74c4a",
-    "assimp/code/AssetLib/USD/USDZExporter.cpp": "eb99d6e2c513eb86452c381db13aecabfd96e78b5c2397740cf088b7e7c4e186",
+    "assimp/code/AssetLib/USD/USDZExporter.cpp": "7d46c008e16a317c47b01d4ae32d4fc435eea2d41ace2e37ea2554a7638beb80",
     "assimp/code/AssetLib/X/XFileExporter.cpp": "730178631df48132ac12e0c1d68fab8f2f7b8ef949e0155cad66335674afd260",
     "assimp/code/Common/Exporter.cpp": "d9abdb1572b28f4cd8c0db00000ea46e25c817abdee897bc966ec6a922b78d45",
     "assimp/code/Common/Importer.cpp": "02b3283d3bb08596e867d59dfad40b7e4d8edd29531d36d235a0581996e5571f",
@@ -1878,7 +1878,7 @@
       "defaults": [true],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:121"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:122"]
     },
     {
       "nativeName": "USDZ_EXPORT_CLEARCOAT",
@@ -1887,7 +1887,7 @@
       "defaults": [true],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:122"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:123"]
     },
     {
       "nativeName": "USDZ_EXPORT_MATERIALX",
@@ -1896,7 +1896,7 @@
       "defaults": [false],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:123"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:124"]
     },
     {
       "nativeName": "USDZ_EXPORT_SUBDIVISION",
@@ -1905,7 +1905,7 @@
       "defaults": [false],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:124"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:125"]
     },
     {
       "nativeName": "USDZ_EXPORT_VOLUMES",
@@ -1914,7 +1914,7 @@
       "defaults": [false],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:125"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:126"]
     },
     {
       "nativeName": "USDZ_OPTIMIZE_FOR_MOBILE",
@@ -1923,7 +1923,7 @@
       "defaults": [true],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:126"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:127"]
     },
     {
       "nativeName": "USE_GLTF_PBR_SPECULAR_GLOSSINESS",

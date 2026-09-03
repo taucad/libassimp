@@ -13,5 +13,15 @@
     "name": "Node ESM facade",
     "path": "dist/index.node.mjs",
     "limit": "463 B"
+  },
+  {
+    "name": "generated native loader",
+    "path": "dist/native/index.js",
+    "limit": "3.3 kB"
+  },
+  {
+    "name": "native backend",
+    "path": "dist/native-backend.mjs",
+    "limit": "1.1 kB"
   }
 ]

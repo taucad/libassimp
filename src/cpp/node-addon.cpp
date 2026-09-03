@@ -377,6 +377,7 @@ public:
   }
 
   void Execute() override {
+    const std::lock_guard<std::mutex> lock(assimpMutex);
 #ifdef LIBASSIMP_CPP_COVERAGE
     if (coverageFailNextExecute.exchange(false))
       throw std::runtime_error("coverage execution failure");
@@ -388,7 +389,6 @@ public:
       coverageExecuteBlocked.store(false);
     }
 #endif
-    const std::lock_guard<std::mutex> lock(assimpMutex);
     status_ = plan_->run();
   }
 
@@ -597,6 +597,16 @@ Napi::Array formatsToJs(Napi::Env env,
   return formats;
 }
 
+Napi::Value importFormats(const Napi::CallbackInfo &info) {
+  const std::lock_guard<std::mutex> lock(assimpMutex);
+  return formatsToJs(info.Env(), libassimp::importFormats());
+}
+
+Napi::Value exportFormats(const Napi::CallbackInfo &info) {
+  const std::lock_guard<std::mutex> lock(assimpMutex);
+  return formatsToJs(info.Env(), libassimp::exportFormats());
+}
+
 #ifdef LIBASSIMP_CPP_COVERAGE
 Napi::Value coverageWrongPlan(const Napi::CallbackInfo &info) {
   return Napi::External<PlanHandle>::New(info.Env(), nullptr);
@@ -655,13 +665,6 @@ Napi::Value coverageReleaseExecution(const Napi::CallbackInfo &info) {
 #endif
 
 Napi::Object initialize(Napi::Env env, Napi::Object exports) {
-  std::vector<libassimp::FormatInfo> importFormats;
-  std::vector<libassimp::FormatInfo> exportFormats;
-  {
-    const std::lock_guard<std::mutex> lock(assimpMutex);
-    importFormats = libassimp::importFormats();
-    exportFormats = libassimp::exportFormats();
-  }
   exports.Set("buildIdentity", LIBASSIMP_NATIVE_BUILD_IDENTITY);
   exports.Set("napiVersion", NAPI_VERSION);
   exports.Set("packageVersion", LIBASSIMP_PACKAGE_VERSION);
@@ -671,8 +674,8 @@ Napi::Object initialize(Napi::Env env, Napi::Object exports) {
   exports.Set("supplyPlan", Napi::Function::New(env, supplyPlan));
   exports.Set("takePlanResult", Napi::Function::New(env, takePlanResult));
   exports.Set("destroyPlan", Napi::Function::New(env, destroyPlan));
-  exports.Set("importFormats", formatsToJs(env, importFormats));
-  exports.Set("exportFormats", formatsToJs(env, exportFormats));
+  exports.Set("importFormats", Napi::Function::New(env, importFormats));
+  exports.Set("exportFormats", Napi::Function::New(env, exportFormats));
 #ifdef LIBASSIMP_CPP_COVERAGE
   exports.Set("_coverageWrongPlan", Napi::Function::New(env, coverageWrongPlan));
   exports.Set("_coverageEmptyResult", Napi::Function::New(env, coverageEmptyResult));

@@ -20,13 +20,28 @@ export const nativeMatrices = (packageJson = new URL('../package.json', import.m
     target: triple,
   }));
   const smoke = packages.flatMap(({ os, suffix }) => [
-    ...NODE_VERSIONS.map((node) => ({ lane: `node-${node}`, node, os: RUNNER[os], runtime: 'node', suffix })),
+    ...NODE_VERSIONS.map((node) => {
+      const scale = os === 'linux' && node === '26';
+      return {
+        lane: `node-${node}`,
+        minScaleRssBytes: scale ? '4294967296' : '0',
+        node,
+        os: RUNNER[os],
+        runtime: 'node',
+        scale: scale ? '1' : '0',
+        scaleBytes: scale ? '536870912' : '',
+        suffix,
+      };
+    }),
     {
       electron: ELECTRON_VERSION,
       lane: `electron-${ELECTRON_VERSION}`,
+      minScaleRssBytes: '0',
       node: NODE_VERSION,
       os: RUNNER[os],
       runtime: 'electron',
+      scale: '0',
+      scaleBytes: '',
       suffix,
     },
   ]);

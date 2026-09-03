@@ -4750,7 +4750,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_ANIMATIONS',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:121',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:122',
     },
     clearcoat: {
       publicName: 'clearcoat',
@@ -4762,7 +4762,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_CLEARCOAT',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:122',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:123',
     },
     materialX: {
       publicName: 'materialX',
@@ -4774,7 +4774,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_MATERIALX',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:123',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:124',
     },
     optimizeForMobile: {
       publicName: 'optimizeForMobile',
@@ -4786,7 +4786,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_OPTIMIZE_FOR_MOBILE',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:126',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:127',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4827,7 +4827,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_SUBDIVISION',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:124',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:125',
     },
     volumes: {
       publicName: 'volumes',
@@ -4839,7 +4839,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_VOLUMES',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:125',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:126',
     },
   },
   usdz: {
@@ -4853,7 +4853,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_ANIMATIONS',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:121',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:122',
     },
     clearcoat: {
       publicName: 'clearcoat',
@@ -4865,7 +4865,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_CLEARCOAT',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:122',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:123',
     },
     materialX: {
       publicName: 'materialX',
@@ -4877,7 +4877,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_MATERIALX',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:123',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:124',
     },
     optimizeForMobile: {
       publicName: 'optimizeForMobile',
@@ -4889,7 +4889,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_OPTIMIZE_FOR_MOBILE',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:126',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:127',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4930,7 +4930,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_SUBDIVISION',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:124',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:125',
     },
     volumes: {
       publicName: 'volumes',
@@ -4942,7 +4942,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_VOLUMES',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:125',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:126',
     },
   },
   x: {
