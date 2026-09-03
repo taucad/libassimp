@@ -1,7 +1,6 @@
 /** Node-only adapter and selection policy for the generated NAPI-RS loader. */
 
-import { createRequire } from 'node:module';
-
+import packageMetadata from '../package.json' with { type: 'json' };
 import { AssimpError } from './assimp-error.js';
 import type { CreateAssimpOptions, RuntimeLoader } from './create-assimp.js';
 import type { NativeRuntime, ResolutionContext } from './convert.js';
@@ -19,10 +18,6 @@ export type NativeAddon = Readonly<{
   destroyPlan: NativeRuntime['destroyPlan'];
 }>;
 
-const packageMetadata = createRequire(import.meta.url)('../package.json') as {
-  readonly binary: { readonly napi_versions: readonly [number] };
-  readonly version: string;
-};
 const expectedNapiVersion = packageMetadata.binary.napi_versions[0];
 
 /** Generated loader import kept behind the Node-conditioned graph. @internal */
