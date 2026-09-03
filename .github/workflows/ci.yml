@@ -251,7 +251,7 @@ jobs:
               strip --strip-unneeded /src/native-output/libassimp.node'
           node scripts/check-cpp-exports.mjs native-output/libassimp.node
           node scripts/check-native-host.mjs native-output/libassimp.node
-          LIBASSIMP_NATIVE_ADDON=native-output/libassimp.node node src/cpp/node-addon.test.mjs
+          LIBASSIMP_NATIVE_ADDON="$GITHUB_WORKSPACE/native-output/libassimp.node" node src/cpp/node-addon.test.mjs
       - name: Clear container-local FetchContent metadata
         if: matrix.recipe == 'manylinux'
         shell: bash
