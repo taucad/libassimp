@@ -251,7 +251,7 @@ if(LIBASSIMP_NATIVE_ADDON)
     target_link_options(
       libassimp-native
       PRIVATE
-        "LINKER:--exclude-libs,ALL"
+        "LINKER:--exclude-libs,libstdc++_nonshared.a"
         "LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/cmake/libassimp-node.map"
     )
   endif()
