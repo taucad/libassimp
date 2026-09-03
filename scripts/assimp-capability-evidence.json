@@ -1,6 +1,6 @@
 {
-  "engineSha": "d5faa02e66dc04850a79f1fb5f6b7bc43d1aaa7b",
-  "sourceSha256": "8c1a85addeecd863000a0346c320d8a30f2696521f1f5a700e8ad9e6cc5f859f",
+  "engineSha": "c575d18302d77342e5832508a95efa0a2fcefe8a",
+  "sourceSha256": "a0da2c9ad57591c34593598ca80d30a7410b0fafaa78bf03260e962f4d64c73b",
   "sourceSha256ByPath": {
     "assimp-builds.json": "80194988321739a036709113fc0c32d536b2f654d9cb726968dbc5488d3c8c21",
     "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "5dc9b5a66e066a0e5bb5f83de6bb9de1a29d3b7837a4dfa543006f640b3a1edd",
@@ -35,7 +35,7 @@
     "assimp/code/AssetLib/SMD/SMDLoader.cpp": "e3ffc8f5bc9a958dd0a8179a48922236359a2bc081c5914e778f71a9b41663e3",
     "assimp/code/AssetLib/STL/STLExporter.cpp": "6ea5c72e83bef3ced957b089922b85590e7a2bd9ca68f310272bd5a352e9de42",
     "assimp/code/AssetLib/Unreal/UnrealLoader.cpp": "2651b54ccdb63cf50742a31106b4261d55ce91fd5806bf0e52d52d33eaa74c4a",
-    "assimp/code/AssetLib/USD/USDZExporter.cpp": "0b152f2a183e55623a15b9c18cdc2ce0b95bd6a48a7328d9c05d898934ea5509",
+    "assimp/code/AssetLib/USD/USDZExporter.cpp": "eb99d6e2c513eb86452c381db13aecabfd96e78b5c2397740cf088b7e7c4e186",
     "assimp/code/AssetLib/X/XFileExporter.cpp": "730178631df48132ac12e0c1d68fab8f2f7b8ef949e0155cad66335674afd260",
     "assimp/code/Common/Exporter.cpp": "d9abdb1572b28f4cd8c0db00000ea46e25c817abdee897bc966ec6a922b78d45",
     "assimp/code/Common/Importer.cpp": "02b3283d3bb08596e867d59dfad40b7e4d8edd29531d36d235a0581996e5571f",

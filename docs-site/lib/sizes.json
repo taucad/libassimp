@@ -1,14 +1,14 @@
 {
   "version": "0.2.0",
   "wasm": {
-    "sha256": "4d298bd27c445b735c197b28437a55577aa649be69b926df115813aba4cdbddb",
-    "raw": 11739192,
-    "gzip": 3079063,
-    "brotli": 2072121
+    "sha256": "4f49a41fca6f49bc23d35e64a8e7a17c33db65fa2d3b425d8d310d1071dc92ab",
+    "raw": 11738930,
+    "gzip": 3079017,
+    "brotli": 2071966
   },
   "js": {
     "raw": 894,
     "gzip": 396
   },
-  "measuredAt": "2026-09-03T02:03:41.704Z"
+  "measuredAt": "2026-09-03T11:03:54.787Z"
 }
