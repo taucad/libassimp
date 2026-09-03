@@ -18,7 +18,12 @@ const result = spawnSync(command, arguments_, { encoding: 'utf8' });
 if (result.error) throw result.error;
 assert.equal(result.status, 0, result.stderr);
 
-const expected = process.platform === 'darwin' ? '_napi_register_module_v1' : 'napi_register_module_v1';
+const expected =
+  process.platform === 'darwin'
+    ? ['_napi_register_module_v1']
+    : process.platform === 'win32'
+      ? ['napi_register_module_v1', 'node_api_module_get_api_version_v1']
+      : ['napi_register_module_v1'];
 const symbols =
   process.platform === 'win32'
     ? [...result.stdout.matchAll(/^\s+\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)\s*$/gimu)].map((match) => match[1])
@@ -26,4 +31,4 @@ const symbols =
         .split(/\r?\n/u)
         .map((line) => line.trim())
         .filter(Boolean);
-assert.deepEqual(symbols, [expected], `unexpected Node addon exports:\n${result.stdout}`);
+assert.deepEqual(symbols.toSorted(), expected.toSorted(), `unexpected Node addon exports:\n${result.stdout}`);
