@@ -17,7 +17,9 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <condition_variable>
 #include <cstdint>
+#include <deque>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -49,6 +51,11 @@ std::mutex assimpMutex;
 
 #ifdef LIBASSIMP_CPP_COVERAGE
 std::atomic<bool> coverageFailNextExecute{false};
+std::atomic<bool> coverageBlockNextExecute{false};
+std::atomic<bool> coverageExecuteBlocked{false};
+std::mutex coverageExecuteMutex;
+std::condition_variable coverageExecuteCondition;
+bool coverageExecuteReleased = false;
 #endif
 
 libassimp::Bytes bytesFromJs(const Napi::Value &value, const char *path) {
@@ -226,6 +233,65 @@ struct PlanHandle {
   std::shared_ptr<NativePlan> plan;
 };
 
+class RunWorker;
+
+struct DispatchTicket {
+  Napi::ThreadSafeFunction signal;
+  RunWorker *worker = nullptr;
+};
+
+void dispatchTicket(const std::shared_ptr<DispatchTicket> &ticket);
+
+class RunDispatcher {
+public:
+  bool submit(const std::shared_ptr<DispatchTicket> &ticket) {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    if (active_) {
+      waiting_.push_back(ticket);
+      return false;
+    }
+    active_ = ticket;
+    return true;
+  }
+
+  void finish() {
+    std::shared_ptr<DispatchTicket> next;
+    {
+      const std::lock_guard<std::mutex> lock(mutex_);
+      active_.reset();
+      if (!waiting_.empty()) {
+        next = waiting_.front();
+        waiting_.pop_front();
+        active_ = next;
+      }
+    }
+    if (next)
+      dispatchTicket(next);
+  }
+
+  void abandon(const std::shared_ptr<DispatchTicket> &ticket) {
+    {
+      const std::lock_guard<std::mutex> lock(mutex_);
+      const auto found = std::find(waiting_.begin(), waiting_.end(), ticket);
+      if (found != waiting_.end()) {
+        waiting_.erase(found);
+        return;
+      }
+    }
+    finish();
+  }
+
+private:
+  std::mutex mutex_;
+  std::shared_ptr<DispatchTicket> active_;
+  std::deque<std::shared_ptr<DispatchTicket>> waiting_;
+};
+
+RunDispatcher &runDispatcher() {
+  static RunDispatcher dispatcher;
+  return dispatcher;
+}
+
 PlanHandle *handleFromJs(const Napi::Value &value) {
   if (!value.IsExternal())
     throw Napi::TypeError::New(value.Env(),
@@ -285,57 +351,151 @@ bool coverageFailNextQueue = false;
 
 class RunWorker final : public Napi::AsyncWorker {
 public:
-  RunWorker(Napi::Env env, std::shared_ptr<NativePlan> plan)
+  RunWorker(Napi::Env env, std::shared_ptr<NativePlan> plan,
+            std::shared_ptr<DispatchTicket> ticket)
       : Napi::AsyncWorker(env, "libassimp:runPlan"),
-        deferred_(Napi::Promise::Deferred::New(env)), plan_(std::move(plan)) {}
+        deferred_(Napi::Promise::Deferred::New(env)), plan_(std::move(plan)),
+        ticket_(std::move(ticket)) {}
 
   Napi::Promise promise() const { return deferred_.Promise(); }
+  const std::shared_ptr<DispatchTicket> &ticket() const { return ticket_; }
+
+  void queue() {
+#ifdef LIBASSIMP_CPP_COVERAGE
+    if (std::exchange(coverageFailNextQueue, false))
+      throw Napi::Error::New(Env(), "coverage queue failure");
+#endif
+    Queue();
+  }
+
+  void abandon() { plan_->end(); }
+
+  void rejectQueue(const Napi::Error &error) {
+    plan_->end();
+    deferred_.Reject(error.Value());
+    runDispatcher().finish();
+  }
 
   void Execute() override {
 #ifdef LIBASSIMP_CPP_COVERAGE
     if (coverageFailNextExecute.exchange(false))
       throw std::runtime_error("coverage execution failure");
+    if (coverageBlockNextExecute.exchange(false)) {
+      std::unique_lock<std::mutex> lock(coverageExecuteMutex);
+      coverageExecuteBlocked.store(true);
+      coverageExecuteCondition.wait(
+          lock, [] { return coverageExecuteReleased; });
+      coverageExecuteBlocked.store(false);
+    }
 #endif
     const std::lock_guard<std::mutex> lock(assimpMutex);
     status_ = plan_->run();
   }
 
   void OnOK() override {
-    plan_->end();
     deferred_.Resolve(Napi::Number::New(Env(), static_cast<int>(status_)));
   }
 
   void OnError(const Napi::Error &error) override {
-    plan_->end();
     deferred_.Reject(error.Value());
+  }
+
+  void OnWorkComplete(Napi::Env env, napi_status status) override {
+    try {
+      Napi::AsyncWorker::OnWorkComplete(env, status);
+    } catch (const Napi::Error &) {
+      // Worker termination can disable JavaScript before native work completes.
+      Destroy();
+    }
+  }
+
+protected:
+  void Destroy() override {
+    plan_->end();
+    runDispatcher().finish();
+    Napi::AsyncWorker::Destroy();
   }
 
 private:
   Napi::Promise::Deferred deferred_;
   std::shared_ptr<NativePlan> plan_;
+  std::shared_ptr<DispatchTicket> ticket_;
   libassimp::PlanStatus status_ = libassimp::PlanStatus::Failed;
 };
+
+void queueDispatched(Napi::Env env, DispatchTicket *dispatched) {
+  RunWorker *worker = std::exchange(dispatched->worker, nullptr);
+  if (!worker)
+    return;
+  if (env == nullptr) {
+    worker->abandon();
+    runDispatcher().abandon(worker->ticket());
+    delete worker;
+    return;
+  }
+  try {
+    worker->queue();
+  } catch (const Napi::Error &error) {
+    worker->rejectQueue(error);
+    delete worker;
+  }
+}
+
+void dispatchTicket(const std::shared_ptr<DispatchTicket> &ticket) {
+  ticket->signal.NonBlockingCall(
+      ticket.get(), [](Napi::Env env, Napi::Function,
+                       DispatchTicket *dispatched) {
+        queueDispatched(env, dispatched);
+      });
+  ticket->signal.Release();
+}
+
+void finalizeDispatchTicket(Napi::Env,
+                            std::shared_ptr<DispatchTicket> *holder, void *) {
+  std::shared_ptr<DispatchTicket> ticket = std::move(*holder);
+  delete holder;
+  RunWorker *worker = std::exchange(ticket->worker, nullptr);
+  if (!worker)
+    return;
+  runDispatcher().abandon(ticket);
+  worker->abandon();
+  delete worker;
+}
 
 Napi::Value runPlan(const Napi::CallbackInfo &info) {
   const Napi::Env env = info.Env();
   if (info.Length() != 1)
     throw Napi::TypeError::New(env, "runPlan expects a plan");
   std::shared_ptr<NativePlan> plan = planFromJs(info[0]);
-  if (!plan->begin())
+  auto ticket = std::make_shared<DispatchTicket>();
+  auto worker = std::make_unique<RunWorker>(env, plan, ticket);
+  auto holder = std::make_unique<std::shared_ptr<DispatchTicket>>(ticket);
+  ticket->signal = Napi::ThreadSafeFunction::New(
+      env, env.Global().Get("Boolean").As<Napi::Function>(),
+      "libassimp:dispatch", 0, 1, static_cast<void *>(nullptr),
+      finalizeDispatchTicket, holder.get());
+  holder.release();
+  if (!plan->begin()) {
+    ticket->signal.Release();
     throw Napi::Error::New(env, "conversion plan is already running");
-  auto *worker = new RunWorker(env, plan);
+  }
+  ticket->worker = worker.get();
   const Napi::Promise promise = worker->promise();
+  if (!runDispatcher().submit(ticket)) {
+    worker.release();
+    return promise;
+  }
+  ticket->worker = nullptr;
   try {
-#ifdef LIBASSIMP_CPP_COVERAGE
-    if (std::exchange(coverageFailNextQueue, false))
-      throw Napi::Error::New(env, "coverage queue failure");
-#endif
-    worker->Queue();
+    worker->queue();
   } catch (...) {
+    runDispatcher().finish();
     plan->end();
-    delete worker;
+    ticket->signal.Release();
     throw;
   }
+  worker.release();
+  ticket->signal.Release();
   return promise;
 }
 
@@ -458,6 +618,40 @@ Napi::Value coverageExecutionFailure(const Napi::CallbackInfo &info) {
   coverageFailNextExecute.store(true);
   return runPlan(info);
 }
+
+Napi::Value coverageDispatchCleanup(const Napi::CallbackInfo &info) {
+  std::shared_ptr<NativePlan> plan = planFromJs(info[0]);
+  auto ticket = std::make_shared<DispatchTicket>();
+  auto *worker = new RunWorker(info.Env(), plan, ticket);
+  plan->begin();
+  ticket->worker = worker;
+  runDispatcher().submit(ticket);
+  queueDispatched(Napi::Env(nullptr), ticket.get());
+  queueDispatched(Napi::Env(nullptr), ticket.get());
+  return info.Env().Undefined();
+}
+
+Napi::Value coverageBlockExecution(const Napi::CallbackInfo &info) {
+  {
+    const std::lock_guard<std::mutex> lock(coverageExecuteMutex);
+    coverageExecuteReleased = false;
+  }
+  coverageBlockNextExecute.store(true);
+  return info.Env().Undefined();
+}
+
+Napi::Value coverageExecutionBlocked(const Napi::CallbackInfo &info) {
+  return Napi::Boolean::New(info.Env(), coverageExecuteBlocked.load());
+}
+
+Napi::Value coverageReleaseExecution(const Napi::CallbackInfo &info) {
+  {
+    const std::lock_guard<std::mutex> lock(coverageExecuteMutex);
+    coverageExecuteReleased = true;
+  }
+  coverageExecuteCondition.notify_one();
+  return info.Env().Undefined();
+}
 #endif
 
 Napi::Object initialize(Napi::Env env, Napi::Object exports) {
@@ -485,6 +679,14 @@ Napi::Object initialize(Napi::Env env, Napi::Object exports) {
   exports.Set("_coverageQueueFailure", Napi::Function::New(env, coverageQueueFailure));
   exports.Set("_coverageExecutionFailure",
               Napi::Function::New(env, coverageExecutionFailure));
+  exports.Set("_coverageDispatchCleanup",
+              Napi::Function::New(env, coverageDispatchCleanup));
+  exports.Set("_coverageBlockNextExecute",
+              Napi::Function::New(env, coverageBlockExecution));
+  exports.Set("_coverageExecuteBlocked",
+              Napi::Function::New(env, coverageExecutionBlocked));
+  exports.Set("_coverageReleaseExecute",
+              Napi::Function::New(env, coverageReleaseExecution));
 #endif
   return exports;
 }

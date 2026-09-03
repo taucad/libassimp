@@ -19,6 +19,6 @@ The three native packages use Node-API rather than the Node or Electron module A
 
 Node defaults to `backend: 'auto'`: it loads the matching native package and emits a warning before Wasm fallback. Use `backend: 'native'` when a packaged desktop application must fail loudly if its addon was not staged, or `backend: 'wasm'` for reference and parity runs. The returned instance exposes the selected backend and the native build identity when applicable.
 
-Native conversions are admitted process-serial because Assimp has process-global state. Calls from one JavaScript realm wait before entering the libuv thread pool; the native mutex is the process-wide backstop for worker threads. Separate Wasm instances remain independent.
+Native conversions are admitted process-serial because Assimp has process-global state. The addon's process-wide dispatcher queues only one conversion into libuv at a time, including across Node worker threads, so waiting conversions do not occupy the shared filesystem, crypto, DNS, and zlib pool. Separate Wasm instances remain independent.
 
 Native async resolution discovers one uncached sidecar per replay, so an input with N uncached sidecars can require N+1 imports. Provide known sidecars in the initial file set; batch discovery should replace replay only if multi-sidecar profiles show it is material.

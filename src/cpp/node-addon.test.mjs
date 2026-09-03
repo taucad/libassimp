@@ -125,6 +125,83 @@ if (addon._coverageExecutionFailure) {
   addon.destroyPlan(plan);
 }
 
+if (addon._coverageBlockNextExecute) {
+  assert.equal(process.env.UV_THREADPOOL_SIZE, '2');
+  const box = await input('OBJ/box.obj');
+  const plans = Array.from({ length: 8 }, () =>
+    addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options()),
+  );
+  addon._coverageBlockNextExecute();
+  const runs = [
+    addon.runPlan(plans[0]),
+    addon._coverageQueueFailure(plans[1]),
+    ...plans.slice(2).map((plan) => addon.runPlan(plan)),
+  ];
+  for (let attempt = 0; attempt < 1_000 && !addon._coverageExecuteBlocked(); attempt += 1) {
+    await new Promise(setImmediate);
+  }
+  assert(addon._coverageExecuteBlocked(), 'coverage worker did not reach its execution gate');
+  const fsAvailable = await Promise.race([
+    readFile(import.meta.filename).then(() => true),
+    new Promise((resolve) => setTimeout(resolve, 500, false)),
+  ]);
+  addon._coverageReleaseExecute();
+  assert.equal(fsAvailable, true, 'queued conversions saturated the shared libuv pool');
+  await assert.rejects(runs[1], /coverage queue failure/);
+  assert.deepEqual(await Promise.all([runs[0], ...runs.slice(2)]), Array(7).fill(1));
+  assert.equal(await addon.runPlan(plans[1]), 1);
+  for (const plan of plans) addon.destroyPlan(plan);
+
+  const startBlockedWorker = async () => {
+    addon._coverageBlockNextExecute();
+    const mainPlan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
+    const mainRun = addon.runPlan(mainPlan);
+    for (let attempt = 0; attempt < 1_000 && !addon._coverageExecuteBlocked(); attempt += 1) {
+      await new Promise(setImmediate);
+    }
+    const gate = new SharedArrayBuffer(4);
+    const worker = new Worker(
+      `const { readFileSync } = require('node:fs');
+       const { parentPort, workerData } = require('node:worker_threads');
+       const addon = require(workerData.addon);
+       const plan = addon.preparePlan('box.obj', [{ name: 'box.obj', bytes: readFileSync(workerData.model) }], {
+         importProperties: [], postProcess: 0,
+         targets: [{ format: 'glb', nativeId: 'glb2', properties: [] }]
+       });
+       addon.runPlan(plan);
+       parentPort.postMessage('queued');
+       Atomics.wait(new Int32Array(workerData.gate), 0, 0);`,
+      {
+        eval: true,
+        workerData: { addon: addonPath, gate, model: new URL('OBJ/box.obj', models).pathname },
+      },
+    );
+    assert.deepEqual(await once(worker, 'message'), ['queued']);
+    return { mainPlan, mainRun, worker };
+  };
+
+  {
+    const { mainPlan, mainRun, worker } = await startBlockedWorker();
+    assert.equal(await worker.terminate(), 1);
+    addon._coverageReleaseExecute();
+    assert.equal(await mainRun, 1);
+    addon.destroyPlan(mainPlan);
+  }
+
+  {
+    const { mainPlan, mainRun, worker } = await startBlockedWorker();
+    addon._coverageReleaseExecute();
+    assert.equal(await mainRun, 1);
+    assert.equal(await worker.terminate(), 1);
+    addon.destroyPlan(mainPlan);
+  }
+
+  const cleanupPlan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
+  addon._coverageDispatchCleanup(cleanupPlan);
+  assert.equal(await addon.runPlan(cleanupPlan), 1);
+  addon.destroyPlan(cleanupPlan);
+}
+
 {
   const box = await input('OBJ/box.obj');
   const plans = [

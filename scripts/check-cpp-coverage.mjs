@@ -50,7 +50,7 @@ const testArguments = process.env.LIBASSIMP_GTEST_FILTER
 run(testBinary, testArguments, { environment });
 if (addon) {
   run('node', [resolve(root, 'src/cpp/node-addon.test.mjs')], {
-    environment: { ...environment, LIBASSIMP_NATIVE_ADDON: addon },
+    environment: { ...environment, LIBASSIMP_NATIVE_ADDON: addon, UV_THREADPOOL_SIZE: '2' },
   });
 }
 const merged = resolve(directory, 'default.profdata');

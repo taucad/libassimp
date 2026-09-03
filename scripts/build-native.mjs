@@ -120,6 +120,7 @@ if (arguments_.has('--test') || arguments_.has('--coverage')) {
   run('node', [resolve(root, 'src/cpp/node-addon.test.mjs')], {
     ...nodeEnvironment,
     LIBASSIMP_NATIVE_ADDON: addon,
+    UV_THREADPOOL_SIZE: '2',
   });
 }
 if (arguments_.has('--coverage')) {

@@ -24,17 +24,6 @@ const packageMetadata = createRequire(import.meta.url)('../package.json') as {
   readonly version: string;
 };
 const expectedNapiVersion = packageMetadata.binary.napi_versions[0];
-let nativeTail: Promise<unknown> = Promise.resolve();
-
-// Keep Assimp work process-serial without parking libuv workers behind a native mutex.
-const runNative = <Result>(operation: () => Promise<Result>): Promise<Result> => {
-  const result = nativeTail.then(operation, operation);
-  nativeTail = result.then(
-    () => undefined,
-    () => undefined,
-  );
-  return result;
-};
 
 /** Generated loader import kept behind the Node-conditioned graph. @internal */
 export const loadNativeAddon = async (): Promise<NativeAddon> => {
@@ -76,7 +65,7 @@ export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
     buildIdentity: addon.buildIdentity,
     preparePlan: addon.preparePlan,
     runPlan: async (handle, context: ResolutionContext) => {
-      const status = await runNative(() => addon.runPlan(handle));
+      const status = await addon.runPlan(handle);
       if (status === -1) {
         const name = addon.pendingName(handle);
         if (name !== undefined) {
