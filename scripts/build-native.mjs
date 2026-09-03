@@ -38,6 +38,9 @@ if (arguments_.has('--sanitize') && process.platform === 'linux') {
   const runtime = probe.stdout.trim();
   if (!existsSync(runtime)) throw new Error(`AddressSanitizer runtime was not found: ${runtime}`);
   nodeEnvironment.LD_PRELOAD = [runtime, process.env.LD_PRELOAD].filter(Boolean).join(':');
+  // Node intentionally leaves GC- and process-owned allocations live at exit.
+  // Native GoogleTests retain leak detection; this host process still runs ASan/UBSan.
+  nodeEnvironment.ASAN_OPTIONS = [process.env.ASAN_OPTIONS, 'detect_leaks=0'].filter(Boolean).join(':');
 }
 
 const run = (command, args, environment = process.env) => {
