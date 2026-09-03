@@ -110,6 +110,15 @@ function build(script, options = {}) {
     // emcc's own cache lives under the mount too, so the container user can write it.
     '--env',
     'EM_CACHE=/src/build/.emcache',
+    // Docker Desktop can report a freshly cloned FetchContent checkout as
+    // foreign-owned before its bind-mount metadata settles. Trust only inside
+    // this disposable container; the host Git configuration stays unchanged.
+    '--env',
+    'GIT_CONFIG_COUNT=1',
+    '--env',
+    'GIT_CONFIG_KEY_0=safe.directory',
+    '--env',
+    'GIT_CONFIG_VALUE_0=*',
     '--env',
     `SOURCE_DATE_EPOCH=${sourceDateEpoch}`,
     derivedImage(),
