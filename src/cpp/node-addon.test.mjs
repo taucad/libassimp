@@ -6,6 +6,7 @@ import { once } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
 const addonPath = process.env.LIBASSIMP_NATIVE_ADDON;
@@ -48,7 +49,8 @@ const options = (format = 'glb', nativeId = 'glb2') => ({
 });
 const input = async (relative) => {
   const url = new URL(relative, models);
-  return { entry: basename(url.pathname), directory: dirname(url.pathname), bytes: await readFile(url) };
+  const path = fileURLToPath(url);
+  return { entry: basename(path), directory: dirname(path), bytes: await readFile(url) };
 };
 
 {
@@ -173,7 +175,7 @@ if (addon._coverageBlockNextExecute) {
        Atomics.wait(new Int32Array(workerData.gate), 0, 0);`,
       {
         eval: true,
-        workerData: { addon: addonPath, gate, model: new URL('OBJ/box.obj', models).pathname },
+        workerData: { addon: addonPath, gate, model: fileURLToPath(new URL('OBJ/box.obj', models)) },
       },
     );
     assert.deepEqual(await once(worker, 'message'), ['queued']);
@@ -348,7 +350,7 @@ if (addon._coverageEmptyResult)
      });`,
     {
       eval: true,
-      workerData: { addon: addonPath, model: new URL('OBJ/box.obj', models).pathname },
+      workerData: { addon: addonPath, model: fileURLToPath(new URL('OBJ/box.obj', models)) },
     },
   );
   const [code] = await once(worker, 'exit');
