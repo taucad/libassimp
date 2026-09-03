@@ -58,7 +58,16 @@ const inspectLinux = () => {
   );
   assert(compareVersions(cxxabi, '1.3.7') <= 0, `native addon requires CXXABI_${cxxabi}, above CXXABI_1.3.7`);
   const dependencies = elfDependencies(run('readelf', ['--dynamic', binary]));
-  const allowed = new Set(['libc.so.6', 'libgcc_s.so.1', 'libm.so.6', 'libstdc++.so.6']);
+  // manylinux_2_17 permits librt and treats the architecture's dynamic loader
+  // as part of the platform rather than a bundled dependency.
+  const allowed = new Set([
+    'ld-linux-x86-64.so.2',
+    'libc.so.6',
+    'libgcc_s.so.1',
+    'libm.so.6',
+    'librt.so.1',
+    'libstdc++.so.6',
+  ]);
   assert.deepEqual(
     dependencies.filter((dependency) => !allowed.has(dependency)),
     [],
@@ -96,7 +105,7 @@ const inspectWindows = () => {
     .map((line) => line.trim().toLowerCase())
     .filter((line) => line.endsWith('.dll'))
     .toSorted((left, right) => left.localeCompare(right));
-  const allowed = new Set(['kernel32.dll', 'node.exe', 'ucrtbase.dll']);
+  const allowed = new Set(['advapi32.dll', 'kernel32.dll', 'node.exe', 'ole32.dll', 'ucrtbase.dll']);
   assert.deepEqual(
     dependencies.filter(
       (dependency) => !allowed.has(dependency) && !dependency.startsWith('api-ms-win-crt-'),
