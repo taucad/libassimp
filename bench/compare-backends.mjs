@@ -25,6 +25,10 @@ if (process.argv[2] === '--sample') {
   const firstConversionMs = performance.now() - started;
   const output = { bytes: result.files[0].bytes.length, fnv: fnv64(result.files[0].bytes) };
   result = undefined;
+  // Establish the allocator and thread-pool high-water marks before checking steady-state growth.
+  for (let index = 0; index < 10; index += 1) {
+    await assimp.convert({ name: 'cube.obj', bytes }, { to: 'glb' });
+  }
   globalThis.gc?.();
   const retainedRss = [process.memoryUsage().rss];
   for (let index = 0; index < 30; index += 1) {
@@ -120,7 +124,7 @@ const failures = [
   report.cold.firstConversionSpeedup < 3 &&
     `first-conversion speedup ${report.cold.firstConversionSpeedup}x is below 3x`,
   native.retainedRssGrowthBytes > 64 * 1024 * 1024 &&
-    `native retained RSS grew ${native.retainedRssGrowthBytes} bytes across 30 conversions`,
+    `native steady-state RSS grew ${native.retainedRssGrowthBytes} bytes across 30 conversions`,
 ].filter(Boolean);
 
 const markdown = `<!-- libassimp-benchmark -->
@@ -132,7 +136,7 @@ const markdown = `<!-- libassimp-benchmark -->
 | Process-cold first conversion | ${native.firstConversionMs} ms | ${wasm.firstConversionMs} ms | ${report.cold.firstConversionSpeedup}× |
 | Warm helical-gear conversion | ${report.warm.native.medianMs} ms | ${report.warm.wasm.medianMs} ms | ${ratio(report.warm.wasm.medianMs, report.warm.native.medianMs)}× |
 | Maximum RSS | ${native.maxRssKiB} KiB | ${wasm.maxRssKiB} KiB | reported, not gated |
-| Retained RSS growth, 30 conversions | ${native.retainedRssGrowthBytes} B | ${wasm.retainedRssGrowthBytes} B | bounded at 64 MiB native |
+| Steady-state RSS growth, 30 conversions | ${native.retainedRssGrowthBytes} B | ${wasm.retainedRssGrowthBytes} B | bounded at 64 MiB native |
 `;
 const markdownPath = process.env['LIBASSIMP_BENCH_MARKDOWN'];
 if (markdownPath) writeFileSync(markdownPath, markdown);

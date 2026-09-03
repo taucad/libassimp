@@ -240,17 +240,16 @@ app.whenReady().then(() => {
       configuredElectron === undefined
         ? { arguments: [join(work, 'node_modules', 'electron', 'cli.js')], command: process.execPath }
         : { arguments: [], command: resolve(configuredElectron) };
-    const actualVersion = execFileSync(electron.command, [...electron.arguments, '--version'], {
-      encoding: 'utf8',
-    }).trim();
+    const sandboxArguments = process.platform === 'linux' ? ['--no-sandbox'] : [];
+    const actualVersion = execFileSync(
+      electron.command,
+      [...electron.arguments, ...sandboxArguments, '--version'],
+      { encoding: 'utf8' },
+    ).trim();
     if (actualVersion !== `v${version}`) {
       throw new Error(`expected Electron v${version}, received ${actualVersion}`);
     }
-    const arguments_ = [
-      ...(process.platform === 'linux' ? ['--no-sandbox'] : []),
-      '--headless',
-      'electron-main.mjs',
-    ];
+    const arguments_ = [...sandboxArguments, '--headless', 'electron-main.mjs'];
     const options = {
       cwd: work,
       env: {
