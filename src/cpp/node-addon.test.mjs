@@ -5,12 +5,12 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
 
 const addonPath = process.env.LIBASSIMP_NATIVE_ADDON;
 assert(addonPath, 'LIBASSIMP_NATIVE_ADDON is required');
-const addon = createRequire(import.meta.url)(addonPath);
+const addon = createRequire(import.meta.url)(resolve(addonPath));
 const capabilityEvidence = JSON.parse(
   await readFile(new URL('../../scripts/assimp-capability-evidence.json', import.meta.url), 'utf8'),
 );
