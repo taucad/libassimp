@@ -29,7 +29,7 @@ const glbJson = (bytes) => {
 
 // One representative fixture per importer the reference suite exercised.
 // `error` marks the formats `assimp-builds.json` disables and the fixtures assimp
-// itself refuses; `empty` marks a scene that parses without geometry.
+// itself refuses.
 const IMPORTS = [
   ['3D', ['3D/box.uc', '3D/box_a.3d', '3D/box_d.3d']],
   ['3DS', ['3DS/test1.3ds']],
@@ -80,8 +80,8 @@ const IMPORTS = [
   ['X', ['X/test_cube_text.x']],
   ['X binary', ['X/test_cube_binary.x']],
   ['X3D', ['X3D/HelloWorld.x3d']],
-  // The engine fork parses binary X3D, and hands back a scene with no geometry.
-  ['X3DB', ['X3DB/HelloWorld.x3db'], 'empty'],
+  // Assimp recognizes the extension but has no binary X3D decoder.
+  ['X3DB', ['X3DB/HelloWorld.x3db'], 'error'],
   ['XGL', ['XGL/sample_official.xgl']],
   ['IRR', ['IRR/box.irr'], 'error'],
   ['IRRMesh', ['IRRMesh/spider.irrmesh'], 'error'],
@@ -206,8 +206,7 @@ describe('importers', () => {
     }
     const { files: outputs } = await assimp.convert(inputs, { to: 'assjson' });
     const meshes = JSON.parse(text(outputs[0].bytes)).meshes?.length ?? 0;
-    if (outcome === 'empty') expect(meshes).toBe(0);
-    else expect(meshes, `${id} imported without meshes`).toBeGreaterThan(0);
+    expect(meshes, `${id} imported without meshes`).toBeGreaterThan(0);
     pin(`import ${id}`, outputs[0].bytes);
   });
 

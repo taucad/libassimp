@@ -2722,7 +2722,7 @@ export const internalImportOptionDescriptors = {
     phases: ['import'],
     description:
       'Specifies whether the Collada loader will ignore the provided unit size. If this property is set to true, the unit size provided in the file header will be ignored and the file will be loaded without scaling the assets. Property type: Bool. Default value: false.',
-    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:133',
+    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:148',
   },
   importColladaIgnoreUpDirection: {
     publicName: 'importColladaIgnoreUpDirection',
@@ -2735,7 +2735,7 @@ export const internalImportOptionDescriptors = {
     phases: ['import'],
     description:
       'Specifies whether the Collada loader will ignore the provided up direction. If this property is set to true, the up direction provided in the file header will be ignored and the file will be loaded as is. Property type: Bool. Default value: false.',
-    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:132',
+    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:147',
   },
   importColladaUseColladaNames: {
     publicName: 'importColladaUseColladaNames',
@@ -2748,7 +2748,7 @@ export const internalImportOptionDescriptors = {
     phases: ['import'],
     description:
       'Specifies whether the Collada loader should use Collada names. If this property is set to true, the Collada names will be used as the node and mesh names. The default is to use the id tag (resp. sid tag, if no id tag is present) instead. Property type: Bool. Default value: false.',
-    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:134',
+    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:149',
   },
   importFbxEmbeddedTexturesLegacyNaming: {
     publicName: 'importFbxEmbeddedTexturesLegacyNaming',

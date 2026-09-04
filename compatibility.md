@@ -34,3 +34,5 @@ A pending native resolver retains the executor slot, so untrusted provider work 
 A native resolver must not await another native conversion: both need the same executor. Calls started in the resolver's own asynchronous context are rejected before staging; a separate forced-Wasm instance can perform independent nested work. Pre-created Promise chains and cross-worker message/RPC dependency cycles are outside this detection and require caller-owned deadlines. An unrelated native request can still queue while a resolver is pending.
 
 Native address space is not limited to Wasm32's 4 GiB, but file-format limits still apply. USDZ uses classic ZIP: layouts requiring ZIP64 are rejected before payload copying rather than silently truncating sizes or offsets. Larger native memory capacity does not imply unlimited output size for every format.
+
+The compiled importer catalog lists recognized extensions, not support for every encoding. Assimp recognizes `x3db` but has no binary X3D decoder. Native and Wasm reject binary X3D with `IMPORT_FAILED`; an empty result is not a successful decode. XML X3D remains supported, including a valid empty scene.

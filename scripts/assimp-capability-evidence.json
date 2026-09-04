@@ -1,6 +1,6 @@
 {
-  "engineSha": "db885b84734250d0d0e8bb4715c1a70e0e6477e0",
-  "sourceSha256": "dc900fd5c5073ec40407024c9ca26a02e11c2c8809a9aeacc1dd53a1f87f2dbd",
+  "engineSha": "3906261b1397a6f5f3bf43bbee5faa7fcc2db4a1",
+  "sourceSha256": "dba3d05e10fbb56338c967ee2d638b7bc61c79607e36a013fbe0ba8870e8ee6c",
   "sourceSha256ByPath": {
     "assimp-builds.json": "80194988321739a036709113fc0c32d536b2f654d9cb726968dbc5488d3c8c21",
     "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "5dc9b5a66e066a0e5bb5f83de6bb9de1a29d3b7837a4dfa543006f640b3a1edd",
@@ -8,7 +8,7 @@
     "assimp/code/AssetLib/ASE/ASELoader.cpp": "3f24015f200645dbc3d382435d851ca8c8cc7c8e816e095458d41c3b98df5b46",
     "assimp/code/AssetLib/Assjson/json_exporter.cpp": "ef5512005d91bf3ffb191b73e06770bf19b19ec3ecd6442bc9fa01aea9110208",
     "assimp/code/AssetLib/BVH/BVHLoader.cpp": "1c4d9383b9314223ca18908c8e9971a5970c859630cfd4a6e0607cc55dfee6e9",
-    "assimp/code/AssetLib/Collada/ColladaLoader.cpp": "5fcfa380b4f1a52a35f33f2fb28474ed0f3be56f977ce827dc24b2239b9475ca",
+    "assimp/code/AssetLib/Collada/ColladaLoader.cpp": "dca0e26aa4f56a088ac681b3d91347d5717ec25630f3f7c110f19d146fc97c70",
     "assimp/code/AssetLib/CSM/CSMLoader.cpp": "6c459e0e91e6cdf0e99cf247ff8860cfa6e20027e00dc4909e1a28f1f4cd5cf5",
     "assimp/code/AssetLib/FBX/FBXAnimation.cpp": "3edbd928f2f87108c4f4ed63ab341673f1a437c3a0ea74e90bb047b4401ecffb",
     "assimp/code/AssetLib/FBX/FBXDeformer.cpp": "224e80df46d5f8385f6ba995f509ad2aae4ea32eb722c9d7c930ed9781b731d7",
@@ -26,7 +26,7 @@
     "assimp/code/AssetLib/LWS/LWSLoader.cpp": "7ea5cf7f588cc209d43052be170f0cb91ed4ab1c08fe19e2303659f419f7f285",
     "assimp/code/AssetLib/MD2/MD2Loader.cpp": "d43d427834d37c57d9f279bde6abfaa0b3e1eca2f830d3f3c4d3269ac9e59b08",
     "assimp/code/AssetLib/MD3/MD3Loader.cpp": "5978c13232158dd6b301e62f76d46e0f39022d030724ad020cf27af6d8296d15",
-    "assimp/code/AssetLib/MD5/MD5Loader.cpp": "1117101d4a13a7eefbbf52ba7b217e051662f3af2358924f7b5a4ba7e8e36364",
+    "assimp/code/AssetLib/MD5/MD5Loader.cpp": "fea4189e8650d30cf1994e766264aee2d88c49e5c0bc713cf0cce748a9a3efcb",
     "assimp/code/AssetLib/MDC/MDCLoader.cpp": "bc37141b9150f325b1cab6237ca9ebe6773429972445978f4e4a9b9cf6393b55",
     "assimp/code/AssetLib/MDL/MDLLoader.cpp": "734526349cce19f77b03b4280ada258f08a0c974b9ee0d766cc5ac7b38d75aa8",
     "assimp/code/AssetLib/Obj/ObjExporter.cpp": "78af9863ac89a3e9e772755d71b553d142191dc9c0f41a8d6dd2d28d110f3c66",
@@ -563,7 +563,7 @@
       "symbols": ["AI_CONFIG_IMPORT_REMOVE_EMPTY_BONES"],
       "sources": [
         "assimp/code/PostProcessing/LimitBoneWeightsProcess.cpp:85",
-        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:131",
+        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:146",
         "assimp/code/AssetLib/FBX/FBXImporter.cpp:118"
       ]
     },
@@ -868,7 +868,7 @@
       "defaults": [0],
       "owners": ["Collada"],
       "symbols": ["AI_CONFIG_IMPORT_COLLADA_IGNORE_UNIT_SIZE"],
-      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:133"]
+      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:148"]
     },
     {
       "nativeName": "IMPORT_COLLADA_IGNORE_UP_DIRECTION",
@@ -877,7 +877,7 @@
       "defaults": [0],
       "owners": ["Collada"],
       "symbols": ["AI_CONFIG_IMPORT_COLLADA_IGNORE_UP_DIRECTION"],
-      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:132"]
+      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:147"]
     },
     {
       "nativeName": "IMPORT_COLLADA_UNIT_SCALE_TO_METERS",
@@ -904,7 +904,7 @@
       "defaults": [0],
       "owners": ["Collada"],
       "symbols": ["AI_CONFIG_IMPORT_COLLADA_USE_COLLADA_NAMES"],
-      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:134"]
+      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:149"]
     },
     {
       "nativeName": "IMPORT_DXF_UNIT_SCALE_TO_METERS",
@@ -1355,7 +1355,7 @@
       "sources": [
         "assimp/code/AssetLib/ASE/ASELoader.cpp:114",
         "assimp/code/AssetLib/BVH/BVHLoader.cpp:101",
-        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:130",
+        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:145",
         "assimp/code/AssetLib/CSM/CSMLoader.cpp:96",
         "assimp/code/AssetLib/LWS/LWSLoader.cpp:185",
         "assimp/code/AssetLib/SMD/SMDLoader.cpp:124"
