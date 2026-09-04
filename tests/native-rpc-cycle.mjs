@@ -81,9 +81,15 @@ if (!isMainThread) {
     }
     assert.fail(message);
   };
-  const assertStats = (expected) => {
-    const actual = stats();
-    assert.deepEqual(actual, Object.fromEntries(Object.keys(actual).map((key) => [key, expected[key]])));
+  const assertStats = (expected) => assert.deepEqual(stats(), expected);
+  const idleStats = {
+    activeJobs: 0,
+    joinWaiters: 0,
+    outstandingRequests: 0,
+    queuedJobs: 0,
+    retainedBytes: 0,
+    stagedBytes: 0,
+    transientBytes: 0,
   };
 
   const { port1, port2 } = new MessageChannel();
@@ -130,15 +136,7 @@ if (!isMainThread) {
       () => Object.values(stats()).every((count) => count === 0),
       'terminated environment retained work',
     );
-    assertStats({
-      activeJobs: 0,
-      joinWaiters: 0,
-      outstandingRequests: 0,
-      queuedJobs: 0,
-      retainedBytes: 0,
-      stagedBytes: 0,
-      transientBytes: 0,
-    });
+    assertStats(idleStats);
   }
 
   const rpcExit = once(rpc, 'exit');
@@ -147,7 +145,7 @@ if (!isMainThread) {
   assert.equal(subsequent.type, 'subsequent', subsequent.error);
   assert.equal(subsequent.digest, first.digest);
   assert.deepEqual(await rpcExit, [0]);
-  if (stats !== undefined) assertStats(Object.fromEntries(Object.keys(stats()).map((key) => [key, 0])));
+  if (stats !== undefined) assertStats(idleStats);
   clearTimeout(deadline);
   process.stdout.write(
     `cross-worker RPC cycle terminated and recovered; counters=${stats ? 'exact' : 'unavailable'}\n`,
