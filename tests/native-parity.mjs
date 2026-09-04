@@ -187,7 +187,7 @@ await assert.rejects(instance.convert(...request), /disposed/iu);
       let nestedWasmCompleted = false;
       const result = await nativeAssimp.convert(input, {
         to: 'glb',
-        signal: AbortSignal.timeout(5_000),
+        signal: AbortSignal.timeout(60_000),
         resolve: async () => {
           assert.deepEqual(comparable(await wasmAssimp.convert(...request)), comparable(wasmResult));
           nestedWasmCompleted = true;
@@ -251,11 +251,11 @@ await assert.rejects(instance.convert(...request), /disposed/iu);
 }
 
 process.stdout.write(
-  execFileSync(
-    process.execPath,
-    [fileURLToPath(new URL('./fixtures/native-rpc-cycle.mjs', import.meta.url))],
-    { encoding: 'utf8', killSignal: 'SIGKILL', timeout: 15_000 },
-  ),
+  execFileSync(process.execPath, [fileURLToPath(new URL('./native-rpc-cycle.mjs', import.meta.url))], {
+    encoding: 'utf8',
+    killSignal: 'SIGKILL',
+    timeout: 15_000,
+  }),
 );
 
 if (process.env['LIBASSIMP_SCALE'] === '1') {

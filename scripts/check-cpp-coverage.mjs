@@ -57,6 +57,9 @@ if (addon) {
       UV_THREADPOOL_SIZE: '2',
     },
   });
+  run('node', [resolve(root, 'tests/native-rpc-cycle.mjs'), '--require-counters'], {
+    environment: { ...environment, NAPI_RS_NATIVE_LIBRARY_PATH: addon },
+  });
 }
 const merged = resolve(directory, 'default.profdata');
 const profiles = readdirSync(directory)
