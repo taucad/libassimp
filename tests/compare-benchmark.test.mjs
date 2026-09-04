@@ -11,7 +11,10 @@ import { averageBenchmarks, compareBenchmark } from '../scripts/compare-benchmar
 const root = fileURLToPath(new URL('..', import.meta.url));
 const benchmark = fileURLToPath(new URL('../bench/gated.mjs', import.meta.url));
 
-const runResolverBenchmark = (backend) => {
+const runResolverBenchmark = (
+  backend,
+  { exposeBackend = true, legacyWasm = false, reportedBackend = backend } = {},
+) => {
   const work = mkdtempSync(join(tmpdir(), 'libassimp-benchmark-'));
   const entry = join(work, 'entry.mjs');
   writeFileSync(
@@ -26,7 +29,7 @@ const run = async (files, options) => {
   return { files: [{ name: \`result.\${to}\`, bytes: encoder.encode(\`\${to}:\${names.join(',')}\`) }] };
 };
 export const createAssimp = async ({ backend = 'wasm' } = {}) => ({
-  backend,
+  ${exposeBackend ? `backend: ${JSON.stringify(reportedBackend)},` : ''}
   convert: run,
   convertFormats: async (files, { targets, ...options }) =>
     Promise.all(targets.map(async ({ to, exportOptions }) => ({
@@ -43,10 +46,12 @@ export const convert = run;
       execFileSync(process.execPath, [benchmark], {
         cwd: root,
         encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
         env: {
           ...process.env,
           LIBASSIMP_BENCH_BACKEND: backend,
           LIBASSIMP_BENCH_ENTRY: entry,
+          ...(legacyWasm ? { LIBASSIMP_BENCH_LEGACY_WASM: '1' } : {}),
           MAX_INIT_MS: '1000',
           MAX_MEDIAN_MS: '1000',
         },
@@ -77,6 +82,28 @@ describe('benchmark comparison', () => {
     expect(() => averageBenchmarks([report(1), { ...report(1), outputFnv: 'different' }])).toThrow(
       'different identities or output fingerprints',
     );
+  });
+
+  it('rejects missing, malformed, and nonfinite reports', () => {
+    expect(() => averageBenchmarks([])).toThrow('at least one benchmark report is required');
+    expect(() => averageBenchmarks([{}])).toThrow('invalid benchmark report');
+    expect(() => averageBenchmarks([{ ...report(1), medianMs: Number.NaN }])).toThrow(
+      'invalid benchmark report',
+    );
+  });
+
+  it('fails an injected regression above the unchanged ten-percent limit', () => {
+    expect(compareBenchmark(report(1.101), report(1)).failed).toBe(true);
+  });
+
+  it('accepts only an explicitly identified legacy Wasm base without backend metadata', () => {
+    const base = averageBenchmarks([
+      runResolverBenchmark('wasm', { exposeBackend: false, legacyWasm: true }),
+    ]);
+    expect(base.dependencyResolver.routes.replay).not.toBeNull();
+    expect(compareBenchmark(base, base).failed).toBe(false);
+    expect(() => runResolverBenchmark('wasm', { exposeBackend: false })).toThrow();
+    expect(() => runResolverBenchmark('wasm', { reportedBackend: 'native' })).toThrow();
   });
 
   it('reports deterministic dependency-heavy native, JSPI, and replay evidence', () => {

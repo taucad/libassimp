@@ -534,8 +534,8 @@ jobs:
           : "${entry:?current benchmark did not produce an entry}"
           : "${base_directory:?base build did not produce a directory}"
           LIBASSIMP_BENCH_ENTRY="$entry" LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/current-regression-1.json || failed=1
-          (cd "$base_directory" && LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/base-benchmark-1.json) || failed=1
-          (cd "$base_directory" && LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/base-benchmark-2.json) || failed=1
+          (cd "$base_directory" && LIBASSIMP_BENCH_BACKEND=wasm LIBASSIMP_BENCH_LEGACY_WASM=1 node bench/gated.mjs > /tmp/base-benchmark-1.json) || failed=1
+          (cd "$base_directory" && LIBASSIMP_BENCH_BACKEND=wasm LIBASSIMP_BENCH_LEGACY_WASM=1 node bench/gated.mjs > /tmp/base-benchmark-2.json) || failed=1
           LIBASSIMP_BENCH_ENTRY="$entry" LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/current-regression-2.json || failed=1
           node scripts/compare-benchmark.mjs \
             /tmp/current-regression-1.json,/tmp/current-regression-2.json \

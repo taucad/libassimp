@@ -9,8 +9,12 @@ import { fnv64 } from '../tests/fnv64.mjs';
 // `dist/index.mjs`, so the benchmark measures exactly what ships.
 const benchmarkEntry = process.env['LIBASSIMP_BENCH_ENTRY'];
 const backend = process.env['LIBASSIMP_BENCH_BACKEND'];
+const legacyWasm = process.env['LIBASSIMP_BENCH_LEGACY_WASM'];
 if (backend !== undefined && backend !== 'native' && backend !== 'wasm') {
   throw new Error('LIBASSIMP_BENCH_BACKEND must be native or wasm');
+}
+if (legacyWasm !== undefined && (legacyWasm !== '1' || backend !== 'wasm')) {
+  throw new Error('LIBASSIMP_BENCH_LEGACY_WASM=1 requires the Wasm benchmark');
 }
 const entry = await import(benchmarkEntry ? pathToFileURL(resolve(benchmarkEntry)).href : 'libassimp');
 const createAssimp = (options = {}) =>
@@ -119,7 +123,8 @@ const measureResolverRoute = async (route) => {
   try {
     const expectedBackend = route === 'native' ? 'native' : 'wasm';
     assimp = await entry.createAssimp({ backend: expectedBackend });
-    assert.equal(assimp.backend, expectedBackend);
+    const actualBackend = legacyWasm === '1' && assimp.backend === undefined ? 'wasm' : assimp.backend;
+    assert.equal(actualBackend, expectedBackend);
     const samples = [];
     for (const sidecars of dependencySidecars) {
       const fixture = dependencyFixture(sidecars);
