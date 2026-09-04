@@ -31,6 +31,6 @@ Queued native requests retain JavaScript input views without eagerly copying the
 
 A pending native resolver retains the executor slot, so untrusted provider work needs a caller-owned cancellation deadline. There is no implicit timeout or in-process parallel import. Separate utility processes provide independent progress and hard termination. Instance disposal drains accepted work rather than cancelling it.
 
-A native resolver must not await another native conversion: both need the same executor. Same-environment asynchronous reentry is rejected before staging; a separate forced-Wasm instance can perform independent nested work. Cross-worker message or RPC dependency cycles still require caller-owned deadlines.
+A native resolver must not await another native conversion: both need the same executor. Calls started in the resolver's own asynchronous context are rejected before staging; a separate forced-Wasm instance can perform independent nested work. Pre-created Promise chains and cross-worker message/RPC dependency cycles are outside this detection and require caller-owned deadlines. An unrelated native request can still queue while a resolver is pending.
 
 Native address space is not limited to Wasm32's 4 GiB, but file-format limits still apply. USDZ uses classic ZIP: layouts requiring ZIP64 are rejected before payload copying rather than silently truncating sizes or offsets. Larger native memory capacity does not imply unlimited output size for every format.

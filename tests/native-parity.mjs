@@ -107,6 +107,35 @@ await assert.rejects(instance.convert(...request), /disposed/iu);
         );
         assert.deepEqual(comparable(await nested.convert(...request)), comparable(nativeResult));
       }
+      // A pre-created provider chain has its original async context. The
+      // resolver contract excludes native dependency cycles; caller abort
+      // must still break one and allow already-queued native work to drain.
+      const providerGate = Promise.withResolvers();
+      const nestedStarted = Promise.withResolvers();
+      const resolverEntered = Promise.withResolvers();
+      const provider = providerGate.promise.then(async () => {
+        const nested = otherNative.convert(...request);
+        nestedStarted.resolve();
+        assert.deepEqual(comparable(await nested), comparable(nativeResult));
+        return sidecarBytes;
+      });
+      const controller = new AbortController();
+      const reason = new Error('cancel pre-created provider dependency cycle');
+      const outer = nativeAssimp.convert(input, {
+        to: 'glb',
+        signal: controller.signal,
+        resolve: () => {
+          resolverEntered.resolve();
+          return provider;
+        },
+      });
+      await resolverEntered.promise;
+      providerGate.resolve();
+      await nestedStarted.promise;
+      const aborted = assert.rejects(outer, (error) => error === reason);
+      controller.abort(reason);
+      await aborted;
+      await provider;
       let nestedWasmCompleted = false;
       const result = await nativeAssimp.convert(input, {
         to: 'glb',

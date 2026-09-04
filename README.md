@@ -84,7 +84,7 @@ In Node, `createAssimp({ backend: 'auto' | 'native' | 'wasm' })` makes routing e
 
 An unresolved native sidecar holds that executor's slot. For untrusted Node I/O, pass a caller-chosen deadline such as `signal: AbortSignal.timeout(30_000)`; cancelling the blocked call releases the slot. libassimp imposes no hidden deadline on large conversions. Use separate utility processes when workloads need independent progress or hard termination.
 
-Resolvers must not await another native conversion on the same process-wide executor. Same-environment async reentry fails immediately; use a separate `{ backend: 'wasm' }` instance for independent nested conversion. Caller-owned deadlines still cover cross-worker message/RPC cycles.
+Resolvers must not await another native conversion on the same process-wide executor. Calls started in the resolver's own async context fail immediately; use a separate `{ backend: 'wasm' }` instance for independent nested conversion. Pre-created Promise chains and cross-worker message/RPC cycles are not detected: caller-owned deadlines are still required for such provider work.
 
 ## Static capabilities
 
