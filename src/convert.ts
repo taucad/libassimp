@@ -9,7 +9,7 @@ import type {
   PostProcessStep,
 } from './generated/assimp-capabilities.js';
 
-/** One named input or output payload. @public */
+/** One named input or output payload. Keep input bytes unchanged until conversion settles. @public */
 export type AssimpFile = {
   readonly name: string;
   readonly bytes: Uint8Array;

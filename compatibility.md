@@ -27,6 +27,10 @@ Conversion options accept an optional `AbortSignal` and reject with its reason. 
 
 Native conversions are admitted by one process-wide serial executor because Assimp has process-global state. The executor covers all instances and Node worker threads, and waiting conversions do not occupy the shared filesystem, crypto, DNS, and zlib pool. Separate Wasm instances remain independent. Plan-owned bytes, resolver references, and native handles are released through the same deterministic cleanup path after success, failure, cancellation, or disposal.
 
+Queued native requests retain JavaScript input views without eagerly copying their bytes into C++. The admitted job copies on its originating JavaScript thread before engine execution. Keep input bytes unchanged until settlement; detaching or resizing a queued input to a different length fails safely at admission.
+
 A pending native resolver retains the executor slot, so untrusted provider work needs a caller-owned cancellation deadline. There is no implicit timeout or in-process parallel import. Separate utility processes provide independent progress and hard termination. Instance disposal drains accepted work rather than cancelling it.
+
+A native resolver must not await another native conversion: both need the same executor. Same-environment asynchronous reentry is rejected before staging; a separate forced-Wasm instance can perform independent nested work. Cross-worker message or RPC dependency cycles still require caller-owned deadlines.
 
 Native address space is not limited to Wasm32's 4 GiB, but file-format limits still apply. USDZ uses classic ZIP: layouts requiring ZIP64 are rejected before payload copying rather than silently truncating sizes or offsets. Larger native memory capacity does not imply unlimited output size for every format.

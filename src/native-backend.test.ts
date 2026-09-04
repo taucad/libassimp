@@ -223,6 +223,179 @@ describe('native addon adapter', () => {
     await Promise.resolve();
     expect(settlements).toEqual([[ABORTED]]);
   });
+
+  it.each([
+    ['same instance', false, false],
+    ['same instance after await', false, true],
+    ['different instance', true, false],
+    ['different instance after await', true, true],
+  ] as const)('rejects native resolver reentry from the %s before addon work', async (_, separate, wait) => {
+    const preparePlan = vi.fn(() => ({}));
+    let occupied = false;
+    const runPlan: NativeAddon['runPlan'] = vi.fn(
+      (_handle: unknown, resolveRequest: Parameters<NativeAddon['runPlan']>[1]) => {
+        if (occupied) return new Promise<number>(() => undefined);
+        occupied = true;
+        return new Promise<number>((finish) => {
+          resolveRequest('nested.bin', (status: 0 | 1 | 2 | 3) => {
+            occupied = false;
+            finish(status === FAILED ? 2 : 1);
+          });
+        });
+      },
+    );
+    const fakeAddon = addon({ preparePlan, runPlan });
+    const outerRuntime = adaptNativeAddon(fakeAddon);
+    const nestedRuntime = separate ? adaptNativeAddon(fakeAddon) : outerRuntime;
+    const nestedRequest = prepareConversion(
+      { name: 'nested.obj', bytes: new Uint8Array([2]) },
+      { targets: [{ to: 'glb' }] as const },
+      new Set(['glb']),
+    );
+    let nested: Promise<unknown> | undefined;
+    const outerRequest = prepareConversion(
+      { name: 'outer.obj', bytes: new Uint8Array([1]) },
+      {
+        targets: [{ to: 'glb' }] as const,
+        resolve: async () => {
+          if (wait) await Promise.resolve();
+          nested = runPreparedConversion(nestedRuntime, nestedRequest);
+          await nested;
+          return undefined;
+        },
+      },
+      new Set(['glb']),
+    );
+
+    const outer = runPreparedConversion(outerRuntime, outerRequest).catch((error: unknown) => error);
+    await vi.waitFor(() => {
+      expect(nested).toBeDefined();
+    });
+    expect(preparePlan).toHaveBeenCalledOnce();
+    expect(runPlan).toHaveBeenCalledOnce();
+    const nestedError = await (nested as Promise<unknown>).catch((error: unknown) => error);
+    expect(nestedError).toMatchObject({
+      message: expect.stringMatching(/native resolver.*backend: 'wasm'/u),
+    });
+    await expect(outer).resolves.toMatchObject({
+      code: 'RESOLVE_FAILED',
+      fileName: 'nested.bin',
+      cause: nestedError,
+    });
+  });
+
+  it('keeps forced Wasm and unrelated native admission independent of a pending resolver', async () => {
+    let nextHandle = 0;
+    const preparePlan = vi.fn(() => (nextHandle += 1));
+    const destroyPlan = vi.fn();
+    const runPlan: NativeAddon['runPlan'] = vi.fn(
+      (_handle: unknown, resolveRequest: Parameters<NativeAddon['runPlan']>[1]) =>
+        new Promise<number>((finish) => {
+          resolveRequest('pending.bin', () => {
+            finish(1);
+          });
+        }),
+    );
+    const runtime = adaptNativeAddon(addon({ preparePlan, runPlan, destroyPlan }));
+    const nestedRequest = prepareConversion(
+      { name: 'nested.obj', bytes: new Uint8Array([2]) },
+      { targets: [{ to: 'glb' }] as const },
+      new Set(['glb']),
+    );
+    const loadWasm = vi.fn(async () => wasmRuntime());
+    const loadNative = vi.fn(async () => addon());
+    const loader = createNodeRuntimeLoader(loadWasm, loadNative);
+    let forcedWasmFinished = false;
+    let releaseResolver: (() => void) | undefined;
+    const resolverGate = new Promise<void>((resolve) => {
+      releaseResolver = resolve;
+    });
+    const outerRequest = prepareConversion(
+      { name: 'outer.obj', bytes: new Uint8Array([1]) },
+      {
+        targets: [{ to: 'glb' }] as const,
+        resolve: async () => {
+          await runPreparedConversion(await loader({ backend: 'wasm' }), nestedRequest);
+          forcedWasmFinished = true;
+          await resolverGate;
+          return undefined;
+        },
+      },
+      new Set(['glb']),
+    );
+
+    const outer = runPreparedConversion(runtime, outerRequest);
+    await vi.waitFor(() => {
+      expect(forcedWasmFinished).toBe(true);
+    });
+    expect(loadWasm).toHaveBeenCalledOnce();
+    expect(loadNative).not.toHaveBeenCalled();
+    const unrelated = runtime.preparePlan('unrelated.obj', [], {
+      importProperties: [],
+      postProcess: 0,
+      targets: [],
+    });
+    runtime.destroyPlan(unrelated);
+    expect(preparePlan).toHaveBeenCalledTimes(2);
+    releaseResolver?.();
+    await expect(outer).resolves.toBeDefined();
+  });
+
+  it.each(['settled', 'aborted'] as const)(
+    'allows native calls from retained resolver continuations after the resolver is %s',
+    async (completion) => {
+      const controller = new AbortController();
+      const reason = { phase: 'retained-continuation' };
+      let nextHandle = 0;
+      const preparePlan = vi.fn(() => (nextHandle += 1));
+      const runPlan: NativeAddon['runPlan'] = vi.fn(
+        (handle: unknown, resolveRequest: Parameters<NativeAddon['runPlan']>[1]) => {
+          if (handle !== 1) return Promise.resolve(1);
+          return new Promise<number>((finish) => {
+            resolveRequest('retained.bin', (status: 0 | 1 | 2 | 3) => {
+              finish(status === ABORTED ? 2 : 1);
+            });
+          });
+        },
+      );
+      const runtime = adaptNativeAddon(addon({ preparePlan, runPlan }));
+      const nestedRequest = prepareConversion(
+        { name: 'nested.obj', bytes: new Uint8Array([2]) },
+        { targets: [{ to: 'glb' }] as const },
+        new Set(['glb']),
+      );
+      let releaseRetained: (() => void) | undefined;
+      const retainedGate = new Promise<void>((resolve) => {
+        releaseRetained = resolve;
+      });
+      let retained: Promise<unknown> | undefined;
+      const outerRequest = prepareConversion(
+        { name: 'outer.obj', bytes: new Uint8Array([1]) },
+        {
+          targets: [{ to: 'glb' }] as const,
+          resolve: () => {
+            retained = retainedGate.then(() => runPreparedConversion(runtime, nestedRequest));
+            return completion === 'aborted' ? new Promise(() => undefined) : undefined;
+          },
+          ...(completion === 'aborted' ? { signal: controller.signal } : {}),
+        },
+        new Set(['glb']),
+      );
+
+      const outer = runPreparedConversion(runtime, outerRequest);
+      if (completion === 'aborted') {
+        await vi.waitFor(() => {
+          expect(runPlan).toHaveBeenCalledOnce();
+        });
+        controller.abort(reason);
+        await expect(outer).rejects.toBe(reason);
+      } else await expect(outer).resolves.toBeDefined();
+      releaseRetained?.();
+      await expect(retained).resolves.toBeDefined();
+      expect(preparePlan).toHaveBeenCalledTimes(2);
+      expect(runPlan).toHaveBeenCalledTimes(2);
+    },
+  );
 });
 
 describe('Node backend selection', () => {

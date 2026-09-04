@@ -7,6 +7,7 @@ import { afterEach, describe, it } from 'node:test';
 
 import { preparedReleaseFindings } from '../scripts/check-prepared-release.mjs';
 import {
+  checkElfDependencies,
   elfDependencies,
   maxCxxabiVersion,
   maxGlibcVersion,
@@ -198,6 +199,21 @@ describe('native target source', () => {
 });
 
 describe('native binary inspection', () => {
+  it('permits the glibc 2.17 thread runtime but rejects non-platform ELF dependencies', () => {
+    const dependencies = [
+      'ld-linux-x86-64.so.2',
+      'libc.so.6',
+      'libgcc_s.so.1',
+      'libm.so.6',
+      'libpthread.so.0',
+      'librt.so.1',
+      'libstdc++.so.6',
+    ];
+    assert.doesNotThrow(() => checkElfDependencies(dependencies));
+    assert.throws(() => checkElfDependencies([...dependencies, 'libassimp.so.7']), assert.AssertionError);
+    assert.throws(() => checkElfDependencies(['/tmp/libpthread.so.0']), assert.AssertionError);
+  });
+
   it('reads ELF, Mach-O, and PE machine headers without host-specific tools', () => {
     const elf = Buffer.alloc(64);
     Buffer.from([0x7f, 0x45, 0x4c, 0x46, 2, 1]).copy(elf);

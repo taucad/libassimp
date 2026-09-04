@@ -87,6 +87,42 @@ await assert.rejects(instance.convert(...request), /disposed/iu);
   try {
     const path = join(directory, 'points.bin');
     await writeFile(path, sidecarBytes);
+    const otherNative = await native.createAssimp({ backend: 'native' });
+    try {
+      for (const nested of [nativeAssimp, otherNative]) {
+        await assert.rejects(
+          nativeAssimp.convert(input, {
+            to: 'glb',
+            signal: AbortSignal.timeout(5_000),
+            resolve: async () => {
+              await Promise.resolve();
+              await nested.convert(...request);
+              return sidecarBytes;
+            },
+          }),
+          (error) =>
+            error.code === 'RESOLVE_FAILED' &&
+            error.cause?.message.includes('native conversion cannot start from a native resolver'),
+          'nested native resolution must reject without waiting for the abort watchdog',
+        );
+        assert.deepEqual(comparable(await nested.convert(...request)), comparable(nativeResult));
+      }
+      let nestedWasmCompleted = false;
+      const result = await nativeAssimp.convert(input, {
+        to: 'glb',
+        signal: AbortSignal.timeout(5_000),
+        resolve: async () => {
+          assert.deepEqual(comparable(await wasmAssimp.convert(...request)), comparable(wasmResult));
+          nestedWasmCompleted = true;
+          return sidecarBytes;
+        },
+      });
+      assert(nestedWasmCompleted);
+      assert.equal(glbPointCount(result.files[0].bytes), points);
+      process.stdout.write('native resolver reentry rejects, recovers, and permits nested Wasm\n');
+    } finally {
+      otherNative.dispose();
+    }
     let expectedDigest;
     for (const backend of [nativeAssimp, wasmAssimp]) {
       for (let iteration = 0; iteration < 3; iteration += 1) {

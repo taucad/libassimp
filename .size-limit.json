@@ -22,6 +22,6 @@
   {
     "name": "native backend",
     "path": "dist/native-backend.mjs",
-    "limit": "1.1 kB"
+    "limit": "1.25 kB"
   }
 ]

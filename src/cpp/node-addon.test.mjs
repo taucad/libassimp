@@ -37,6 +37,12 @@ if (!addon._coverageStats) {
     'takePlanResult',
   ]);
 }
+if (addon._coverageStats) {
+  assert.deepEqual(
+    { retainedBytes: addon._coverageStats().retainedBytes, stagedBytes: addon._coverageStats().stagedBytes },
+    { retainedBytes: 0, stagedBytes: 0 },
+  );
+}
 const capabilityEvidence = JSON.parse(
   await readFile(new URL('../../scripts/assimp-capability-evidence.json', import.meta.url), 'utf8'),
 );
@@ -103,10 +109,15 @@ const executorIdle = () => {
   return activeJobs === 0 && queuedJobs === 0;
 };
 const resourceCounts = () => {
-  const { activeJobs, outstandingRequests, queuedJobs, transientBytes } = addon._coverageStats();
-  return { activeJobs, outstandingRequests, queuedJobs, transientBytes };
+  const { activeJobs, outstandingRequests, queuedJobs, retainedBytes, stagedBytes, transientBytes } =
+    addon._coverageStats();
+  return { activeJobs, outstandingRequests, queuedJobs, retainedBytes, stagedBytes, transientBytes };
 };
-const noResources = () => Object.values(resourceCounts()).every((count) => count === 0);
+const noResources = () => {
+  const { activeJobs, outstandingRequests, queuedJobs, transientBytes } = resourceCounts();
+  return activeJobs === 0 && outstandingRequests === 0 && queuedJobs === 0 && transientBytes === 0;
+};
+const noStagingResources = () => Object.values(resourceCounts()).every((count) => count === 0);
 const directoryResolver =
   (directory, delay = 0) =>
   (name, settle) => {
@@ -121,11 +132,11 @@ const directoryResolver =
     if (delay === 0) void resolve();
     else setTimeout(() => void resolve(), delay);
   };
-const runChild = async (source, environment = {}) => {
+const runChild = async (source, environment = {}, nodeArguments = []) => {
   const sanitizerEnvironment = process.env.LIBASSIMP_ASAN_RUNTIME
     ? { DYLD_INSERT_LIBRARIES: process.env.LIBASSIMP_ASAN_RUNTIME }
     : {};
-  const child = spawn(process.execPath, ['--eval', source], {
+  const child = spawn(process.execPath, [...nodeArguments, '--eval', source], {
     env: { ...process.env, ...sanitizerEnvironment, ...environment },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
@@ -160,7 +171,6 @@ const runChild = async (source, environment = {}) => {
     importProperties: properties,
     targets: [{ format: 'glb', nativeId: 'glb2', properties }],
   });
-  source.fill(0);
   assert.equal(await run(plan), 1);
   const first = addon.takePlanResult(plan);
   assert(first.ok);
@@ -624,11 +634,13 @@ if (addon._coverageStats) {
     expectedOutput ??= output;
     assert.deepEqual(output, expectedOutput, 'repeated large-sidecar output differs');
     addon.destroyPlan(plan);
-    await waitFor(noResources, 'large-sidecar success retained native resources');
+    await waitFor(noStagingResources, 'large-sidecar success retained native resources');
     assert.deepEqual(resourceCounts(), {
       activeJobs: 0,
       outstandingRequests: 0,
       queuedJobs: 0,
+      retainedBytes: 0,
+      stagedBytes: 0,
       transientBytes: 0,
     });
   }
@@ -645,6 +657,8 @@ if (addon._coverageStats) {
       activeJobs: 1,
       outstandingRequests: 1,
       queuedJobs: 0,
+      retainedBytes: 0,
+      stagedBytes: source.byteLength,
       transientBytes: 0,
     });
     addon.cancelPlan(plan);
@@ -657,11 +671,13 @@ if (addon._coverageStats) {
       formats: [],
     });
     addon.destroyPlan(plan);
-    await waitFor(noResources, 'large-sidecar cancellation retained native resources');
+    await waitFor(noStagingResources, 'large-sidecar cancellation retained native resources');
     assert.deepEqual(resourceCounts(), {
       activeJobs: 0,
       outstandingRequests: 0,
       queuedJobs: 0,
+      retainedBytes: 0,
+      stagedBytes: 0,
       transientBytes: 0,
     });
   }
@@ -669,27 +685,132 @@ if (addon._coverageStats) {
 
 if (addon._coverageBlockNextExecute) {
   const box = await input('OBJ/box.obj');
-  const activePlan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
-  const queuedPlan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
+  const bytes = Uint8Array.from(box.bytes);
+  const plans = Array.from({ length: 4 }, () =>
+    addon.preparePlan(box.entry, [{ name: box.entry, bytes }], options()),
+  );
+  assert.deepEqual(
+    { retainedBytes: addon._coverageStats().retainedBytes, stagedBytes: addon._coverageStats().stagedBytes },
+    { retainedBytes: bytes.byteLength * plans.length, stagedBytes: 0 },
+    'preparePlan copied queued input bytes into native memory',
+  );
   addon._coverageBlockNextExecute();
-  const activeRun = run(activePlan);
+  const activeRun = run(plans[0]);
   await waitFor(() => addon._coverageExecuteBlocked(), 'executor did not reach its gate');
-  const queuedRun = run(queuedPlan);
+  const queuedRuns = plans.slice(1).map((plan) => run(plan));
   await waitFor(
-    () => addon._coverageStats().activeJobs === 1 && addon._coverageStats().queuedJobs === 1,
+    () => addon._coverageStats().activeJobs === 1 && addon._coverageStats().queuedJobs === queuedRuns.length,
     'executor did not report queued and active jobs',
   );
-  addon.cancelPlan(queuedPlan);
-  assert.equal(await queuedRun, ABORTED);
-  addon.cancelPlan(activePlan);
-  assert.equal(await activeRun, ABORTED);
-  addon._coverageReleaseExecute();
   assert.deepEqual(
-    { activeJobs: addon._coverageStats().activeJobs, queuedJobs: addon._coverageStats().queuedJobs },
-    { activeJobs: 0, queuedJobs: 0 },
+    {
+      retainedBytes: addon._coverageStats().retainedBytes,
+      stagedBytes: addon._coverageStats().stagedBytes,
+    },
+    { retainedBytes: bytes.byteLength * queuedRuns.length, stagedBytes: bytes.byteLength },
+    'queued plans staged before FIFO admission',
   );
-  addon.destroyPlan(activePlan);
-  addon.destroyPlan(queuedPlan);
+  bytes.fill(0);
+  for (const plan of plans.slice(1)) addon.cancelPlan(plan);
+  assert.deepEqual(await Promise.all(queuedRuns), Array(queuedRuns.length).fill(ABORTED));
+  assert.deepEqual(addon.takePlanResult(plans[1]).formats, []);
+  assert.deepEqual(
+    { retainedBytes: addon._coverageStats().retainedBytes, stagedBytes: addon._coverageStats().stagedBytes },
+    { retainedBytes: 0, stagedBytes: bytes.byteLength },
+    'cancellation before admission copied or retained queued bytes',
+  );
+  addon._coverageReleaseExecute();
+  assert.equal(await activeRun, 1);
+  const activeResult = addon.takePlanResult(plans[0]);
+  assert(activeResult.ok, 'admitted input was not copied before caller mutation');
+  const activeOutput = activeResult.formats[0].files[0].bytes;
+  for (const plan of plans) addon.destroyPlan(plan);
+  await waitFor(noStagingResources, 'same-environment staging resources survived disposal');
+
+  const expectedPlan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
+  assert.equal(await run(expectedPlan), 1);
+  assert.deepEqual(
+    activeOutput,
+    addon.takePlanResult(expectedPlan).formats[0].files[0].bytes,
+    'deferred staging changed conversion output',
+  );
+  addon.destroyPlan(expectedPlan);
+  await waitFor(noStagingResources, 'comparison conversion retained staged input bytes');
+
+  const detached = Uint8Array.from(box.bytes);
+  const detachedPlan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: detached }], options());
+  structuredClone(detached.buffer, { transfer: [detached.buffer] });
+  assert.equal(await run(detachedPlan), FAILED);
+  assert.equal(addon.takePlanResult(detachedPlan).code, 'INVALID_INPUT');
+  addon.destroyPlan(detachedPlan);
+  await waitFor(noStagingResources, 'detached staging failure retained resources');
+
+  const idlePlan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
+  assert.equal(addon._coverageStats().retainedBytes, box.bytes.byteLength);
+  addon.destroyPlan(idlePlan);
+  assert.equal(addon._coverageStats().retainedBytes, 0, 'destroy-before-run retained its input reference');
+
+  const emptyPlan = addon.preparePlan(
+    'empty.obj',
+    [{ name: 'empty.obj', bytes: new Uint8Array() }],
+    options(),
+  );
+  assert.equal(await run(emptyPlan), FAILED);
+  addon.destroyPlan(emptyPlan);
+  await waitFor(noStagingResources, 'empty staged input retained resources');
+
+  const workerActive = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
+  addon._coverageBlockNextExecute();
+  const workerActiveRun = run(workerActive);
+  await waitFor(() => addon._coverageExecuteBlocked(), 'executor did not reach its worker staging gate');
+  const worker = new Worker(
+    `const { readFileSync } = require('node:fs');
+     const { parentPort, workerData } = require('node:worker_threads');
+     const addon = require(workerData.addon);
+     const bytes = readFileSync(workerData.model);
+     const options = {
+       importProperties: [], postProcess: 0,
+       targets: [{ format: 'glb', nativeId: 'glb2', properties: [] }]
+     };
+     const plans = Array.from({ length: workerData.count }, () =>
+       addon.preparePlan('box.obj', [{ name: 'box.obj', bytes }], options)
+     );
+     const running = plans.map((plan) => addon.runPlan(plan, (_name, settle) => settle(0)));
+     parentPort.postMessage({ queued: plans.length, bytes: bytes.byteLength });
+     parentPort.once('message', async () => {
+       for (const plan of plans) addon.cancelPlan(plan);
+       const statuses = await Promise.all(running);
+       for (const plan of plans) addon.destroyPlan(plan);
+       parentPort.postMessage(statuses);
+     });`,
+    {
+      eval: true,
+      workerData: {
+        addon: addonPath,
+        count: 3,
+        model: fileURLToPath(new URL('OBJ/box.obj', models)),
+      },
+    },
+  );
+  const workerExit = once(worker, 'exit');
+  const [{ queued, bytes: workerBytes }] = await once(worker, 'message');
+  await waitFor(() => addon._coverageStats().queuedJobs === queued, 'worker jobs were not queued FIFO');
+  assert.deepEqual(
+    { retainedBytes: addon._coverageStats().retainedBytes, stagedBytes: addon._coverageStats().stagedBytes },
+    { retainedBytes: workerBytes * queued, stagedBytes: box.bytes.byteLength },
+    'worker inputs staged before process-wide admission',
+  );
+  worker.postMessage('cancel');
+  assert.deepEqual((await once(worker, 'message'))[0], Array(queued).fill(ABORTED));
+  assert.equal((await workerExit)[0], 0);
+  assert.deepEqual(
+    { retainedBytes: addon._coverageStats().retainedBytes, stagedBytes: addon._coverageStats().stagedBytes },
+    { retainedBytes: 0, stagedBytes: box.bytes.byteLength },
+  );
+  addon._coverageReleaseExecute();
+  assert.equal(await workerActiveRun, 1);
+  addon.destroyPlan(workerActive);
+  await waitFor(noStagingResources, 'cross-worker staging resources survived disposal');
 }
 
 if (addon._coverageRollbackPlan) {
@@ -754,6 +875,14 @@ if (addon._coverageCloseNextDispatch) {
   addon._coverageReleaseExecute();
   await waitFor(executorIdle, 'explicitly closed plan stayed active');
   addon.destroyPlan(explicitlyClosed);
+
+  const stageClosed = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
+  addon._coverageCloseNextStageDispatch();
+  void run(stageClosed);
+  await waitFor(executorIdle, 'closed staging dispatch stayed active');
+  assert.equal(addon._coverageStats().retainedBytes, box.bytes.byteLength);
+  addon.destroyPlan(stageClosed);
+  await waitFor(noStagingResources, 'closed staging dispatch retained resources');
 }
 
 if (addon._coverageFailNext) {
@@ -770,6 +899,35 @@ if (addon._coverageFailNext) {
     assert.equal(await run(plan), failure < 3 ? 1 : ABORTED, 'failed setup retained plan admission');
     addon.destroyPlan(plan);
   }
+
+  for (const [failure, message] of [
+    [6, /could not retain native conversion inputs/],
+    [11, /could not create native conversion handle/],
+  ]) {
+    addon._coverageFailNext(failure);
+    assert.throws(
+      () => addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options()),
+      message,
+    );
+    assert.equal(addon._coverageStats().retainedBytes, 0);
+  }
+
+  for (const failure of [7, 8, 9, 10]) {
+    const failedStage = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
+    addon._coverageFailNext(failure);
+    assert.equal(await run(failedStage), FAILED);
+    assert.equal(addon.takePlanResult(failedStage).code, 'INVALID_INPUT');
+    assert.equal(addon._coverageStats(failedStage).importAttempts, 0);
+    if (failure === 7) assert.equal(await run(failedStage), FAILED);
+    addon.destroyPlan(failedStage);
+    await waitFor(noStagingResources, `staging failure ${failure} retained resources`);
+  }
+
+  const cancelledStage = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
+  addon._coverageFailNext(12);
+  assert.equal(await run(cancelledStage), ABORTED);
+  addon.destroyPlan(cancelledStage);
+  await waitFor(noStagingResources, 'staging cancellation race retained resources');
 
   const plan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
   addon._coverageFailNext(4);
@@ -819,9 +977,12 @@ if (addon._coverageBlockNextProgress) {
       activeJobs: 0,
       outstandingRequests: 0,
       queuedJobs: 0,
+      retainedBytes: 0,
+      stagedBytes: box.bytes.byteLength,
       transientBytes: 0,
     });
     addon.destroyPlan(plan);
+    await waitFor(noStagingResources, `${name} disposal retained staged input bytes`);
   }
 }
 
@@ -1077,9 +1238,12 @@ if (addon._coverageStats) {
        name: 'cube_usemtl.obj', bytes: readFileSync(workerData.sidecar)
      }], options);
      addon.runPlan(box, () => {});
-     addon.runPlan(sidecar, () => {});
-     parentPort.postMessage('blocked');
-     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);`,
+     addon.runPlan(sidecar, () => {
+       queueMicrotask(() => {
+         parentPort.postMessage('blocked');
+         Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);
+       });
+     });`,
     {
       eval: true,
       workerData: {
@@ -1096,9 +1260,43 @@ if (addon._coverageStats) {
   );
   assert.equal(await worker.terminate(), 1);
   await waitFor(
-    () => addon._coverageStats().activeJobs === 0 && addon._coverageStats().outstandingRequests === 0,
+    () =>
+      addon._coverageStats().activeJobs === 0 &&
+      addon._coverageStats().outstandingRequests === 0 &&
+      addon._coverageStats().retainedBytes === 0 &&
+      addon._coverageStats().stagedBytes === 0,
     'terminated callback queue survived cleanup',
   );
+}
+
+if (addon._coverageStats) {
+  const worker = new Worker(
+    `const { readFileSync } = require('node:fs');
+     const { parentPort, workerData } = require('node:worker_threads');
+     const addon = require(workerData.addon);
+     const bytes = readFileSync(workerData.model);
+     const plan = addon.preparePlan('box.obj', [{ name: 'box.obj', bytes }], {
+       importProperties: [], postProcess: 0,
+       targets: [{ format: 'glb', nativeId: 'glb2', properties: [] }]
+     });
+     addon.runPlan(plan, (_name, settle) => settle(0));
+     parentPort.postMessage(bytes.byteLength);
+     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);`,
+    {
+      eval: true,
+      workerData: {
+        addon: addonPath,
+        model: fileURLToPath(new URL('OBJ/box.obj', models)),
+      },
+    },
+  );
+  const [bytes] = await once(worker, 'message');
+  await waitFor(
+    () => addon._coverageStats().activeJobs === 1 && addon._coverageStats().retainedBytes === bytes,
+    'worker staging callback was not pending',
+  );
+  assert.equal(await worker.terminate(), 1);
+  await waitFor(noStagingResources, 'pending worker staging callback survived teardown');
 }
 
 {
@@ -1130,6 +1328,8 @@ if (addon._coverageStats) {
         addon._coverageStats().activeJobs === 0 &&
         addon._coverageStats().queuedJobs === 0 &&
         addon._coverageStats().outstandingRequests === 0 &&
+        addon._coverageStats().retainedBytes === 0 &&
+        addon._coverageStats().stagedBytes === 0 &&
         addon._coverageStats().transientBytes === 0,
       'worker environment cleanup left native work alive',
     );
@@ -1139,19 +1339,77 @@ if (addon._coverageStats) {
 {
   const worker = new Worker(
     `const { readFileSync } = require('node:fs');
-     const { workerData } = require('node:worker_threads');
+     const { parentPort, workerData } = require('node:worker_threads');
      const addon = require(workerData.addon);
-     globalThis.plan = addon.preparePlan('box.obj', [{ name: 'box.obj', bytes: readFileSync(workerData.model) }], {
+     const bytes = readFileSync(workerData.model);
+     globalThis.plan = addon.preparePlan('box.obj', [{ name: 'box.obj', bytes }], {
        importProperties: [], postProcess: 0,
        targets: [{ format: 'glb', nativeId: 'glb2', properties: [] }]
-     });`,
+     });
+     parentPort.postMessage(bytes.byteLength);
+     parentPort.once('message', () => {});`,
     {
       eval: true,
       workerData: { addon: addonPath, model: fileURLToPath(new URL('OBJ/box.obj', models)) },
     },
   );
-  const [code] = await once(worker, 'exit');
+  const exit = once(worker, 'exit');
+  const [bytes] = await once(worker, 'message');
+  if (addon._coverageStats) {
+    assert.equal(addon._coverageStats().retainedBytes, bytes);
+    assert.equal(addon._coverageStats().stagedBytes, 0);
+  }
+  worker.postMessage('close');
+  const [code] = await exit;
   assert.equal(code, 0);
+  if (addon._coverageStats)
+    await waitFor(noStagingResources, 'idle worker teardown retained its input descriptor');
+}
+
+if (addon._coverageStats) {
+  await runChild(
+    `const assert = require('node:assert/strict');
+     const { readFileSync } = require('node:fs');
+     const addon = require(${JSON.stringify(addonPath)});
+     const bytes = readFileSync(${JSON.stringify(fileURLToPath(new URL('OBJ/box.obj', models)))});
+     const options = {
+       importProperties: [], postProcess: 0,
+       targets: [{ format: 'glb', nativeId: 'glb2', properties: [] }]
+     };
+     const waitFor = ${waitFor.toString()};
+     let plan = addon.preparePlan('box.obj', [{ name: 'box.obj', bytes }], options);
+     assert.equal(addon._coverageStats().retainedBytes, bytes.byteLength);
+     plan = undefined;
+     (async () => {
+       await waitFor(() => {
+         global.gc();
+         return addon._coverageStats().retainedBytes === 0;
+       }, 'idle plan inputs survived garbage collection');
+       assert.equal(addon._coverageStats().retainedBytes, 0);
+       assert.equal(addon._coverageStats().stagedBytes, 0);
+       addon._coverageBlockNextExecute();
+       let active = addon.preparePlan('box.obj', [{ name: 'box.obj', bytes }], options);
+       let queued = addon.preparePlan('box.obj', [{ name: 'box.obj', bytes }], options);
+       const activeRun = addon.runPlan(active, (_name, settle) => settle(0));
+       const queuedRun = addon.runPlan(queued, (_name, settle) => settle(0));
+       await waitFor(() => addon._coverageExecuteBlocked() && addon._coverageStats().queuedJobs === 1,
+         'garbage collection jobs were not admitted and queued');
+       active = undefined;
+       queued = undefined;
+       global.gc();
+       addon._coverageReleaseExecute();
+       await Promise.all([activeRun, queuedRun]);
+       await waitFor(() => {
+         global.gc();
+         return !Object.values(addon._coverageStats()).some(Boolean);
+       }, 'completed plans survived garbage collection');
+       const stats = addon._coverageStats();
+       for (const name of ['activeJobs', 'outstandingRequests', 'queuedJobs', 'retainedBytes', 'stagedBytes', 'transientBytes'])
+         assert.equal(stats[name], 0, name);
+     })().catch((error) => { console.error(error); process.exitCode = 1; });`,
+    {},
+    ['--expose-gc'],
+  );
 }
 
 await runChild(
@@ -1205,6 +1463,8 @@ if (addon._coverageStats) {
     activeJobs: 0,
     outstandingRequests: 0,
     queuedJobs: 0,
+    retainedBytes: 0,
+    stagedBytes: 0,
     transientBytes: 0,
   });
 }

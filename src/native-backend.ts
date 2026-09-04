@@ -1,5 +1,7 @@
 /** Node-only adapter and selection policy for the generated NAPI-RS loader. */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import packageMetadata from '../package.json' with { type: 'json' };
 import { AssimpError } from './assimp-error.js';
 import type { CreateAssimpOptions, RuntimeLoader } from './create-assimp.js';
@@ -14,6 +16,8 @@ const nativeStatus: Readonly<Record<ResolutionResult['status'], 0 | 1 | 2 | 3>> 
   failed: 2,
   aborted: 3,
 };
+
+const nativeResolver = new AsyncLocalStorage<{ active: boolean }>();
 
 /** Minimal generated-loader surface consumed by the facade. @internal */
 export type NativeAddon = Readonly<{
@@ -60,7 +64,14 @@ export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
   return {
     backend: 'native',
     buildIdentity: addon.buildIdentity,
-    preparePlan: addon.preparePlan,
+    preparePlan: (...arguments_) => {
+      if (nativeResolver.getStore()?.active === true) {
+        throw new Error(
+          "libassimp native conversion cannot start from a native resolver because the process-wide native executor is waiting for that resolver; use an instance with { backend: 'wasm' } for independent nested conversion.",
+        );
+      }
+      return addon.preparePlan(...arguments_);
+    },
     runPlan: (handle, context: ResolutionContext) =>
       addon.runPlan(handle, (name, settle) => {
         const deliver = (result: ResolutionResult | undefined): void => {
@@ -71,9 +82,14 @@ export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
             context.release(name);
           } else settle(nativeStatus[result.status]);
         };
-        const result = context.resolve(name);
-        if (result instanceof Promise) void result.then(deliver);
-        else deliver(result);
+        const lease = { active: true };
+        const result = nativeResolver.run(lease, () => context.resolve(name));
+        const complete = (resolved: ResolutionResult | undefined): void => {
+          lease.active = false;
+          deliver(resolved);
+        };
+        if (result instanceof Promise) void result.then(complete);
+        else complete(result);
       }),
     cancelPlan: addon.cancelPlan,
     takePlanResult: addon.takePlanResult,

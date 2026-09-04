@@ -58,13 +58,19 @@ const inspectLinux = () => {
   );
   assert(compareVersions(cxxabi, '1.3.7') <= 0, `native addon requires CXXABI_${cxxabi}, above CXXABI_1.3.7`);
   const dependencies = elfDependencies(run('readelf', ['--dynamic', binary]));
-  // manylinux_2_17 permits librt and treats the architecture's dynamic loader
-  // as part of the platform rather than a bundled dependency.
+  checkElfDependencies(dependencies);
+  return { cxxabi, dependencies, glibc, glibcxx };
+};
+
+export const checkElfDependencies = (dependencies) => {
+  // The glibc 2.17 floor provides pthread separately for the owned executor.
+  // Platform library list: https://peps.python.org/pep-0599/#the-manylinux2014-policy
   const allowed = new Set([
     'ld-linux-x86-64.so.2',
     'libc.so.6',
     'libgcc_s.so.1',
     'libm.so.6',
+    'libpthread.so.0',
     'librt.so.1',
     'libstdc++.so.6',
   ]);
@@ -73,7 +79,6 @@ const inspectLinux = () => {
     [],
     `unexpected ELF dependencies: ${dependencies.join(', ')}`,
   );
-  return { cxxabi, dependencies, glibc, glibcxx };
 };
 
 const inspectDarwin = () => {

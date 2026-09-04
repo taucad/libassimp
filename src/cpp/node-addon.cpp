@@ -59,8 +59,11 @@ std::atomic<bool> coverageBlockNextJoin{false};
 std::atomic<bool> coverageJoinBlocked{false};
 std::atomic<std::size_t> coverageJoinWaiters{0};
 std::atomic<bool> coverageCloseNextDispatch{false};
+std::atomic<bool> coverageCloseNextStageDispatch{false};
 std::atomic<std::size_t> coverageOutstandingRequests{0};
 std::atomic<std::size_t> coverageTransientBytes{0};
+std::atomic<std::size_t> coverageRetainedBytes{0};
+std::atomic<std::size_t> coverageStagedBytes{0};
 std::mutex coverageExecuteMutex;
 std::condition_variable coverageExecuteCondition;
 bool coverageExecuteReleased = false;
@@ -73,6 +76,13 @@ enum class CoverageFailure : int {
   Submit = 3,
   Complete = 4,
   UnknownSubmit = 5,
+  Reference = 6,
+  StageReference = 7,
+  StageLength = 8,
+  StageElement = 9,
+  StageTypedArray = 10,
+  External = 11,
+  CancelStage = 12,
 };
 std::atomic<int> coverageFailure{0};
 
@@ -93,13 +103,17 @@ double milliseconds(NativeDiagnostics::Duration duration) {
 }
 #endif
 
-libassimp::Bytes bytesFromJs(const Napi::Value &value, const char *path) {
+Napi::Uint8Array uint8ArrayAt(const Napi::Value &value, const char *path) {
   if (!value.IsTypedArray() ||
       value.As<Napi::TypedArray>().TypedArrayType() != napi_uint8_array) {
     throw Napi::TypeError::New(value.Env(),
                                std::string(path) + " must be a Uint8Array");
   }
-  const Napi::Uint8Array bytes = value.As<Napi::Uint8Array>();
+  return value.As<Napi::Uint8Array>();
+}
+
+libassimp::Bytes bytesFromJs(const Napi::Value &value, const char *path) {
+  const Napi::Uint8Array bytes = uint8ArrayAt(value, path);
   return {bytes.Data(), bytes.Data() + bytes.ElementLength()};
 }
 
@@ -194,16 +208,33 @@ libassimp::Properties propertiesFromJs(const Napi::Value &value) {
   return properties;
 }
 
-std::vector<libassimp::NamedBytes> filesFromJs(const Napi::Value &value) {
+struct InputFile {
+  std::string name;
+  std::size_t length;
+};
+
+struct ValidatedFiles {
+  Napi::Array values;
+  std::vector<InputFile> files;
+  std::size_t bytes = 0;
+};
+
+ValidatedFiles validateFilesFromJs(const Napi::Value &value) {
   const Napi::Array values = arrayAt(value, "files");
-  std::vector<libassimp::NamedBytes> files;
+  Napi::Array retained = Napi::Array::New(value.Env(), values.Length());
+  std::vector<InputFile> files;
   files.reserve(values.Length());
+  std::size_t total = 0;
   for (std::uint32_t index = 0; index < values.Length(); ++index) {
     const Napi::Object file = objectAt(values.Get(index), "file");
-    files.push_back({stringAt(file.Get("name"), "file.name"),
-                     bytesFromJs(file.Get("bytes"), "file.bytes")});
+    const std::string name = stringAt(file.Get("name"), "file.name");
+    const Napi::Uint8Array bytes =
+        uint8ArrayAt(file.Get("bytes"), "file.bytes");
+    files.push_back({name, bytes.ElementLength()});
+    total += bytes.ElementLength();
+    retained.Set(index, bytes);
   }
-  return files;
+  return {retained, std::move(files), total};
 }
 
 std::vector<libassimp::Target> targetsFromJs(const Napi::Value &value) {
@@ -223,22 +254,34 @@ class Job;
 
 class NativePlan {
 public:
-  NativePlan(std::string entryName, std::vector<libassimp::NamedBytes> files,
+  NativePlan(std::string entryName, std::vector<InputFile> files,
              libassimp::Properties importProperties, unsigned int postProcess,
              std::vector<libassimp::Target> targets)
-      : plan_(std::move(entryName), std::move(files),
-              std::move(importProperties), postProcess, std::move(targets), {}) {}
+      : entryName_(std::move(entryName)), files_(std::move(files)),
+        importProperties_(std::move(importProperties)),
+        postProcess_(postProcess), targets_(std::move(targets)) {
+    stagingResult_.code = "INVALID_INPUT";
+    stagingResult_.message = "Input buffers changed before native admission.";
+  }
+
+#ifdef LIBASSIMP_CPP_COVERAGE
+  ~NativePlan() { coverageStagedBytes.fetch_sub(stagedBytes_); }
+#endif
 
   bool begin(const std::shared_ptr<Job> &job);
   void end(const Job *job);
   bool busy() const;
   std::shared_ptr<Job> activeJob() const;
-  libassimp::PlanStatus run(libassimp::Resolver resolve) {
-    return plan_.run(std::move(resolve));
-  }
-  void cancel() { plan_.cancel(); }
-  const libassimp::Result &result() const { return plan_.result(); }
-  std::size_t importAttempts() const { return plan_.importAttempts(); }
+  void retainInputs(napi_env env, napi_value values, std::size_t bytes);
+  bool stage(napi_env env);
+  bool staged() const;
+  bool cancelled() const;
+  void releaseInputs(napi_env env);
+  void releaseIdleInputs(napi_env env);
+  libassimp::PlanStatus run(libassimp::Resolver resolve);
+  void cancel();
+  const libassimp::Result &result() const;
+  std::size_t importAttempts() const;
 #ifdef LIBASSIMP_CPP_COVERAGE
   void queued();
   void executing();
@@ -248,9 +291,21 @@ public:
 private:
   mutable std::mutex mutex_;
   bool busy_ = false;
+  bool cancelled_ = false;
+  bool stagingFailed_ = false;
   std::weak_ptr<Job> activeJob_;
-  libassimp::Plan plan_;
+  std::string entryName_;
+  std::vector<InputFile> files_;
+  libassimp::Properties importProperties_;
+  unsigned int postProcess_;
+  std::vector<libassimp::Target> targets_;
+  napi_ref inputValues_ = nullptr;
+  std::size_t retainedBytes_ = 0;
+  std::unique_ptr<libassimp::Plan> plan_;
+  libassimp::Result emptyResult_;
+  libassimp::Result stagingResult_;
 #ifdef LIBASSIMP_CPP_COVERAGE
+  std::size_t stagedBytes_ = 0;
   NativeDiagnostics diagnostics_;
   std::chrono::steady_clock::time_point queuedAt_;
   bool diagnosticsQueued_ = false;
@@ -262,6 +317,7 @@ struct PlanHandle {
 };
 
 struct EnvironmentState {
+  napi_env env = nullptr;
   napi_async_cleanup_hook_handle cleanup = nullptr;
   bool closing = false;
   bool cleanupWalked = false;
@@ -341,6 +397,8 @@ public:
   void execute();
   void cancel(napi_env env, bool environmentClosing);
   void finish(libassimp::PlanStatus status);
+  void stage(napi_env env);
+  void stageClosed();
   void endPlan() { plan_->end(this); }
   bool cancelled() const;
   libassimp::ResolveStatus resolve(const std::string &name,
@@ -357,6 +415,7 @@ public:
 
 private:
   bool dispatch(Event *event, bool release);
+  bool requestStaging();
   void abortThreadSafeFunction();
 
   std::shared_ptr<NativePlan> plan_;
@@ -364,12 +423,15 @@ private:
   mutable std::mutex mutex_;
   bool cancelled_ = false;
   bool environmentClosing_ = false;
+  bool stagingDone_ = false;
+  bool stagingSucceeded_ = false;
   std::shared_ptr<ResolveRequest> request_;
+  std::condition_variable stagingCondition_;
   std::mutex functionMutex_;
   napi_threadsafe_function function_ = nullptr;
 };
 
-enum class EventKind { Resolve, Complete };
+enum class EventKind { Stage, Resolve, Complete };
 
 struct Event {
   EventKind kind;
@@ -390,7 +452,12 @@ bool Job::dispatch(Event *event, bool release) {
     if (function_ != nullptr) {
       napi_threadsafe_function function = function_;
 #ifdef LIBASSIMP_CPP_COVERAGE
-      if (coverageCloseNextDispatch.exchange(false)) {
+      if (event->kind == EventKind::Stage &&
+          coverageCloseNextStageDispatch.exchange(false)) {
+        napi_release_threadsafe_function(function, napi_tsfn_abort);
+        status = napi_closing;
+      } else if (event->kind != EventKind::Stage &&
+                 coverageCloseNextDispatch.exchange(false)) {
         napi_release_threadsafe_function(function, napi_tsfn_abort);
         status = napi_closing;
       } else
@@ -446,12 +513,47 @@ void Job::cancel(napi_env env, bool environmentClosing) {
   if (cancelPlan)
     plan_->cancel();
   if (env != nullptr)
+    plan_->releaseInputs(env);
+  stagingCondition_.notify_all();
+  if (env != nullptr && !environmentClosing)
     setReferenced(env, true);
 #ifdef LIBASSIMP_CPP_COVERAGE
   coverageExecuteCondition.notify_all();
 #endif
   if (environmentClosing)
     abortThreadSafeFunction();
+}
+
+void Job::stage(napi_env env) {
+  const bool succeeded = plan_->stage(env);
+  {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    stagingSucceeded_ = succeeded;
+    stagingDone_ = true;
+  }
+  stagingCondition_.notify_one();
+}
+
+void Job::stageClosed() {
+  {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    stagingDone_ = true;
+  }
+  stagingCondition_.notify_one();
+}
+
+bool Job::requestStaging() {
+  if (plan_->staged())
+    return true;
+  if (!dispatch(new Event{EventKind::Stage, shared_from_this(), {}}, false))
+    return false;
+#ifdef LIBASSIMP_CPP_COVERAGE
+  if (takeCoverageFailure(CoverageFailure::CancelStage))
+    cancel(nullptr, false);
+#endif
+  std::unique_lock<std::mutex> lock(mutex_);
+  stagingCondition_.wait(lock, [&] { return stagingDone_ || cancelled_; });
+  return stagingDone_ && stagingSucceeded_;
 }
 
 libassimp::ResolveStatus Job::resolve(const std::string &name,
@@ -487,6 +589,9 @@ libassimp::ResolveStatus Job::resolve(const std::string &name,
 void Job::execute() {
 #ifdef LIBASSIMP_CPP_COVERAGE
   plan_->executing();
+#endif
+  const bool staged = requestStaging();
+#ifdef LIBASSIMP_CPP_COVERAGE
   if (coverageBlockNextExecute.exchange(false)) {
     std::unique_lock<std::mutex> lock(coverageExecuteMutex);
     coverageExecuteBlocked.store(true);
@@ -496,12 +601,13 @@ void Job::execute() {
   }
 #endif
   libassimp::PlanStatus status = libassimp::PlanStatus::Aborted;
-  if (!cancelled()) {
+  if (!cancelled() && staged) {
     status = plan_->run(
         [this](const std::string &name, libassimp::Bytes &bytes) {
           return resolve(name, bytes);
         });
-  }
+  } else if (!cancelled() && !plan_->cancelled())
+    status = libassimp::PlanStatus::Failed;
   finish(status);
 }
 
@@ -654,6 +760,167 @@ private:
   bool joining_ = false;
 };
 
+void NativePlan::retainInputs(napi_env env, napi_value values,
+                              std::size_t bytes) {
+  napi_ref reference;
+  napi_status status;
+#ifdef LIBASSIMP_CPP_COVERAGE
+  if (takeCoverageFailure(CoverageFailure::Reference))
+    status = napi_generic_failure;
+  else
+#endif
+    status = napi_create_reference(env, values, 1, &reference);
+  if (status != napi_ok)
+    throw Napi::Error::New(env, "could not retain native conversion inputs");
+  {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    inputValues_ = reference;
+    retainedBytes_ = bytes;
+  }
+#ifdef LIBASSIMP_CPP_COVERAGE
+  coverageRetainedBytes.fetch_add(bytes);
+#endif
+}
+
+void NativePlan::releaseInputs(napi_env env) {
+  napi_ref reference;
+  std::size_t bytes;
+  {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    reference = std::exchange(inputValues_, nullptr);
+    bytes = std::exchange(retainedBytes_, 0);
+  }
+  if (reference == nullptr)
+    return;
+#ifdef LIBASSIMP_CPP_COVERAGE
+  coverageRetainedBytes.fetch_sub(bytes);
+#endif
+  napi_delete_reference(env, reference);
+}
+
+void NativePlan::releaseIdleInputs(napi_env env) {
+  {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    if (busy_)
+      return;
+  }
+  releaseInputs(env);
+}
+
+bool NativePlan::staged() const {
+  const std::lock_guard<std::mutex> lock(mutex_);
+  return plan_ != nullptr;
+}
+
+bool NativePlan::cancelled() const {
+  const std::lock_guard<std::mutex> lock(mutex_);
+  return cancelled_;
+}
+
+bool NativePlan::stage(napi_env env) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  const napi_ref reference =
+      cancelled_ || stagingFailed_ ? nullptr : inputValues_;
+
+  bool succeeded = false;
+  try {
+    if (reference != nullptr) {
+      napi_value values;
+      std::uint32_t length;
+      napi_status status;
+#ifdef LIBASSIMP_CPP_COVERAGE
+      if (takeCoverageFailure(CoverageFailure::StageReference))
+        status = napi_generic_failure;
+      else
+#endif
+        status = napi_get_reference_value(env, reference, &values);
+      if (status != napi_ok)
+        throw std::runtime_error("changed inputs");
+#ifdef LIBASSIMP_CPP_COVERAGE
+      if (takeCoverageFailure(CoverageFailure::StageLength))
+        status = napi_generic_failure;
+      else
+#endif
+        status = napi_get_array_length(env, values, &length);
+      if (status != napi_ok)
+        throw std::runtime_error("changed inputs");
+      std::vector<libassimp::NamedBytes> files;
+      files.reserve(files_.size());
+      for (std::uint32_t index = 0; index < length; ++index) {
+        napi_value value;
+        napi_typedarray_type type;
+        std::size_t byteLength;
+        void *data;
+        napi_value arrayBuffer;
+        std::size_t byteOffset;
+#ifdef LIBASSIMP_CPP_COVERAGE
+        if (takeCoverageFailure(CoverageFailure::StageElement))
+          status = napi_generic_failure;
+        else
+#endif
+          status = napi_get_element(env, values, index, &value);
+        if (status != napi_ok)
+          throw std::runtime_error("changed inputs");
+#ifdef LIBASSIMP_CPP_COVERAGE
+        if (takeCoverageFailure(CoverageFailure::StageTypedArray))
+          status = napi_generic_failure;
+        else
+#endif
+          status = napi_get_typedarray_info(env, value, &type, &byteLength,
+                                            &data, &arrayBuffer, &byteOffset);
+        if (status != napi_ok || byteLength != files_[index].length)
+          throw std::runtime_error("changed inputs");
+        (void)type;
+        libassimp::Bytes bytes;
+        if (byteLength != 0) {
+          const auto *begin = static_cast<const std::uint8_t *>(data);
+          bytes.assign(begin, begin + byteLength);
+        }
+        files.push_back({files_[index].name, std::move(bytes)});
+      }
+      auto plan = std::make_unique<libassimp::Plan>(
+          std::move(entryName_), std::move(files), std::move(importProperties_),
+          postProcess_, std::move(targets_), libassimp::Resolver{});
+      plan_ = std::move(plan);
+      succeeded = true;
+#ifdef LIBASSIMP_CPP_COVERAGE
+      stagedBytes_ = retainedBytes_;
+      coverageStagedBytes.fetch_add(stagedBytes_);
+#endif
+    }
+  } catch (...) {
+    stagingFailed_ = true;
+  }
+  lock.unlock();
+  releaseInputs(env);
+  return succeeded;
+}
+
+libassimp::PlanStatus NativePlan::run(libassimp::Resolver resolve) {
+  return plan_->run(std::move(resolve));
+}
+
+void NativePlan::cancel() {
+  libassimp::Plan *plan;
+  {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    cancelled_ = true;
+    plan = plan_.get();
+  }
+  if (plan)
+    plan->cancel();
+}
+
+const libassimp::Result &NativePlan::result() const {
+  if (plan_)
+    return plan_->result();
+  return stagingFailed_ ? stagingResult_ : emptyResult_;
+}
+
+std::size_t NativePlan::importAttempts() const {
+  return plan_ ? plan_->importAttempts() : 0;
+}
+
 bool NativePlan::begin(const std::shared_ptr<Job> &job) {
   const std::lock_guard<std::mutex> lock(mutex_);
   if (busy_)
@@ -673,7 +940,8 @@ void NativePlan::end(const Job *job) {
     return;
 #ifdef LIBASSIMP_CPP_COVERAGE
   if (diagnosticsQueued_) {
-    diagnostics_.phases = plan_.phaseDiagnostics();
+    if (plan_)
+      diagnostics_.phases = plan_->phaseDiagnostics();
     diagnostics_.total = finished - queuedAt_;
   } else {
     diagnostics_ = {};
@@ -755,7 +1023,9 @@ libassimp::ResolveStatus resolveStatusFromJs(const Napi::CallbackInfo &info) {
 void callJavaScript(napi_env rawEnv, napi_value callback, void *, void *data) {
   std::unique_ptr<Event> event(static_cast<Event *>(data));
   if (rawEnv == nullptr) {
-    if (event->request)
+    if (event->kind == EventKind::Stage)
+      event->job->stageClosed();
+    else if (event->request)
       event->request->settle(libassimp::ResolveStatus::Aborted);
     else if (event->job)
       event->job->endPlan();
@@ -763,6 +1033,10 @@ void callJavaScript(napi_env rawEnv, napi_value callback, void *, void *data) {
   }
 
   const Napi::Env env(rawEnv);
+  if (event->kind == EventKind::Stage) {
+    event->job->stage(rawEnv);
+    return;
+  }
   if (event->kind == EventKind::Complete) {
     napi_value status;
     napi_status created;
@@ -820,7 +1094,7 @@ void cleanupEnvironment(napi_async_cleanup_hook_handle handle, void *data) {
   }
   Executor &executor = Executor::instance();
   for (const std::shared_ptr<Job> &job : jobs) {
-    job->cancel(nullptr, true);
+    job->cancel(environment->env, true);
     if (executor.remove(job))
       job->finish(libassimp::PlanStatus::Aborted);
   }
@@ -873,16 +1147,31 @@ Napi::Value preparePlan(const Napi::CallbackInfo &info) {
     throw Napi::TypeError::New(env, "options.postProcess must be a uint32");
   }
 
+  ValidatedFiles files = validateFilesFromJs(info[1]);
   auto plan = std::make_shared<NativePlan>(
-      stringAt(info[0], "entryName"), filesFromJs(info[1]),
+      stringAt(info[0], "entryName"), std::move(files.files),
       propertiesFromJs(options.Get("importProperties")), postProcessValue,
       targetsFromJs(options.Get("targets")));
-  Napi::External<PlanHandle> handle = Napi::External<PlanHandle>::New(
-      env, new PlanHandle{std::move(plan)}, [](Napi::Env, PlanHandle *handle) {
-        delete handle;
-      });
-  handle.TypeTag(&kPlanType);
-  return handle;
+  plan->retainInputs(env, files.values, files.bytes);
+  try {
+#ifdef LIBASSIMP_CPP_COVERAGE
+    if (takeCoverageFailure(CoverageFailure::External))
+      throw Napi::Error::New(env, "could not create native conversion handle");
+#endif
+    auto planHandle = std::make_unique<PlanHandle>(PlanHandle{plan});
+    Napi::External<PlanHandle> handle = Napi::External<PlanHandle>::New(
+        env, planHandle.get(), [](Napi::Env env, PlanHandle *handle) {
+          if (handle->plan)
+            handle->plan->releaseIdleInputs(env);
+          delete handle;
+        });
+    planHandle.release();
+    handle.TypeTag(&kPlanType);
+    return handle;
+  } catch (...) {
+    plan->releaseInputs(env);
+    throw;
+  }
 }
 
 Napi::Value runPlan(const Napi::CallbackInfo &info) {
@@ -949,11 +1238,11 @@ Napi::Value runPlan(const Napi::CallbackInfo &info) {
 #endif
       Executor::instance().submit(job);
     } catch (const std::exception &error) {
-      job->cancel(nullptr, true);
+      job->cancel(env, true);
       job->finish(libassimp::PlanStatus::Aborted);
       throw Napi::Error::New(env, error.what());
     } catch (...) {
-      job->cancel(nullptr, true);
+      job->cancel(env, true);
       job->finish(libassimp::PlanStatus::Aborted);
       throw Napi::Error::New(env, "could not submit native conversion");
     }
@@ -971,6 +1260,7 @@ Napi::Value cancelPlan(const Napi::CallbackInfo &info) {
   const std::shared_ptr<Job> job = plan->activeJob();
   if (!job) {
     plan->cancel();
+    plan->releaseInputs(info.Env());
     return info.Env().Undefined();
   }
   job->cancel(info.Env(), false);
@@ -1027,6 +1317,7 @@ Napi::Value destroyPlan(const Napi::CallbackInfo &info) {
     throw Napi::TypeError::New(info.Env(), "destroyPlan expects a plan");
   PlanHandle *handle = handleFromJs(info[0]);
   if (handle->plan) {
+    handle->plan->releaseIdleInputs(info.Env());
     handle->plan.reset();
   }
   return info.Env().Undefined();
@@ -1084,6 +1375,10 @@ Napi::Value coverageStats(const Napi::CallbackInfo &info) {
             Napi::Number::New(info.Env(), coverageOutstandingRequests.load()));
   stats.Set("transientBytes",
             Napi::Number::New(info.Env(), coverageTransientBytes.load()));
+  stats.Set("retainedBytes",
+            Napi::Number::New(info.Env(), coverageRetainedBytes.load()));
+  stats.Set("stagedBytes",
+            Napi::Number::New(info.Env(), coverageStagedBytes.load()));
   stats.Set("joinWaiters",
             Napi::Number::New(info.Env(), coverageJoinWaiters.load()));
   if (info.Length() == 1) {
@@ -1198,6 +1493,11 @@ Napi::Value coverageCloseDispatch(const Napi::CallbackInfo &info) {
   return info.Env().Undefined();
 }
 
+Napi::Value coverageCloseStageDispatch(const Napi::CallbackInfo &info) {
+  coverageCloseNextStageDispatch.store(true);
+  return info.Env().Undefined();
+}
+
 Napi::Value coverageClosePlan(const Napi::CallbackInfo &info) {
   planFromJs(info[0])->activeJob()->closeForCoverage(info.Env());
   return info.Env().Undefined();
@@ -1218,6 +1518,8 @@ Napi::Value coverageDrainCallbacks(const Napi::CallbackInfo &info) {
   callJavaScript(nullptr, nullptr, nullptr,
                  new Event{EventKind::Resolve, {}, request});
   const std::shared_ptr<NativePlan> plan = planFromJs(info[0]);
+  callJavaScript(nullptr, nullptr, nullptr,
+                 new Event{EventKind::Stage, std::make_shared<Job>(plan), {}});
   auto job = std::make_shared<Job>(plan);
   plan->begin(job);
   callJavaScript(nullptr, nullptr, nullptr,
@@ -1255,7 +1557,7 @@ Napi::Value coverageReleaseProgress(const Napi::CallbackInfo &info) {
 
 Napi::Object initialize(Napi::Env env, Napi::Object exports) {
   (void)inventories();
-  auto *environment = new EnvironmentState;
+  auto *environment = new EnvironmentState{env};
   napi_status cleanupStatus;
 #ifdef LIBASSIMP_CPP_COVERAGE
   if (std::getenv("LIBASSIMP_COVERAGE_FAIL_CLEANUP") != nullptr)
@@ -1309,6 +1611,8 @@ Napi::Object initialize(Napi::Env env, Napi::Object exports) {
               Napi::Function::New(env, coverageReleaseResolve));
   exports.Set("_coverageCloseNextDispatch",
               Napi::Function::New(env, coverageCloseDispatch));
+  exports.Set("_coverageCloseNextStageDispatch",
+              Napi::Function::New(env, coverageCloseStageDispatch));
   exports.Set("_coverageClosePlan",
               Napi::Function::New(env, coverageClosePlan));
   exports.Set("_coverageRollbackPlan",

@@ -76,11 +76,15 @@ const { files } = await convert(
 
 `resolve` is the one dependency-loading flow on every backend, and each requested name is cached for the call. Native and JSPI keep one Assimp import alive while dependencies resolve. Only non-JSPI Wasm replays: N asynchronously discovered sidecars can require N+1 imports in the worst case.
 
+Keep input byte arrays unchanged until the conversion Promise settles. Queued native calls retain their JavaScript inputs and copy them only after executor admission, avoiding a native copy for every queued request.
+
 The `signal` is optional. Aborting releases a pending conversion without waiting for the resolver Promise; pass the same signal to resolver I/O, as above, to stop that I/O too. Cancellation is cooperative once engine work is running, so settlement can wait for the next native progress checkpoint or return from synchronous Wasm. Success, failure, and cancellation release plan-owned bytes and resolver state deterministically. `dispose()` rejects new calls and drains accepted calls; it does not cancel them.
 
 In Node, `createAssimp({ backend: 'auto' | 'native' | 'wasm' })` makes routing explicit and the returned instance reports the backend it loaded. `auto` warns before falling back to Wasm when the matching optional native package is unavailable. All native instances and Node worker threads share one process-wide serial executor; separate Wasm instances remain independent.
 
 An unresolved native sidecar holds that executor's slot. For untrusted Node I/O, pass a caller-chosen deadline such as `signal: AbortSignal.timeout(30_000)`; cancelling the blocked call releases the slot. libassimp imposes no hidden deadline on large conversions. Use separate utility processes when workloads need independent progress or hard termination.
+
+Resolvers must not await another native conversion on the same process-wide executor. Same-environment async reentry fails immediately; use a separate `{ backend: 'wasm' }` instance for independent nested conversion. Caller-owned deadlines still cover cross-worker message/RPC cycles.
 
 ## Static capabilities
 
