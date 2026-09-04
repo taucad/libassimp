@@ -842,7 +842,7 @@ bool NativePlan::stage(napi_env env) {
       else
 #endif
         status = napi_get_array_length(env, values, &length);
-      if (status != napi_ok)
+      if (status != napi_ok || length != files_.size())
         throw std::runtime_error("changed inputs");
       std::vector<libassimp::NamedBytes> files;
       files.reserve(files_.size());

@@ -185,6 +185,42 @@ const runChild = async (source, environment = {}, nodeArguments = []) => {
 }
 
 {
+  const box = await input('OBJ/box.obj');
+  for (const mutation of ['remove', 'append']) {
+    const files = [{ name: box.entry, bytes: box.bytes }];
+    const planOptions = options();
+    const previous = Object.getOwnPropertyDescriptor(Array.prototype, '0');
+    let retained;
+    let plan;
+    try {
+      Object.defineProperty(Array.prototype, '0', {
+        configurable: true,
+        set(value) {
+          retained = this;
+          Object.defineProperty(this, '0', { value, writable: true, enumerable: true, configurable: true });
+        },
+      });
+      plan = addon.preparePlan(box.entry, files, planOptions);
+    } finally {
+      if (previous) Object.defineProperty(Array.prototype, '0', previous);
+      else Reflect.deleteProperty(Array.prototype, '0');
+    }
+    assert(Array.isArray(retained), 'indexed setter did not observe the retained array');
+    assert.notEqual(retained, files);
+    if (mutation === 'remove') retained.length = 0;
+    else retained.push(box.bytes);
+    try {
+      assert.equal(await run(plan), FAILED);
+      assert.equal(addon.takePlanResult(plan).code, 'INVALID_INPUT');
+      if (addon._coverageStats) assert.equal(addon._coverageStats(plan).importAttempts, 0);
+    } finally {
+      addon.destroyPlan(plan);
+    }
+    if (addon._coverageStats) await waitFor(noStagingResources, `${mutation} retained staging resources`);
+  }
+}
+
+{
   const spider = await input('OBJ/spider.obj');
   const plan = addon.preparePlan(spider.entry, [{ name: spider.entry, bytes: spider.bytes }], options());
   assert.equal(await run(plan, directoryResolver(spider.directory, 5)), 1);
