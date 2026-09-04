@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { readScalePointCount, writeScaleFixture } from './generate-scale-fixture.mjs';
 
@@ -124,6 +126,35 @@ await assert.rejects(instance.convert(...request), /disposed/iu);
         );
         assert.deepEqual(comparable(await nested.convert(...request)), comparable(nativeResult));
       }
+      const resolverGate = Promise.withResolvers();
+      const fifoResolverEntered = Promise.withResolvers();
+      const completionOrder = [];
+      const pendingResolver = nativeAssimp
+        .convert(input, {
+          to: 'glb',
+          resolve: (name) => {
+            assert.equal(name, 'points.bin');
+            fifoResolverEntered.resolve();
+            return resolverGate.promise;
+          },
+        })
+        .then((result) => {
+          completionOrder.push('resolver');
+          return result;
+        });
+      await fifoResolverEntered.promise;
+      const unrelated = otherNative.convert(...request).then((result) => {
+        completionOrder.push('unrelated');
+        return result;
+      });
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.deepEqual(completionOrder, [], 'unrelated native work bypassed the pending resolver');
+      resolverGate.resolve(sidecarBytes);
+      const [resolved, unrelatedResult] = await Promise.all([pendingResolver, unrelated]);
+      assert.deepEqual(completionOrder, ['resolver', 'unrelated']);
+      assert.equal(glbPointCount(resolved.files[0].bytes), points);
+      assert.deepEqual(comparable(unrelatedResult), comparable(nativeResult));
+
       // A pre-created provider chain has its original async context. The
       // resolver contract excludes native dependency cycles; caller abort
       // must still break one and allow already-queued native work to drain.
@@ -165,7 +196,9 @@ await assert.rejects(instance.convert(...request), /disposed/iu);
       });
       assert(nestedWasmCompleted);
       assert.equal(glbPointCount(result.files[0].bytes), points);
-      process.stdout.write('native resolver reentry rejects, recovers, and permits nested Wasm\n');
+      process.stdout.write(
+        'native resolver reentry rejects, unrelated work stays FIFO, recovers, and permits nested Wasm\n',
+      );
     } finally {
       otherNative.dispose();
     }
@@ -216,6 +249,14 @@ await assert.rejects(instance.convert(...request), /disposed/iu);
     rmSync(directory, { force: true, recursive: true });
   }
 }
+
+process.stdout.write(
+  execFileSync(
+    process.execPath,
+    [fileURLToPath(new URL('./fixtures/native-rpc-cycle.mjs', import.meta.url))],
+    { encoding: 'utf8', killSignal: 'SIGKILL', timeout: 15_000 },
+  ),
+);
 
 if (process.env['LIBASSIMP_SCALE'] === '1') {
   const directory = mkdtempSync(join(tmpdir(), 'libassimp-scale-'));
