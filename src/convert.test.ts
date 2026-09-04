@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { AssimpError } from './assimp-error.js';
 import { validatePlanOptions } from './assimp-options.js';
@@ -303,6 +303,32 @@ describe('validation and atomic errors', () => {
       'expected { name, bytes }',
     );
   });
+
+  it('throws an already-aborted reason before reading plan inputs', () => {
+    const controller = new AbortController();
+    const reason = { phase: 'before-plan' };
+    const targets = vi.fn();
+    controller.abort(reason);
+    const options = Object.defineProperties(
+      { signal: controller.signal },
+      { targets: { get: targets } },
+    ) as never;
+    let thrown: unknown;
+    try {
+      prepareConversion({ name: 'cube.obj', bytes: cube }, options, new Set(['glb']));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBe(reason);
+    expect(targets).not.toHaveBeenCalled();
+  });
+
+  it('rejects typed-array proxies before staging input bytes', () => {
+    const file = { name: 'cube.obj', bytes: new Proxy(cube, {}) };
+    expect(() => prepareConversion(file, { targets: [{ to: 'glb' }] }, new Set(['glb']))).toThrow(
+      'expected { name, bytes }',
+    );
+  });
 });
 
 describe('resolver and staged-plan internals', () => {
@@ -350,6 +376,7 @@ describe('resolver and staged-plan internals', () => {
     expect(ready.dispatch({ operation: 4, first: handle, second: 0, memory, suspending: false })).toBe(0);
     expect(ready.dispatch({ operation: 2, first: handle, second: 0, memory, suspending: false })).toBe(-1);
     expect(ready.dispatch({ operation: 3, first: handle, second: 0, memory, suspending: false })).toBe(-1);
+    expect(ready.dispatch({ operation: 4, first: handle, second: 0, memory, suspending: false })).toBe(0);
     expect(ready.dispatch({ operation: 99, first: 0, second: 0, memory, suspending: false })).toBe(-1);
   });
 
@@ -375,12 +402,143 @@ describe('resolver and staged-plan internals', () => {
     await expect(dispatchName(direct, 'direct.bin', true)).resolves.toBeGreaterThan(0);
   });
 
-  const request = (resolve?: PreparedConversion<readonly [{ readonly to: 'glb' }]>['resolve']) =>
+  it('preserves a throwing then getter as a resolver failure', () => {
+    const cause = new Error('invalid resolver promise');
+    const context = new ResolutionContext(
+      () =>
+        // oxlint-disable-next-line unicorn/no-thenable -- hostile resolver results must preserve their failure cause.
+        Object.defineProperty({}, 'then', {
+          get() {
+            throw cause;
+          },
+        }) as Promise<Uint8Array>,
+    );
+    expect(context.resolve('broken.bin')).toEqual({ status: 'failed' });
+    expect(context.getFailure()).toEqual({ fileName: 'broken.bin', cause });
+    context.dispose();
+  });
+
+  it.each([false, true])(
+    'releases copied Wasm sidecar state before plan completion (JSPI: %s)',
+    async (suspending) => {
+      const bytes = new Uint8Array([3, 4]);
+      const context = new ResolutionContext(async () => bytes);
+      let handle = await dispatchName(context, 'copied.bin', suspending);
+      if (!suspending) {
+        await Promise.all(context.takePending());
+        handle = await dispatchName(context, 'copied.bin', false);
+      }
+      expect(Reflect.get(context, 'states')).toHaveProperty('size', 1);
+      expect(context.dispatch({ operation: 3, first: handle, second: 64, memory, suspending })).toBe(2);
+      expect(context.dispatch({ operation: 4, first: handle, second: 0, memory, suspending })).toBe(0);
+      expect(Reflect.get(context, 'states')).toEqual(new Map());
+      expect(Reflect.get(context, 'handles')).toEqual(new Map());
+      context.dispose();
+    },
+  );
+
+  it('does not allocate Wasm handles while a Promise merely settles', async () => {
+    const bytes = new Uint8Array([7]);
+    const context = new ResolutionContext(async () => bytes);
+    await expect(context.resolve('shared.bin')).resolves.toEqual({ status: 'found', bytes });
+    expect(dispatchName(context, 'shared.bin', false)).toBe(1);
+  });
+
+  it('disposes pending work and ignores late settlement', async () => {
+    let resolve: ((bytes: Uint8Array) => void) | undefined;
+    const context = new ResolutionContext(
+      () =>
+        new Promise((settle) => {
+          resolve = settle;
+        }),
+    );
+    const pending = dispatchName(context, 'late.bin', true) as Promise<number>;
+    context.dispose();
+    context.dispose();
+    expect(Reflect.get(context, 'resolver')).toBeUndefined();
+    resolve?.(new Uint8Array([9]));
+    await expect(pending).resolves.toBe(-1);
+    await Promise.resolve();
+    expect(dispatchName(context, 'late.bin', false)).toBe(-1);
+    expect(context.takePending()).toEqual([]);
+    expect(context.getFailure()).toBeUndefined();
+  });
+
+  it('closes pending work on abort and preserves the exact reason', async () => {
+    const controller = new AbortController();
+    const add = vi.spyOn(controller.signal, 'addEventListener');
+    const remove = vi.spyOn(controller.signal, 'removeEventListener');
+    let reject: ((cause: unknown) => void) | undefined;
+    const context = new ResolutionContext(
+      () =>
+        new Promise((_resolve, rejectPromise) => {
+          reject = rejectPromise;
+        }),
+      controller.signal,
+    );
+    const pending = dispatchName(context, 'late.bin', true) as Promise<number>;
+    const reason = { phase: 'resolving' };
+    controller.abort(reason);
+    expect(Reflect.get(context, 'resolver')).toBeUndefined();
+    await expect(pending).resolves.toBe(-1);
+    let thrown: unknown;
+    try {
+      context.throwIfAborted();
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBe(reason);
+    expect(add).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledOnce();
+    expect(context.resolve('after-abort.bin')).toEqual({ status: 'aborted' });
+    reject?.(new Error('late rejection'));
+    await Promise.resolve();
+    expect(context.getFailure()).toBeUndefined();
+    expect(context.takePending()).toEqual([]);
+    context.dispose();
+  });
+
+  it('fences a settled Promise before its Wasm continuation can allocate', async () => {
+    const controller = new AbortController();
+    const context = new ResolutionContext(async () => new Uint8Array([5]), controller.signal);
+    const pending = dispatchName(context, 'raced.bin', true) as Promise<number>;
+    await Promise.resolve();
+    controller.abort('closed generation');
+    await expect(pending).resolves.toBe(-1);
+    context.dispose();
+  });
+
+  it('does not reopen when a resolver aborts synchronously', async () => {
+    const reason = { phase: 'inside-resolver' };
+    for (const finish of [
+      () => Promise.reject(new Error('late rejection')),
+      () => {
+        throw new Error('late throw');
+      },
+    ]) {
+      const controller = new AbortController();
+      const context = new ResolutionContext(() => {
+        controller.abort(reason);
+        return finish();
+      }, controller.signal);
+      expect(dispatchName(context, 'raced.bin', true)).toBe(-1);
+      await Promise.resolve();
+      expect(context.getFailure()).toBeUndefined();
+      expect(context.takePending()).toEqual([]);
+      context.dispose();
+    }
+  });
+
+  const request = (
+    resolve?: PreparedConversion<readonly [{ readonly to: 'glb' }]>['resolve'],
+    signal?: AbortSignal,
+  ) =>
     prepareConversion(
       { name: 'cube.obj', bytes: cube },
       {
         targets: [{ to: 'glb' }] as const,
         ...(resolve === undefined ? {} : { resolve }),
+        ...(signal === undefined ? {} : { signal }),
       },
       new Set(['glb']),
     );
@@ -391,18 +549,85 @@ describe('resolver and staged-plan internals', () => {
     },
   ) => {
     const destroyed: number[] = [];
+    const cancelled: number[] = [];
     const { runPlan, ...nativeOverrides } = overrides;
     const value: NativeRuntime = {
       backend: 'wasm',
       preparePlan: () => 7,
       takePlanResult: () => ({ ok: true, code: '', message: '', formats: [{ format: 'glb', files: [] }] }),
       destroyPlan: (handle) => destroyed.push(handle as number),
+      cancelPlan: (handle) => cancelled.push(handle as number),
       dispose: () => undefined,
       ...nativeOverrides,
       runPlan,
     };
-    return { destroyed, value };
+    return { cancelled, destroyed, value };
   };
+
+  it('preserves an abort reason at admission without preparing a plan', async () => {
+    const controller = new AbortController();
+    const reason = { phase: 'admission' };
+    const preparedRequest = request(undefined, controller.signal);
+    controller.abort(reason);
+    const preparePlan = vi.fn(() => 7);
+    const dispose = vi.spyOn(ResolutionContext.prototype, 'dispose');
+    const { destroyed, value } = runtime({ preparePlan, runPlan: async () => 1 });
+    await expect(runPreparedConversion(value, preparedRequest)).rejects.toBe(reason);
+    expect(preparePlan).not.toHaveBeenCalled();
+    expect(destroyed).toEqual([]);
+    expect(dispose).toHaveBeenCalledOnce();
+    dispose.mockRestore();
+  });
+
+  it('cancels resolving work and cleans up exactly once', async () => {
+    const controller = new AbortController();
+    const reason = { phase: 'resolver' };
+    const dispose = vi.spyOn(ResolutionContext.prototype, 'dispose');
+    const { cancelled, destroyed, value } = runtime({
+      runPlan: async (_handle, context) => {
+        void dispatchName(context, 'slow.bin', false);
+        queueMicrotask(() => {
+          controller.abort(reason);
+        });
+        return -1;
+      },
+    });
+    await expect(
+      runPreparedConversion(
+        value,
+        request(() => new Promise(() => undefined), controller.signal),
+      ),
+    ).rejects.toBe(reason);
+    expect(cancelled).toEqual([7]);
+    expect(destroyed).toEqual([7]);
+    expect(dispose).toHaveBeenCalledOnce();
+    dispose.mockRestore();
+  });
+
+  it('cancels a plan when its signal aborts during preparation', async () => {
+    const controller = new AbortController();
+    const reason = { phase: 'prepare' };
+    const preparedRequest = request(undefined, controller.signal);
+    const { cancelled, destroyed, value } = runtime({
+      preparePlan: () => {
+        controller.abort(reason);
+        return 7;
+      },
+      runPlan: async () => 1,
+    });
+    await expect(runPreparedConversion(value, preparedRequest)).rejects.toBe(reason);
+    expect(cancelled).toEqual([7]);
+    expect(destroyed).toEqual([7]);
+  });
+
+  it('preserves a run rejection and still destroys its plan', async () => {
+    const cause = new Error('runtime failed');
+    const { destroyed, value } = runtime({
+      runPlan: async () => Promise.reject(cause),
+    });
+    await expect(runPreparedConversion(value, request())).rejects.toBe(cause);
+    expect(destroyed).toEqual([7]);
+  });
 
   it('rejects replay without new resolver work and always destroys the plan', async () => {
     const { destroyed, value } = runtime({ runPlan: async () => -1 });

@@ -182,17 +182,18 @@ describe('native target source', () => {
     assert(!source.includes('process.platform'));
     for (const name of [
       'buildIdentity',
+      'cancelPlan',
       'destroyPlan',
       'napiVersion',
       'packageVersion',
-      'pendingName',
       'preparePlan',
       'runPlan',
-      'supplyPlan',
       'takePlanResult',
     ]) {
       assert(source.includes(`'${name}'`), name);
     }
+    assert(!source.includes("'pendingName'"));
+    assert(!source.includes("'supplyPlan'"));
   });
 });
 

@@ -12,20 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// One owned plan imports a scene once and exports its ordered targets. A replay
-// reuses the staged bytes/configuration while reconstructing attempt-local
-// Assimp objects, so pending work can never leak a partial result.
+// One owned plan imports a scene once and exports its ordered targets. Only
+// non-JSPI Wasm may replay after a Pending result.
 
 #include "libassimp.hpp"
 
 #include <assimp/Exporter.hpp>
 #include <assimp/Importer.hpp>
+#include <assimp/ProgressHandler.hpp>
 #include <assimp/cimport.h>
 #include <assimp/importerdesc.h>
 #include <assimp/matrix4x4.h>
 #include <assimp/scene.h>
 
 #include <exception>
+#ifdef LIBASSIMP_CPP_COVERAGE
+#include <condition_variable>
+#include <mutex>
+#endif
 #include <sstream>
 #include <stdexcept>
 #include <type_traits>
@@ -35,6 +39,102 @@ namespace libassimp {
 namespace {
 
 static_assert(std::is_same_v<ai_real, float>, "TypeScript validation assumes float32 ai_real storage");
+
+#ifdef LIBASSIMP_CPP_COVERAGE
+using Clock = std::chrono::steady_clock;
+std::atomic<ProgressPhase> coverageBlockPhase{ProgressPhase::None};
+std::atomic<ProgressPhase> coverageBlockedPhase{ProgressPhase::None};
+std::mutex progressMutex;
+std::condition_variable progressCondition;
+bool releaseBlockedProgress = false;
+#endif
+
+class CancelProgress final : public Assimp::ProgressHandler {
+ public:
+#ifdef LIBASSIMP_CPP_COVERAGE
+  CancelProgress(const std::atomic<bool>& cancelled, PhaseDiagnostics& diagnostics,
+                 ProgressPhase phase)
+      : cancelled_(cancelled), diagnostics_(diagnostics), phase_(phase) {}
+#else
+  explicit CancelProgress(const std::atomic<bool>& cancelled) : cancelled_(cancelled) {}
+#endif
+
+  bool Update(float) noexcept override {
+#ifdef LIBASSIMP_CPP_COVERAGE
+    ProgressPhase requested = phase_;
+    if (coverageBlockPhase.compare_exchange_strong(requested, ProgressPhase::None)) {
+      std::unique_lock<std::mutex> lock(progressMutex);
+      coverageBlockedPhase.store(phase_);
+      progressCondition.wait(lock, [&] { return releaseBlockedProgress || cancelled_.load(); });
+      coverageBlockedPhase.store(ProgressPhase::None);
+    }
+#endif
+    return !cancelled_.load();
+  }
+
+#ifdef LIBASSIMP_CPP_COVERAGE
+  bool UpdateFileRead(int currentStep, int numberOfSteps) override {
+    observe(ProgressPhase::Importing, currentStep, numberOfSteps);
+    const bool keepGoing = Assimp::ProgressHandler::UpdateFileRead(currentStep, numberOfSteps);
+    if (currentStep == numberOfSteps) phase_ = ProgressPhase::PostProcessing;
+    return keepGoing;
+  }
+
+  bool UpdatePostProcess(int currentStep, int numberOfSteps) override {
+    observe(ProgressPhase::PostProcessing, currentStep, numberOfSteps);
+    return Assimp::ProgressHandler::UpdatePostProcess(currentStep, numberOfSteps);
+  }
+
+  bool UpdateFileWrite(int currentStep, int numberOfSteps) override {
+    observe(ProgressPhase::Exporting, currentStep, numberOfSteps);
+    return Assimp::ProgressHandler::UpdateFileWrite(currentStep, numberOfSteps);
+  }
+
+  void finish() {
+    const Clock::time_point now = Clock::now();
+    for (std::size_t index = 0; index < boundaries_.size(); ++index) close(index, now);
+  }
+
+ private:
+  struct Boundary {
+    Clock::time_point started;
+    PhaseDiagnostics::Duration resolverAtStart{};
+    bool seen = false;
+    bool open = false;
+  };
+
+  void observe(ProgressPhase phase, int currentStep, int numberOfSteps) {
+    phase_ = phase;
+    const std::size_t index = static_cast<std::size_t>(phase) - 1;
+    Boundary& boundary = boundaries_[index];
+    const Clock::time_point now = Clock::now();
+    if (!boundary.seen) {
+      boundary.started = now;
+      boundary.resolverAtStart = diagnostics_.resolverWait;
+      boundary.seen = true;
+      boundary.open = true;
+      diagnostics_.observed[index] = true;
+    }
+    if (currentStep == numberOfSteps) close(index, now);
+  }
+
+  void close(std::size_t index, Clock::time_point now) {
+    Boundary& boundary = boundaries_[index];
+    if (!boundary.open) return;
+    diagnostics_.phases[index] +=
+        now - boundary.started - (diagnostics_.resolverWait - boundary.resolverAtStart);
+    boundary.open = false;
+  }
+#endif
+
+ private:
+  const std::atomic<bool>& cancelled_;
+#ifdef LIBASSIMP_CPP_COVERAGE
+  PhaseDiagnostics& diagnostics_;
+  ProgressPhase phase_;
+  std::array<Boundary, 3> boundaries_{};
+#endif
+};
 
 const aiExportFormatDesc* findExportFormat(const Assimp::Exporter& exporter, const std::string& id) {
   for (std::size_t index = 0; index < exporter.GetExportFormatCount(); ++index) {
@@ -46,6 +146,22 @@ const aiExportFormatDesc* findExportFormat(const Assimp::Exporter& exporter, con
 
 #ifdef LIBASSIMP_CPP_COVERAGE
 void exportNothing(const char*, Assimp::IOSystem*, const aiScene*, const Assimp::ExportProperties*) {}
+
+void exportProbe(const char* path, Assimp::IOSystem* io, const aiScene*,
+                 const Assimp::ExportProperties*) {
+  Assimp::IOStream* output = io->Open(path, "wb");
+  const std::uint8_t byte = 1;
+  output->Write(&byte, 1, 1);
+  io->Close(output);
+  Assimp::IOStream* sidecar = io->Open("coverage.sidecar", "rb");
+  if (sidecar == nullptr) return;
+  std::uint8_t resolved = 0;
+  sidecar->Read(&resolved, 1, 1);
+  io->Close(sidecar);
+  output = io->Open("result.sidecar", "wb");
+  output->Write(&resolved, 1, 1);
+  io->Close(output);
+}
 #endif
 
 Result fail(std::string code, std::string message, int formatIndex = -1, std::string format = {}) {
@@ -116,8 +232,42 @@ Plan::Plan(std::string entryName, std::vector<NamedBytes> files, Properties impo
   for (NamedBytes& file : files) files_.push_back(std::move(file));
 }
 
-PlanStatus Plan::run() {
+PlanStatus Plan::run() { return run(resolve_); }
+
+void Plan::cancel() {
+  cancelled_.store(true);
+#ifdef LIBASSIMP_CPP_COVERAGE
+  progressCondition.notify_all();
+#endif
+}
+
+PlanStatus Plan::run(Resolver resolve) {
   result_ = {};
+#ifdef LIBASSIMP_CPP_COVERAGE
+  phaseDiagnostics_ = {};
+  Resolver measuredResolve;
+  if (resolve) measuredResolve = [this, resolve = std::move(resolve)](
+                                       const std::string& name, Bytes& bytes) {
+    const Clock::time_point started = Clock::now();
+    try {
+      const ResolveStatus status = resolve(name, bytes);
+      phaseDiagnostics_.resolverWait += Clock::now() - started;
+      return status;
+    } catch (...) {
+      phaseDiagnostics_.resolverWait += Clock::now() - started;
+      throw;
+    }
+  };
+  const Resolver& activeResolve = measuredResolve;
+#else
+  const Resolver& activeResolve = resolve;
+#endif
+  const auto cancelled = [&] {
+    if (!cancelled_.load()) return false;
+    result_ = {};
+    return true;
+  };
+  if (cancelled()) return PlanStatus::Aborted;
   if (files_.empty()) {
     result_ = fail("NO_FILES", "convert needs at least one input file.");
     return PlanStatus::Failed;
@@ -130,25 +280,47 @@ PlanStatus Plan::run() {
   const char* phase = "IMPORT_FAILED";
   int activeFormatIndex = -1;
   std::string activeFormat;
+  const auto terminalStatus = [&](ResolveStatus status, const std::string& name) {
+    if (cancelled() || status == ResolveStatus::Aborted) {
+      result_ = {};
+      return PlanStatus::Aborted;
+    }
+    result_ = fail("RESOLVE_FAILED", "Failed to resolve '" + name + "'.", activeFormatIndex, activeFormat);
+    return PlanStatus::Failed;
+  };
   try {
     if (!pendingName_.empty()) {
       Bytes resolved;
-      const ResolveStatus status = resolve_(pendingName_, resolved);
+      const ResolveStatus status = activeResolve(pendingName_, resolved);
       if (status == ResolveStatus::Pending) return PlanStatus::Pending;
+      if (cancelled() || status == ResolveStatus::Failed || status == ResolveStatus::Aborted) {
+        return terminalStatus(status, pendingName_);
+      }
       if (status == ResolveStatus::Found) {
         files_.push_back(NamedBytes{pendingName_, std::move(resolved)});
       }
       pendingName_.clear();
     }
-    MemoryFiles inputs(files_, resolve_);
+    MemoryFiles inputs(files_, activeResolve);
     Assimp::Importer importer;
     applyProperties(importProperties_, importer);
     importer.SetIOHandler(new MemoryIO(inputs, false));
+#ifdef LIBASSIMP_CPP_COVERAGE
+    auto* const importProgress =
+        new CancelProgress(cancelled_, phaseDiagnostics_, ProgressPhase::Importing);
+#else
+    auto* const importProgress = new CancelProgress(cancelled_);
+#endif
+    importer.SetProgressHandler(importProgress);
     ++importAttempts_;
     const aiScene* scene = importer.ReadFile(entryName_, postProcess_);
-    // Assimp deliberately catches every exception raised while probing IO.
-    // A missing stream is its native control flow; the side-band flag lets the
-    // host replay only when that miss represented unresolved async work.
+#ifdef LIBASSIMP_CPP_COVERAGE
+    importProgress->finish();
+#endif
+    if (cancelled()) return PlanStatus::Aborted;
+    if (inputs.terminal().has_value()) {
+      return terminalStatus(*inputs.terminal(), inputs.terminalName());
+    }
     if (inputs.pending()) {
       pendingName_ = inputs.pendingName();
       return PlanStatus::Pending;
@@ -170,6 +342,8 @@ PlanStatus Plan::run() {
 #ifdef LIBASSIMP_CPP_COVERAGE
       exporter.RegisterExporter(
           Assimp::Exporter::ExportFormatEntry("__test_empty", "Coverage-only empty exporter", "empty", exportNothing));
+      exporter.RegisterExporter(
+          Assimp::Exporter::ExportFormatEntry("__test_probe", "Coverage-only resolver probe", "probe", exportProbe));
 #endif
       const aiExportFormatDesc* description = findExportFormat(exporter, target.nativeId);
       if (description == nullptr) {
@@ -180,12 +354,31 @@ PlanStatus Plan::run() {
       }
 
       const std::string outputName = "result." + std::string(description->fileExtension);
-      MemoryFiles outputs(files_, resolve_);
+      MemoryFiles outputs(files_, activeResolve);
       outputs.neverResolve(outputName);
       Assimp::ExportProperties exportProperties;
       applyProperties(target.properties, exportProperties);
       exporter.SetIOHandler(new MemoryIO(outputs, true));
-      if (exporter.Export(scene, target.nativeId, outputName, 0u, &exportProperties) != aiReturn_SUCCESS) {
+#ifdef LIBASSIMP_CPP_COVERAGE
+      auto* const exportProgress =
+          new CancelProgress(cancelled_, phaseDiagnostics_, ProgressPhase::Exporting);
+#else
+      auto* const exportProgress = new CancelProgress(cancelled_);
+#endif
+      exporter.SetProgressHandler(exportProgress);
+      const aiReturn exported = exporter.Export(scene, target.nativeId, outputName, 0u, &exportProperties);
+#ifdef LIBASSIMP_CPP_COVERAGE
+      exportProgress->finish();
+#endif
+      if (cancelled()) return PlanStatus::Aborted;
+      if (outputs.terminal().has_value()) {
+        return terminalStatus(*outputs.terminal(), outputs.terminalName());
+      }
+      if (outputs.pending()) {
+        pendingName_ = outputs.pendingName();
+        return PlanStatus::Pending;
+      }
+      if (exported != aiReturn_SUCCESS) {
         result_ = fail(phase, exporter.GetErrorString(), static_cast<int>(index), target.format);
         return PlanStatus::Failed;
       }
@@ -199,8 +392,10 @@ PlanStatus Plan::run() {
     result_ = std::move(completed);
     return PlanStatus::Completed;
   } catch (const std::exception& error) {
+    if (cancelled()) return PlanStatus::Aborted;
     result_ = fail(phase, error.what(), activeFormatIndex, activeFormat);
   } catch (...) {
+    if (cancelled()) return PlanStatus::Aborted;
     result_ = fail(phase, "Unknown error.", activeFormatIndex, activeFormat);
   }
   return PlanStatus::Failed;
@@ -224,6 +419,27 @@ std::vector<FormatInfo> exportFormats() {
 }
 
 namespace detail {
+
+#ifdef LIBASSIMP_CPP_COVERAGE
+void blockNextProgress(ProgressPhase phase) {
+  {
+    const std::lock_guard<std::mutex> lock(progressMutex);
+    releaseBlockedProgress = false;
+  }
+  coverageBlockPhase.store(phase);
+}
+
+ProgressPhase progressBlocked() { return coverageBlockedPhase.load(); }
+
+void releaseProgress() {
+  {
+    const std::lock_guard<std::mutex> lock(progressMutex);
+    releaseBlockedProgress = true;
+  }
+  coverageBlockPhase.store(ProgressPhase::None);
+  progressCondition.notify_all();
+}
+#endif
 
 bool exportFormatMatches(const aiExportFormatDesc* description, const std::string& id) {
   return description != nullptr && id == description->id;

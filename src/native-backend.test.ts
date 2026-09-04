@@ -11,6 +11,10 @@ import {
 } from './native-backend.js';
 
 const packageVersion = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
+const MISSING = 0;
+const FOUND = 1;
+const FAILED = 2;
+const ABORTED = 3;
 
 const addon = (overrides: Partial<NativeAddon> = {}): NativeAddon => ({
   buildIdentity: `${process.platform}-${process.arch}-napi8`,
@@ -18,8 +22,7 @@ const addon = (overrides: Partial<NativeAddon> = {}): NativeAddon => ({
   packageVersion,
   preparePlan: () => ({}),
   runPlan: async () => 1,
-  pendingName: () => undefined,
-  supplyPlan: () => undefined,
+  cancelPlan: () => undefined,
   takePlanResult: () => ({ ok: true, code: '', message: '', formats: [{ format: 'glb', files: [] }] }),
   destroyPlan: () => undefined,
   ...overrides,
@@ -29,6 +32,7 @@ const wasmRuntime = (): NativeRuntime => ({
   backend: 'wasm',
   preparePlan: () => 1,
   runPlan: async () => 1,
+  cancelPlan: () => undefined,
   takePlanResult: () => ({ ok: true, code: '', message: '', formats: [] }),
   destroyPlan: () => undefined,
   dispose: () => undefined,
@@ -51,15 +55,21 @@ describe('native addon adapter', () => {
     expect(() =>
       adaptNativeAddon(addon({ runPlan: undefined as unknown as NativeAddon['runPlan'] })),
     ).toThrow("native loader is missing 'runPlan'");
+    expect(() =>
+      adaptNativeAddon(addon({ cancelPlan: undefined as unknown as NativeAddon['cancelPlan'] })),
+    ).toThrow("native loader is missing 'cancelPlan'");
   });
 
   it('adapts completed work and forwards every plan operation', async () => {
     const handle = {};
     const preparePlan = vi.fn(() => handle);
     const runPlan = vi.fn(async () => 1);
+    const cancelPlan = vi.fn();
     const takePlanResult = vi.fn(() => ({ ok: true, code: '' as const, message: '', formats: [] }));
     const destroyPlan = vi.fn();
-    const runtime = adaptNativeAddon(addon({ preparePlan, runPlan, takePlanResult, destroyPlan }));
+    const runtime = adaptNativeAddon(
+      addon({ preparePlan, runPlan, cancelPlan, takePlanResult, destroyPlan }),
+    );
 
     expect(runtime.backend).toBe('native');
     expect(runtime.buildIdentity).toBe(`${process.platform}-${process.arch}-napi8`);
@@ -69,17 +79,32 @@ describe('native addon adapter', () => {
     await expect(runtime.runPlan(handle, new ResolutionContext(undefined))).resolves.toBe(1);
     expect(runtime.takePlanResult(handle)).toEqual({ ok: true, code: '', message: '', formats: [] });
     runtime.destroyPlan(handle);
+    runtime.cancelPlan(handle);
     runtime.dispose();
-    expect(runPlan).toHaveBeenCalledWith(handle);
+    expect(runPlan).toHaveBeenCalledWith(handle, expect.any(Function));
+    expect(cancelPlan).toHaveBeenCalledWith(handle);
     expect(destroyPlan).toHaveBeenCalledWith(handle);
   });
 
-  it('replays found and missing sidecars through the common conversion runner', async () => {
+  it('settles found and missing sidecars through one native run', async () => {
     const handle = {};
-    const runPlan = vi.fn().mockResolvedValueOnce(-1).mockResolvedValueOnce(-1).mockResolvedValueOnce(1);
-    const pendingName = vi.fn().mockReturnValueOnce('material.mtl').mockReturnValueOnce('missing.png');
-    const supplyPlan = vi.fn();
-    const runtime = adaptNativeAddon(addon({ preparePlan: () => handle, runPlan, pendingName, supplyPlan }));
+    const settlements: unknown[][] = [];
+    let requestLate: Parameters<NativeAddon['runPlan']>[1] | undefined;
+    const runPlan: NativeAddon['runPlan'] = vi.fn(
+      async (_plan: unknown, resolveRequest: Parameters<NativeAddon['runPlan']>[1]) => {
+        requestLate = resolveRequest;
+        for (const name of ['material.mtl', 'missing.png']) {
+          await new Promise<void>((resolve) => {
+            resolveRequest(name, (status: 0 | 1 | 2 | 3, bytes?: Uint8Array) => {
+              settlements.push(bytes === undefined ? [status] : [status, bytes]);
+              resolve();
+            });
+          });
+        }
+        return 1;
+      },
+    );
+    const runtime = adaptNativeAddon(addon({ preparePlan: () => handle, runPlan }));
     const request = prepareConversion(
       { name: 'cube.obj', bytes: new Uint8Array([1]) },
       {
@@ -90,48 +115,113 @@ describe('native addon adapter', () => {
     );
 
     await expect(runPreparedConversion(runtime, request)).resolves.toEqual([{ format: 'glb', files: [] }]);
-    expect(supplyPlan).toHaveBeenNthCalledWith(1, handle, 'material.mtl', new Uint8Array([2]));
-    expect(supplyPlan).toHaveBeenNthCalledWith(2, handle, 'missing.png', undefined);
+    expect(runPlan).toHaveBeenCalledOnce();
+    expect(settlements).toEqual([[FOUND, new Uint8Array([2])], [MISSING]]);
+    const late = vi.fn();
+    requestLate?.('late.bin', late);
+    await Promise.resolve();
+    expect(late).not.toHaveBeenCalled();
   });
 
-  it('keeps resolver rejection causal and rejects pending without a name', async () => {
+  it.each([
+    ['rejection', async () => Promise.reject(new Error('offline'))],
+    ['invalid result', () => 'bad' as unknown as Uint8Array],
+    ['typed-array proxy', () => new Proxy(new Uint8Array([1]), {})],
+    ['promised typed-array proxy', async () => new Proxy(new Uint8Array([1]), {})],
+  ] as const)('settles a resolver %s as failed with causal context', async (_label, resolve) => {
     const cause = new Error('offline');
-    const rejected = adaptNativeAddon(
-      addon({
-        runPlan: vi.fn().mockResolvedValueOnce(-1),
-        pendingName: () => 'sidecar.bin',
-      }),
+    const settlements: unknown[][] = [];
+    const runPlan: NativeAddon['runPlan'] = vi.fn(
+      (_plan: unknown, resolveRequest: Parameters<NativeAddon['runPlan']>[1]) =>
+        new Promise<number>((finish) => {
+          resolveRequest('sidecar.bin', (status: 0 | 1 | 2 | 3, bytes?: Uint8Array) => {
+            settlements.push(bytes === undefined ? [status] : [status, bytes]);
+            finish(2);
+          });
+        }),
     );
+    const rejected = adaptNativeAddon(addon({ runPlan }));
     const request = prepareConversion(
       { name: 'cube.obj', bytes: new Uint8Array([1]) },
-      { targets: [{ to: 'glb' }] as const, resolve: async () => Promise.reject(cause) },
+      {
+        targets: [{ to: 'glb' }] as const,
+        resolve: _label === 'rejection' ? async () => Promise.reject(cause) : resolve,
+      },
       new Set(['glb']),
     );
     await expect(runPreparedConversion(rejected, request)).rejects.toMatchObject({
       code: 'RESOLVE_FAILED',
-      cause,
+      fileName: 'sidecar.bin',
+      ...(_label === 'rejection' ? { cause } : {}),
     });
-
-    const unnamed = adaptNativeAddon(addon({ runPlan: async () => -1 }));
-    await expect(runPreparedConversion(unnamed, request)).rejects.toThrow(
-      'PENDING without new resolver work',
-    );
+    expect(settlements).toEqual([[FAILED]]);
+    expect(runPlan).toHaveBeenCalledOnce();
   });
 
-  it('stages asynchronous resolver bytes once and handles invalid results', async () => {
-    const supplied = vi.fn();
-    const context = new ResolutionContext(async () => new Uint8Array([3]));
-    context.stageNative('shared.bin', supplied);
-    context.stageNative('shared.bin', supplied);
-    await Promise.all(context.takePending());
-    expect(supplied).toHaveBeenCalledTimes(2);
-    expect(supplied).toHaveBeenNthCalledWith(1, new Uint8Array([3]));
-    expect(supplied).toHaveBeenNthCalledWith(2, new Uint8Array([3]));
+  it.each([false, true])(
+    'releases copied native sidecar state before plan completion (async: %s)',
+    async (asynchronous) => {
+      const bytes = new Uint8Array([3, 4]);
+      const context = new ResolutionContext(() => (asynchronous ? Promise.resolve(bytes) : bytes));
+      const runPlan: NativeAddon['runPlan'] = (_plan, resolveRequest) =>
+        new Promise((finish) => {
+          resolveRequest('copied.bin', (status, copied) => {
+            expect(status).toBe(FOUND);
+            expect(copied).toBe(bytes);
+            expect(Reflect.get(context, 'states')).toHaveProperty('size', 1);
+            finish(1);
+          });
+        });
+      await adaptNativeAddon(addon({ runPlan })).runPlan({}, context);
+      expect(Reflect.get(context, 'states')).toEqual(new Map());
+      context.dispose();
+    },
+  );
 
-    const invalid = new ResolutionContext(() => 'bad' as unknown as Uint8Array);
-    invalid.stageNative('bad.bin', supplied);
-    await Promise.all(invalid.takePending());
-    expect(invalid.getFailure()).toMatchObject({ fileName: 'bad.bin' });
+  it('settles abort, cancels native work, and ignores late resolver completion', async () => {
+    const controller = new AbortController();
+    const reason = { phase: 'native-resolve' };
+    const settlements: unknown[][] = [];
+    let release: ((bytes: Uint8Array) => void) | undefined;
+    const handle = {};
+    const runPlan: NativeAddon['runPlan'] = vi.fn(
+      (_plan: unknown, resolveRequest: Parameters<NativeAddon['runPlan']>[1]) =>
+        new Promise<number>((finish) => {
+          resolveRequest('slow.bin', (status: 0 | 1 | 2 | 3, bytes?: Uint8Array) => {
+            settlements.push(bytes === undefined ? [status] : [status, bytes]);
+            finish(2);
+          });
+        }),
+    );
+    const cancelPlan = vi.fn();
+    const destroyPlan = vi.fn();
+    const runtime = adaptNativeAddon(addon({ preparePlan: () => handle, runPlan, cancelPlan, destroyPlan }));
+    const request = prepareConversion(
+      { name: 'cube.obj', bytes: new Uint8Array([1]) },
+      {
+        targets: [{ to: 'glb' }] as const,
+        resolve: () =>
+          new Promise((resolve) => {
+            release = resolve;
+          }),
+        signal: controller.signal,
+      },
+      new Set(['glb']),
+    );
+
+    const conversion = runPreparedConversion(runtime, request);
+    await vi.waitFor(() => {
+      expect(runPlan).toHaveBeenCalledOnce();
+    });
+    controller.abort(reason);
+    await expect(conversion).rejects.toBe(reason);
+    expect(settlements).toEqual([[ABORTED]]);
+    expect(cancelPlan).toHaveBeenCalledOnce();
+    expect(cancelPlan).toHaveBeenCalledWith(handle);
+    expect(destroyPlan).toHaveBeenCalledOnce();
+    release?.(new Uint8Array([3]));
+    await Promise.resolve();
+    expect(settlements).toEqual([[ABORTED]]);
   });
 });
 

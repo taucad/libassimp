@@ -25,6 +25,7 @@ if (arguments_.has('--sanitize') && process.platform === 'darwin') {
   if (probe.status !== 0) throw new Error(`xcrun failed: ${probe.stderr?.trim() ?? 'unknown error'}`);
   const runtime = probe.stdout.trim();
   if (!existsSync(runtime)) throw new Error(`AddressSanitizer runtime was not found: ${runtime}`);
+  nodeEnvironment.LIBASSIMP_ASAN_RUNTIME = runtime;
   nodeEnvironment.DYLD_INSERT_LIBRARIES = runtime;
 }
 if (arguments_.has('--sanitize') && process.platform === 'linux') {

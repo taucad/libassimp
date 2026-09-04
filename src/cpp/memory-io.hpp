@@ -26,6 +26,7 @@
 #include <deque>
 #include <functional>
 #include <limits>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -41,9 +42,15 @@ struct NamedBytes {
   Bytes bytes;
 };
 
-enum class ResolveStatus { Missing, Found, Pending };
+enum class ResolveStatus : int {
+  Pending = -1,
+  Missing = 0,
+  Found = 1,
+  Failed = 2,
+  Aborted = 3,
+};
 
-/** Sidecar loader. Pending marks the current attempt for JS replay. */
+/** Sidecar loader. Pending is reserved for non-JSPI Wasm replay. */
 using Resolver = std::function<ResolveStatus(const std::string& name, Bytes& out)>;
 
 /** Everything one convert call reads and writes. Both IOSystems below share exactly one of these. */
@@ -53,6 +60,7 @@ class MemoryFiles {
 
   /** Exact name, then basename, then the host callback. Both outcomes are cached. */
   const Bytes* find(const std::string& name) {
+    if (pending_ || terminal_.has_value()) return nullptr;
     for (const NamedBytes& input : inputs_) {
       if (input.name == name) return &input.bytes;
     }
@@ -67,9 +75,16 @@ class MemoryFiles {
       basenameMatch = &input.bytes;
     }
     if (basenameMatch != nullptr) return basenameMatch;
-    if (pending_ || !resolve_ || missing_.count(name) != 0) return nullptr;
+    if (!resolve_ || missing_.count(name) != 0) return nullptr;
     Bytes resolved;
-    const ResolveStatus status = resolve_(name, resolved);
+    ResolveStatus status;
+    try {
+      status = resolve_(name, resolved);
+    } catch (...) {
+      terminal_ = ResolveStatus::Failed;
+      terminalName_ = name;
+      throw;
+    }
     if (status == ResolveStatus::Pending) {
       pending_ = true;
       pendingName_ = name;
@@ -77,6 +92,11 @@ class MemoryFiles {
     }
     if (status == ResolveStatus::Missing) {
       missing_.insert(name);
+      return nullptr;
+    }
+    if (status != ResolveStatus::Found) {
+      terminal_ = status;
+      terminalName_ = name;
       return nullptr;
     }
     inputs_.push_back(NamedBytes{name, std::move(resolved)});
@@ -107,6 +127,8 @@ class MemoryFiles {
 
   bool pending() const { return pending_; }
   const std::string& pendingName() const { return pendingName_; }
+  const std::optional<ResolveStatus>& terminal() const { return terminal_; }
+  const std::string& terminalName() const { return terminalName_; }
 
   static std::string basename(const std::string& path) {
     const std::size_t slash = path.find_last_of("/\\");
@@ -121,6 +143,8 @@ class MemoryFiles {
   Resolver resolve_;
   bool pending_ = false;
   std::string pendingName_;
+  std::optional<ResolveStatus> terminal_;
+  std::string terminalName_;
 };
 
 /** Append-and-seek stream over one output buffer. */

@@ -108,11 +108,12 @@ try {
     `
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
 
 const native = await import('libassimp');
-const packageRoot = new URL('./node_modules/libassimp/', pathToFileURL(process.cwd() + '/'));
-const wasm = await import(new URL('dist/index.mjs', packageRoot));
+const watchdog = setTimeout(() => {
+  console.error('package conversion smoke exceeded 120 seconds');
+  process.exit(1);
+}, 120_000);
 const bytes = new Uint8Array(await readFile(process.argv[2]));
 const request = [{ name: 'cube.obj', bytes }, { to: 'glb' }];
 const glbPointCount = (contents) => {
@@ -126,8 +127,12 @@ const glbPointCount = (contents) => {
   }, 0), 0);
 };
 const nativeAssimp = await native.createAssimp({ backend: 'native' });
-const wasmAssimp = await wasm.createAssimp({ backend: 'wasm' });
+const automatic = await native.createAssimp();
+assert.equal(automatic.backend, 'native');
+automatic.dispose();
+const wasmAssimp = await native.createAssimp({ backend: 'wasm' });
 assert.equal(nativeAssimp.backend, 'native');
+assert.equal(wasmAssimp.backend, 'wasm');
 const [nativeResult, wasmResult] = await Promise.all([nativeAssimp.convert(...request), wasmAssimp.convert(...request)]);
 assert.deepEqual(nativeResult, wasmResult, 'native/Wasm bytes differ');
 assert.equal(Buffer.from(nativeResult.files[0].bytes.subarray(0, 4)).toString('latin1'), 'glTF');
@@ -136,7 +141,7 @@ const materialBytes = new Uint8Array(await readFile(process.argv[5]));
 let resolverCalls = 0;
 const resolve = async (name) => {
   resolverCalls += 1;
-  return name === 'cube-material.mtl' ? materialBytes : undefined;
+  return name === 'cube-material.mtl' ? new Uint8Array(await readFile(process.argv[5])) : undefined;
 };
 const sidecarRequest = [{ name: 'cube-material.obj', bytes: materialObj }, { to: 'glb', resolve }];
 const nativeSidecar = await nativeAssimp.convert(...sidecarRequest);
@@ -145,6 +150,45 @@ resolverCalls = 0;
 const wasmSidecar = await wasmAssimp.convert(...sidecarRequest);
 assert.equal(resolverCalls, 1);
 assert.deepEqual(nativeSidecar, wasmSidecar, 'sidecar native/Wasm bytes differ');
+const missingResults = [];
+for (const backend of [nativeAssimp, wasmAssimp]) {
+  const input = { name: 'cube-material.obj', bytes: materialObj };
+  const synchronous = await backend.convert(input, { to: 'glb', resolve: () => materialBytes });
+  assert.deepEqual(synchronous, nativeSidecar);
+  missingResults.push(await backend.convert(input, { to: 'glb', resolve: () => undefined }));
+  const failure = new Error('sidecar provider rejected');
+  await assert.rejects(backend.convert(input, { to: 'glb', resolve: async () => { throw failure; } }),
+    (error) => error.code === 'RESOLVE_FAILED' && error.cause === failure);
+  for (let iteration = 0; iteration < 8; iteration += 1) {
+    const controller = new AbortController();
+    const reason = new Error('superseded conversion ' + iteration);
+    let settle;
+    let opened;
+    const requested = new Promise((resolve) => { opened = resolve; });
+    const pending = backend.convert(input, {
+      to: 'glb', signal: controller.signal,
+      resolve: () => new Promise((resolve) => { settle = resolve; opened(); }),
+    });
+    await requested;
+    const queuedController = new AbortController();
+    const queuedReason = new Error('cancelled before admission');
+    const queued = backend.convert(input, { to: 'glb', signal: queuedController.signal });
+    queuedController.abort(queuedReason);
+    await assert.rejects(queued, (error) => error === queuedReason);
+    controller.abort(reason);
+    await assert.rejects(pending, (error) => error === reason);
+    settle(materialBytes);
+    let preAbortedCalls = 0;
+    await assert.rejects(backend.convert(input, {
+      to: 'glb', signal: controller.signal,
+      resolve: () => { preAbortedCalls += 1; return materialBytes; },
+    }), (error) => error === reason);
+    assert.equal(preAbortedCalls, 0);
+    const recovered = await backend.convert(...sidecarRequest);
+    assert.deepEqual(recovered, nativeSidecar, 'conversion after cancellation differs');
+  }
+}
+assert.deepEqual(missingResults[0], missingResults[1], 'missing sidecar behavior differs');
 const targets = [{ to: 'glb' }, { to: 'stl', exportOptions: { binary: true } }, { to: 'assjson' }];
 const [nativeFormats, wasmFormats] = await Promise.all([
   nativeAssimp.convertFormats({ name: 'cube.obj', bytes }, { targets }),
@@ -174,7 +218,8 @@ if (process.argv[3]) {
 }
 nativeAssimp.dispose();
 wasmAssimp.dispose();
-console.log('native/Wasm parity, malformed input, lifecycle, and subprocess smoke passed');
+clearTimeout(watchdog);
+console.log('native/Wasm parity, filesystem sidecars, cancellation, cleanup, and subprocess smoke passed');
 if (process.parentPort !== undefined) process.exit(0);
 `,
   );

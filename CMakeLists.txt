@@ -184,6 +184,7 @@ if(LIBASSIMP_NATIVE_TESTS)
 endif()
 
 if(LIBASSIMP_NATIVE_ADDON)
+  find_package(Threads REQUIRED)
   if(WIN32 AND NOT MSVC)
     message(FATAL_ERROR "Windows native addons require the MSVC toolchain")
   endif()
@@ -216,7 +217,7 @@ if(LIBASSIMP_NATIVE_ADDON)
 
   add_library(libassimp-native MODULE src/cpp/node-addon.cpp ${CMAKE_JS_SRC})
   target_include_directories(libassimp-native PRIVATE ${CMAKE_JS_INC} "${NODE_ADDON_API_DIR}")
-  target_link_libraries(libassimp-native PRIVATE libassimp-core ${CMAKE_JS_LIB})
+  target_link_libraries(libassimp-native PRIVATE libassimp-core Threads::Threads ${CMAKE_JS_LIB})
   target_compile_definitions(
     libassimp-native
     PRIVATE

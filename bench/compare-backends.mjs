@@ -107,6 +107,26 @@ const nativeWarm = warm('native');
 const wasmWarm = warm('wasm');
 assert.equal(nativeWarm.outputBytes, wasmWarm.outputBytes, 'warm output size differs');
 assert.equal(nativeWarm.outputFnv, wasmWarm.outputFnv, 'warm output bytes differ');
+assert.equal(nativeWarm.dependencyResolver.name, wasmWarm.dependencyResolver.name);
+assert.deepEqual(nativeWarm.dependencyResolver.sidecars, [1, 8, 32]);
+assert.deepEqual(wasmWarm.dependencyResolver.sidecars, nativeWarm.dependencyResolver.sidecars);
+assert.deepEqual(nativeWarm.dependencyResolver.replayWorstCaseImports, [2, 9, 33]);
+const resolverObservable = (samples) =>
+  samples.map(({ sidecars, resolverCalls, outputBytes, outputFnv }) => ({
+    sidecars,
+    resolverCalls,
+    outputBytes,
+    outputFnv,
+  }));
+const nativeResolver = nativeWarm.dependencyResolver.routes.native;
+const jspiResolver = wasmWarm.dependencyResolver.routes.jspi;
+const replayResolver = wasmWarm.dependencyResolver.routes.replay;
+assert(nativeResolver, 'native dependency-heavy resolver report is missing');
+assert(replayResolver, 'replay dependency-heavy resolver report is missing');
+assert.deepEqual(resolverObservable(replayResolver), resolverObservable(nativeResolver));
+if (jspiResolver !== null) {
+  assert.deepEqual(resolverObservable(jspiResolver), resolverObservable(nativeResolver));
+}
 const report = {
   cold: {
     firstConversionSpeedup: ratio(wasm.firstConversionMs, native.firstConversionMs),
@@ -127,16 +147,31 @@ const failures = [
     `native steady-state RSS grew ${native.retainedRssGrowthBytes} bytes across 30 conversions`,
 ].filter(Boolean);
 
+const resolverRows = nativeWarm.dependencyResolver.sidecars
+  .map(
+    (sidecars, index) =>
+      `| ${sidecars} | ${nativeResolver[index].durationMs} ms | ${jspiResolver === null ? 'unavailable' : `${jspiResolver[index].durationMs} ms`} | ${replayResolver[index].durationMs} ms | ${nativeWarm.dependencyResolver.replayWorstCaseImports[index]} |`,
+  )
+  .join('\n');
+
 const markdown = `<!-- libassimp-benchmark -->
 ### Native/Wasm benchmark
 
-| Metric (p50) | Native | Wasm | Native advantage |
+| Metric (p50) | Native | Wasm | Comparison / gate |
 | --- | ---: | ---: | ---: |
 | Ready to convert | ${native.readyMs} ms | ${wasm.readyMs} ms | ${report.cold.readySpeedup}× |
 | Process-cold first conversion | ${native.firstConversionMs} ms | ${wasm.firstConversionMs} ms | ${report.cold.firstConversionSpeedup}× |
 | Warm helical-gear conversion | ${report.warm.native.medianMs} ms | ${report.warm.wasm.medianMs} ms | ${ratio(report.warm.wasm.medianMs, report.warm.native.medianMs)}× |
 | Maximum RSS | ${native.maxRssKiB} KiB | ${wasm.maxRssKiB} KiB | reported, not gated |
 | Steady-state RSS growth, 30 conversions | ${native.retainedRssGrowthBytes} B | ${wasm.retainedRssGrowthBytes} B | bounded at 64 MiB native |
+
+### Dependency-heavy async resolver
+
+| Sidecars | Native | JSPI | Wasm replay | Replay imports (worst case) |
+| ---: | ---: | ---: | ---: | ---: |
+${resolverRows}
+
+Each route resolved exactly the listed sidecar count and produced byte-identical output. Timings are reported, not gated; replay's import cost is the documented N+1 worst case. The packed API has no import-attempt diagnostic, so native's one-import invariant remains gated by native tests.
 `;
 const markdownPath = process.env['LIBASSIMP_BENCH_MARKDOWN'];
 if (markdownPath) writeFileSync(markdownPath, markdown);

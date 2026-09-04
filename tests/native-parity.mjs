@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -47,6 +48,92 @@ for (const backend of [nativeAssimp, wasmAssimp]) {
 const instance = await native.createAssimp({ backend: 'native' });
 instance.dispose();
 await assert.rejects(instance.convert(...request), /disposed/iu);
+
+// A required external buffer exercises large sidecar ownership, not just a
+// material file whose absence an importer can silently tolerate.
+{
+  const directory = mkdtempSync(join(tmpdir(), 'libassimp-large-sidecar-'));
+  const points = 1_048_576;
+  const positions = new Float32Array(points * 3);
+  for (let index = 0; index < points; index += 1) {
+    positions[index * 3] = index % 1024;
+    positions[index * 3 + 1] = Math.floor(index / 1024);
+  }
+  const sidecarBytes = new Uint8Array(positions.buffer);
+  const input = {
+    name: 'points.gltf',
+    bytes: new TextEncoder().encode(
+      JSON.stringify({
+        asset: { version: '2.0' },
+        buffers: [{ uri: 'points.bin', byteLength: sidecarBytes.byteLength }],
+        bufferViews: [{ buffer: 0, byteLength: sidecarBytes.byteLength }],
+        accessors: [
+          {
+            bufferView: 0,
+            componentType: 5126,
+            count: points,
+            type: 'VEC3',
+            min: [0, 0, 0],
+            max: [1023, 1023, 0],
+          },
+        ],
+        meshes: [{ primitives: [{ attributes: { POSITION: 0 }, mode: 0 }] }],
+        nodes: [{ mesh: 0 }],
+        scenes: [{ nodes: [0] }],
+        scene: 0,
+      }),
+    ),
+  };
+  try {
+    const path = join(directory, 'points.bin');
+    await writeFile(path, sidecarBytes);
+    let expectedDigest;
+    for (const backend of [nativeAssimp, wasmAssimp]) {
+      for (let iteration = 0; iteration < 3; iteration += 1) {
+        let calls = 0;
+        const result = await backend.convert(input, {
+          to: 'glb',
+          resolve: async (name) => {
+            assert.equal(name, 'points.bin');
+            calls += 1;
+            return new Uint8Array(await readFile(path));
+          },
+        });
+        assert.equal(calls, 1);
+        assert.equal(glbPointCount(result.files[0].bytes), points);
+        const digest = sha256(result.files[0].bytes);
+        expectedDigest ??= digest;
+        assert.equal(digest, expectedDigest, 'repeated large-sidecar output differs');
+
+        const controller = new AbortController();
+        const reason = new Error('large sidecar cancelled');
+        let opened;
+        let settle;
+        const requested = new Promise((resolve) => {
+          opened = resolve;
+        });
+        const pending = backend.convert(input, {
+          to: 'glb',
+          signal: controller.signal,
+          resolve: () =>
+            new Promise((resolve) => {
+              settle = resolve;
+              opened();
+            }),
+        });
+        await requested;
+        controller.abort(reason);
+        await assert.rejects(pending, (error) => error === reason);
+        settle(sidecarBytes);
+      }
+    }
+    process.stdout.write(
+      `large async sidecar: ${sidecarBytes.byteLength} bytes, ${points} exact points, repeated/cancelled native-Wasm parity passed\n`,
+    );
+  } finally {
+    rmSync(directory, { force: true, recursive: true });
+  }
+}
 
 if (process.env['LIBASSIMP_SCALE'] === '1') {
   const directory = mkdtempSync(join(tmpdir(), 'libassimp-scale-'));

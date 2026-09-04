@@ -7,7 +7,7 @@
   {
     "name": "instance factory",
     "path": "dist/create-assimp.mjs",
-    "limit": "2351 B"
+    "limit": "2605 B"
   },
   {
     "name": "Node ESM facade",

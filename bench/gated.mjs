@@ -21,13 +21,9 @@ const convert = benchmarkAssimp?.convert.bind(benchmarkAssimp) ?? entry.convert;
 // Generated from Tau's replicad/helical-gear example with:
 // pnpm nx run cli:tau -- export libs/tau-examples/src/kernels/replicad/helical-gear/main.ts --ext=glb --output=helical-gear.glb
 const bytes = new Uint8Array(readFileSync(new URL('./fixtures/helical-gear.glb', import.meta.url)));
-const materialCube = new Uint8Array(
-  readFileSync(new URL('../tests/fixtures/cube-material.obj', import.meta.url)),
-);
-const material = new Uint8Array(
-  readFileSync(new URL('../tests/fixtures/cube-material.mtl', import.meta.url)),
-);
 const iterations = 15;
+const dependencySidecars = [1, 8, 32];
+const encoder = new TextEncoder();
 
 const median = (durations) => {
   const sorted = [...durations].sort((left, right) => left - right);
@@ -93,7 +89,26 @@ const restore = (name, descriptor) => {
   else Object.defineProperty(WebAssembly, name, descriptor);
 };
 
-const measureAsyncRoute = async (forceReplay) => {
+const dependencyFixture = (count) => {
+  const names = Array.from({ length: count }, (_, index) => `sidecar-${String(index).padStart(2, '0')}.mtl`);
+  const source = [
+    'o dependency-heavy',
+    'v 0 0 0',
+    'v 1 0 0',
+    'v 0 1 0',
+    ...names.flatMap((name, index) => [`mtllib ${name}`, `usemtl material-${index}`, 'f 1 2 3']),
+  ].join('\n');
+  return {
+    files: new Map(
+      names.map((name, index) => [name, encoder.encode(`newmtl material-${index}\nKd 1 0 0\n`)]),
+    ),
+    input: { name: 'dependency-heavy.obj', bytes: encoder.encode(source) },
+    names,
+  };
+};
+
+const measureResolverRoute = async (route) => {
+  const forceReplay = route === 'replay';
   const suspending = Object.getOwnPropertyDescriptor(WebAssembly, 'Suspending');
   const promising = Object.getOwnPropertyDescriptor(WebAssembly, 'promising');
   if (forceReplay) {
@@ -102,27 +117,33 @@ const measureAsyncRoute = async (forceReplay) => {
   }
   let assimp;
   try {
-    assimp = await createAssimp();
-    let calls = 0;
-    const [duration, result] = await time(() =>
-      assimp.convert(
-        { name: 'cube-material.obj', bytes: materialCube },
-        {
+    const expectedBackend = route === 'native' ? 'native' : 'wasm';
+    assimp = await entry.createAssimp({ backend: expectedBackend });
+    assert.equal(assimp.backend, expectedBackend);
+    const samples = [];
+    for (const sidecars of dependencySidecars) {
+      const fixture = dependencyFixture(sidecars);
+      const requested = [];
+      const [duration, result] = await time(() =>
+        assimp.convert(fixture.input, {
           to: 'glb',
           resolve: async (name) => {
-            calls += 1;
+            requested.push(name);
             await Promise.resolve();
-            return name === 'cube-material.mtl' ? material : undefined;
+            return fixture.files.get(name);
           },
-        },
-      ),
-    );
-    assert.equal(calls, 1);
-    return {
-      durationMs: Math.round(duration * 1_000) / 1_000,
-      resolverCalls: calls,
-      outputFnv: fnv64(result.files[0].bytes),
-    };
+        }),
+      );
+      assert.deepEqual(requested, fixture.names);
+      samples.push({
+        sidecars,
+        durationMs: Math.round(duration * 1_000) / 1_000,
+        resolverCalls: requested.length,
+        outputBytes: result.files[0].bytes.length,
+        outputFnv: fnv64(result.files[0].bytes),
+      });
+    }
+    return samples;
   } finally {
     assimp?.dispose();
     if (forceReplay) {
@@ -133,12 +154,30 @@ const measureAsyncRoute = async (forceReplay) => {
 };
 
 const hasJspi = typeof WebAssembly.Suspending === 'function' && typeof WebAssembly.promising === 'function';
-const asyncResolver = {
-  jspi: hasJspi ? await measureAsyncRoute(false) : null,
-  replay: await measureAsyncRoute(true),
+const resolverBackend = backend ?? 'wasm';
+// The packed API intentionally exposes no import-attempt counter. Native tests
+// gate its one-import invariant; this report gates names, counts, and bytes.
+const dependencyResolver = {
+  name: 'obj-mtl-sidecars-v1',
+  sidecars: dependencySidecars,
+  replayWorstCaseImports: dependencySidecars.map((count) => count + 1),
+  routes: {
+    native: resolverBackend === 'native' ? await measureResolverRoute('native') : null,
+    jspi: resolverBackend === 'wasm' && hasJspi ? await measureResolverRoute('jspi') : null,
+    replay: resolverBackend === 'wasm' ? await measureResolverRoute('replay') : null,
+  },
 };
-if (asyncResolver.jspi !== null) {
-  assert.equal(asyncResolver.jspi.outputFnv, asyncResolver.replay.outputFnv);
+if (dependencyResolver.routes.jspi !== null) {
+  const observable = ({ sidecars, resolverCalls, outputBytes, outputFnv }) => ({
+    sidecars,
+    resolverCalls,
+    outputBytes,
+    outputFnv,
+  });
+  assert.deepEqual(
+    dependencyResolver.routes.jspi.map(observable),
+    dependencyResolver.routes.replay.map(observable),
+  );
 }
 
 const report = {
@@ -154,7 +193,7 @@ const report = {
     pluralMedianMs: median(pluralDurations),
     outputFnvs: pluralOutputs.map(({ files }) => files.map(({ bytes: contents }) => fnv64(contents))),
   },
-  asyncResolver,
+  dependencyResolver,
 };
 
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

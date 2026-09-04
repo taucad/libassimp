@@ -50,7 +50,12 @@ const testArguments = process.env.LIBASSIMP_GTEST_FILTER
 run(testBinary, testArguments, { environment });
 if (addon) {
   run('node', [resolve(root, 'src/cpp/node-addon.test.mjs')], {
-    environment: { ...environment, LIBASSIMP_NATIVE_ADDON: addon, UV_THREADPOOL_SIZE: '2' },
+    environment: {
+      ...environment,
+      LIBASSIMP_NATIVE_ADDON: addon,
+      LIBASSIMP_RECORD_CPP_DIAGNOSTICS: '1',
+      UV_THREADPOOL_SIZE: '2',
+    },
   });
 }
 const merged = resolve(directory, 'default.profdata');
@@ -61,7 +66,9 @@ assert(profiles.length > 0, 'instrumented tests produced no .profraw files');
 run(profdata, ['merge', '-sparse', ...profiles, '-o', merged]);
 
 const objects = addon ? ['-object', addon] : [];
-const sources = [resolve(root, 'src/cpp/libassimp.cpp'), resolve(root, 'src/cpp/memory-io.hpp')];
+const sources = ['libassimp.cpp', 'libassimp.hpp', 'memory-io.hpp'].map((name) =>
+  resolve(root, 'src/cpp', name),
+);
 if (addon) sources.push(resolve(root, 'src/cpp/node-addon.cpp'));
 const report = JSON.parse(
   run(cov, ['export', '-summary-only', testBinary, ...objects, `-instr-profile=${merged}`, ...sources], {

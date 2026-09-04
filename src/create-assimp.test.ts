@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ResolutionContext } from './convert.js';
+import { ResolutionContext, type NativeRuntime } from './convert.js';
 import { compileUrl, createEntry, isJspiAvailable, loadModule, missingImport } from './create-assimp.js';
 import { assimpCapabilities } from './generated/assimp-capabilities.js';
 import { createAssimp } from './index.js';
@@ -262,6 +262,159 @@ describe('createAssimp loading and lifetime', () => {
     expect(entries.join('\n')).toContain('libassimp-absent.wasm');
   });
 
+  it('preserves exact abort reasons before work and while resolving', async () => {
+    using assimp = await createAssimp();
+    const before = new AbortController();
+    const beforeReason = { phase: 'before-work' };
+    const resolve = vi.fn(() => undefined);
+    before.abort(beforeReason);
+    await expect(
+      assimp.convert(
+        { name: 'cube_usemtl.obj', bytes: model('OBJ/cube_usemtl.obj') },
+        { to: 'glb', resolve, signal: before.signal },
+      ),
+    ).rejects.toBe(beforeReason);
+    expect(resolve).not.toHaveBeenCalled();
+    await expect(
+      assimp.convertFormats(
+        { name: 'cube.obj', bytes: cube },
+        { targets: [{ to: 'glb' }], signal: before.signal },
+      ),
+    ).rejects.toBe(beforeReason);
+
+    const during = new AbortController();
+    const duringReason = { phase: 'while-resolving' };
+    let started: (() => void) | undefined;
+    const resolving = new Promise<void>((resolveStarted) => {
+      started = resolveStarted;
+    });
+    let settle: ((bytes: Uint8Array) => void) | undefined;
+    const conversion = assimp.convert(
+      { name: 'cube_usemtl.obj', bytes: model('OBJ/cube_usemtl.obj') },
+      {
+        to: 'glb',
+        signal: during.signal,
+        resolve: () => {
+          started?.();
+          return new Promise((resolveBytes) => {
+            settle = resolveBytes;
+          });
+        },
+      },
+    );
+    await resolving;
+    during.abort(duringReason);
+    await expect(conversion).rejects.toBe(duringReason);
+    settle?.(model('OBJ/cube_usemtl.mtl'));
+    await Promise.resolve();
+  });
+
+  it('cancels queued Wasm admission without waiting for its predecessor', async () => {
+    const preparePlan = vi.fn(() => 1);
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const runtime: NativeRuntime = {
+      backend: 'wasm',
+      preparePlan,
+      runPlan: vi.fn(async () => {
+        await gate;
+        return 1;
+      }),
+      cancelPlan: vi.fn(),
+      takePlanResult: () => ({
+        ok: true,
+        code: '',
+        message: '',
+        formats: [{ format: 'glb', files: [] }],
+      }),
+      destroyPlan: vi.fn(),
+      dispose: vi.fn(),
+    };
+    const entry = createEntry(glueUrl(), new URL('https://example.test/queued.wasm'), {
+      import: [assimpCapabilities.import.obj],
+      export: [assimpCapabilities.export.glb],
+      loadRuntime: async () => runtime,
+    });
+    using assimp = await entry.createAssimp();
+    const first = assimp.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
+    await vi.waitFor(() => {
+      expect(preparePlan).toHaveBeenCalledOnce();
+    });
+    const controller = new AbortController();
+    const reason = { phase: 'queued' };
+    const add = vi.spyOn(controller.signal, 'addEventListener');
+    const remove = vi.spyOn(controller.signal, 'removeEventListener');
+    const second = assimp.convert(
+      { name: 'cube.obj', bytes: cube },
+      { to: 'glb', signal: controller.signal },
+    );
+    const rejected = vi.fn();
+    void second.catch(rejected);
+    controller.abort(reason);
+    await new Promise<void>(setImmediate);
+    expect(rejected).toHaveBeenCalledWith(reason);
+    const listener = add.mock.calls.find(([type]) => type === 'abort')?.[1];
+    expect(listener).toEqual(expect.any(Function));
+    expect(remove).toHaveBeenCalledWith('abort', listener);
+    expect(preparePlan).toHaveBeenCalledOnce();
+
+    const third = assimp.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
+    await Promise.resolve();
+    expect(preparePlan).toHaveBeenCalledOnce();
+    release?.();
+    await expect(first).resolves.toBeDefined();
+    await expect(second).rejects.toBe(reason);
+    await expect(third).resolves.toBeDefined();
+    expect(preparePlan).toHaveBeenCalledTimes(2);
+  });
+
+  it('lets the native executor own admission while disposal only tracks the drain', async () => {
+    let nextHandle = 0;
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const runtime: NativeRuntime = {
+      backend: 'native',
+      preparePlan: vi.fn(() => (nextHandle += 1)),
+      runPlan: vi.fn(async (handle) => {
+        if (handle === 1) await gate;
+        return 1;
+      }),
+      cancelPlan: vi.fn(),
+      takePlanResult: () => ({
+        ok: true,
+        code: '',
+        message: '',
+        formats: [{ format: 'glb', files: [] }],
+      }),
+      destroyPlan: vi.fn(),
+      dispose: vi.fn(),
+    };
+    const entry = createEntry(glueUrl(), new URL('https://example.test/native.wasm'), {
+      import: [assimpCapabilities.import.obj],
+      export: [assimpCapabilities.export.glb],
+      loadRuntime: async () => runtime,
+    });
+    const assimp = await entry.createAssimp();
+    const first = assimp.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
+    const second = assimp.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
+    const secondSettled = vi.fn();
+    void second.then(secondSettled);
+    await new Promise<void>(setImmediate);
+    expect(secondSettled).toHaveBeenCalledWith({ files: [] });
+    expect(runtime.preparePlan).toHaveBeenCalledTimes(2);
+
+    assimp.dispose();
+    expect(runtime.dispose).not.toHaveBeenCalled();
+    release?.();
+    await expect(first).resolves.toEqual({ files: [] });
+    await new Promise<void>(setImmediate);
+    expect(runtime.dispose).toHaveBeenCalledOnce();
+  });
+
   it('serializes suspended work, recovers after rejection, and settles queued work on dispose', async () => {
     const assimp = await createAssimp();
     let release: (() => void) | undefined;
@@ -368,6 +521,71 @@ describe('createAssimp loading and lifetime', () => {
 });
 
 describe('shared entry loader', () => {
+  it.each(['convert', 'convertFormats'] as const)(
+    'cancels top-level %s before and during shared initialization',
+    async (method) => {
+      let finishLoad: ((runtime: NativeRuntime) => void) | undefined;
+      const preparePlan = vi.fn(() => 1);
+      const runtime: NativeRuntime = {
+        backend: 'wasm',
+        preparePlan,
+        runPlan: vi.fn(async () => 1),
+        cancelPlan: vi.fn(),
+        takePlanResult: () => ({
+          ok: true,
+          code: '',
+          message: '',
+          formats: [{ format: 'glb', files: [] }],
+        }),
+        destroyPlan: vi.fn(),
+        dispose: vi.fn(),
+      };
+      const loadRuntime = vi.fn(
+        () =>
+          new Promise<NativeRuntime>((resolve) => {
+            finishLoad = resolve;
+          }),
+      );
+      const entry = createEntry(glueUrl(), new URL('https://example.test/pending.wasm'), {
+        import: [assimpCapabilities.import.obj],
+        export: [assimpCapabilities.export.glb],
+        loadRuntime,
+      });
+      const call = (signal: AbortSignal) =>
+        method === 'convert'
+          ? entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb', signal })
+          : entry.convertFormats({ name: 'cube.obj', bytes: cube }, { targets: [{ to: 'glb' }], signal });
+
+      const before = new AbortController();
+      const beforeReason = { method, phase: 'before-initialization' };
+      const beforeRejected = vi.fn();
+      before.abort(beforeReason);
+      void call(before.signal).catch(beforeRejected);
+      await new Promise<void>(setImmediate);
+      expect(beforeRejected).toHaveBeenCalledWith(beforeReason);
+      expect(loadRuntime).not.toHaveBeenCalled();
+
+      const during = new AbortController();
+      const duringReason = { method, phase: 'during-initialization' };
+      const add = vi.spyOn(during.signal, 'addEventListener');
+      const remove = vi.spyOn(during.signal, 'removeEventListener');
+      const pending = call(during.signal);
+      const duringRejected = vi.fn();
+      void pending.catch(duringRejected);
+      expect(loadRuntime).toHaveBeenCalledOnce();
+      during.abort(duringReason);
+      await new Promise<void>(setImmediate);
+      expect(duringRejected).toHaveBeenCalledWith(duringReason);
+      const listener = add.mock.calls.find(([type]) => type === 'abort')?.[1];
+      expect(listener).toEqual(expect.any(Function));
+      expect(remove).toHaveBeenCalledWith('abort', listener);
+
+      finishLoad?.(runtime);
+      await new Promise<void>(setImmediate);
+      expect(preparePlan).not.toHaveBeenCalled();
+    },
+  );
+
   it('retries a failed shared load and reuses the successful instance', async () => {
     const response = (): Response =>
       new Response(testWasm.slice().buffer, { headers: { 'Content-Type': 'application/wasm' } });
@@ -386,9 +604,12 @@ describe('shared entry loader', () => {
       },
     );
 
-    await expect(entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).rejects.toThrow(
-      '503 Offline',
-    );
+    const loading = new AbortController();
+    const remove = vi.spyOn(loading.signal, 'removeEventListener');
+    await expect(
+      entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb', signal: loading.signal }),
+    ).rejects.toThrow('503 Offline');
+    expect(remove).toHaveBeenCalledOnce();
     await expect(entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).resolves.toEqual({
       files: [],
     });

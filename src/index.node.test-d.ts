@@ -11,3 +11,12 @@ test('Node and browser entries expose one public type surface', () => {
   expectTypeOf<node.Assimp>().toEqualTypeOf<browser.Assimp>();
   expectTypeOf<Awaited<ReturnType<typeof node.createAssimp>>['backend']>().toEqualTypeOf<'native' | 'wasm'>();
 });
+
+test('both entries accept the same optional cancellation signal', () => {
+  const signal = new AbortController().signal;
+  void browser.convert({ name: 'model.obj', bytes: new Uint8Array() }, { to: 'glb', signal });
+  void node.convertFormats(
+    { name: 'model.obj', bytes: new Uint8Array() },
+    { targets: [{ to: 'glb' }], signal },
+  );
+});

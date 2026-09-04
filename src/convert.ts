@@ -37,6 +37,8 @@ export type ConvertOptions<Format extends AllExportFormat = AllExportFormat> = F
   ? {
       readonly to: Format;
       readonly resolve?: ResolveFile;
+      /** Cancels this conversion without changing the resolver's one-argument contract. */
+      readonly signal?: AbortSignal;
       readonly importOptions?: ImportOptions;
       readonly postProcess?: readonly PostProcessStep[];
       readonly exportOptions?: ExportOptionsFor<Format>;
@@ -47,6 +49,8 @@ export type ConvertOptions<Format extends AllExportFormat = AllExportFormat> = F
 export type ConvertFormatsOptions<Targets extends readonly [ConvertTarget, ...ConvertTarget[]]> = {
   readonly targets: Targets;
   readonly resolve?: ResolveFile;
+  /** Cancels this conversion without changing the resolver's one-argument contract. */
+  readonly signal?: AbortSignal;
   readonly importOptions?: ImportOptions;
   readonly postProcess?: readonly PostProcessStep[];
 };
@@ -82,10 +86,15 @@ export type NativeModule = {
   readonly destroyPlan: (handle: number) => void;
 };
 
-type ResolverState =
+/** One terminal resolver answer shared by Wasm and native bridges. @internal */
+export type ResolutionResult =
+  | { readonly status: 'found'; readonly bytes: Uint8Array }
   | { readonly status: 'missing' }
-  | { readonly status: 'ready'; readonly bytes: Uint8Array }
-  | { readonly status: 'pending'; readonly promise: Promise<number> };
+  | { readonly status: 'failed' }
+  | { readonly status: 'aborted' };
+
+type PendingResolution = Promise<ResolutionResult | undefined>;
+type ResolverState = ResolutionResult | { readonly status: 'pending'; readonly promise: PendingResolution };
 
 export type ResolutionDispatch = Readonly<{
   operation: number;
@@ -100,74 +109,143 @@ const isPromiseLike = (value: unknown): value is PromiseLike<Uint8Array | undefi
   value !== null &&
   typeof (value as { then?: unknown }).then === 'function';
 
+const isBytes = (value: unknown): value is Uint8Array =>
+  value instanceof Uint8Array && ArrayBuffer.isView(value);
+
 /** Interpret an Emscripten i32 pointer or length as an unsigned Wasm value. @internal */
 export const unsignedWasmI32 = (value: number): number => value >>> 0;
 
-/** Per-call resolver cache shared by JSPI and replay. @internal */
+/** Per-call resolver cache shared by native, JSPI, and replay. @internal */
 export class ResolutionContext {
   private readonly states = new Map<string, ResolverState>();
-  private readonly handles = new Map<number, Uint8Array>();
-  private readonly pendingSinceRun = new Set<Promise<number>>();
+  private readonly handles = new Map<number, { readonly name: string; readonly bytes: Uint8Array }>();
+  private readonly pendingSinceRun = new Set<PendingResolution>();
+  private readonly pendingClosers = new Set<(result: ResolutionResult | undefined) => void>();
   private nextHandle = 1;
+  private generation = 0;
+  private closed = false;
+  private disposed = false;
+  private aborted = false;
+  private abortReason: unknown;
+  private cancel: (() => void) | undefined;
   public failure?: { readonly fileName: string; readonly cause: unknown };
 
-  public constructor(private readonly resolve: ResolveFile | undefined) {}
+  public constructor(
+    private resolver: ResolveFile | undefined,
+    private readonly signal?: AbortSignal,
+  ) {
+    if (signal?.aborted) this.abort();
+    else signal?.addEventListener('abort', this.abort, { once: true });
+  }
 
-  private settle(name: string, bytes: Uint8Array | undefined): number {
+  private readonly abort = (): void => {
+    this.aborted = true;
+    this.abortReason = this.signal?.reason;
+    this.close({ status: 'aborted' });
+    const cancel = this.cancel;
+    this.cancel = undefined;
+    cancel?.();
+  };
+
+  private close(result: ResolutionResult | undefined): void {
+    if (this.closed) return;
+    this.closed = true;
+    this.generation += 1;
+    this.states.clear();
+    this.handles.clear();
+    this.pendingSinceRun.clear();
+    this.resolver = undefined;
+    this.signal?.removeEventListener('abort', this.abort);
+    const closers = [...this.pendingClosers];
+    this.pendingClosers.clear();
+    for (const close of closers) close(result);
+  }
+
+  private settle(name: string, bytes: Uint8Array | undefined): ResolutionResult {
     if (bytes === undefined) {
-      this.states.set(name, { status: 'missing' });
-      return 0;
+      const result = { status: 'missing' } as const;
+      this.states.set(name, result);
+      return result;
     }
-    if (!(bytes instanceof Uint8Array)) {
+    if (!isBytes(bytes)) {
       this.fail(name, new TypeError('resolve must return Uint8Array or undefined.'));
-      return -1;
+      return { status: 'failed' };
     }
-    this.states.set(name, { status: 'ready', bytes });
-    return this.allocate(bytes);
+    const result = { status: 'found', bytes } as const;
+    this.states.set(name, result);
+    return result;
   }
 
   private fail(fileName: string, cause: unknown): void {
     this.failure ??= { fileName, cause };
-    this.states.set(fileName, { status: 'missing' });
+    this.states.set(fileName, { status: 'failed' });
   }
 
-  private allocate(bytes: Uint8Array): number {
+  private allocate(name: string, bytes: Uint8Array): number {
     const handle = this.nextHandle++;
-    this.handles.set(handle, bytes);
+    this.handles.set(handle, { name, bytes });
     return handle;
   }
 
-  private begin(name: string, suspending: boolean): number | Promise<number> {
+  /** Forget transferred bytes once the C++ plan owns its copy. @internal */
+  public release(name: string): void {
+    this.states.delete(name);
+  }
+
+  /** Resolve one exact name once without allocating backend-specific resources. @internal */
+  public resolve(name: string): ResolutionResult | PendingResolution | undefined {
+    if (this.disposed) return undefined;
+    if (this.aborted) return { status: 'aborted' };
     const existing = this.states.get(name);
-    if (existing?.status === 'ready') return this.allocate(existing.bytes);
-    if (existing?.status === 'missing') return 0;
-    if (existing?.status === 'pending') {
-      return suspending ? existing.promise : -1;
-    }
-    if (this.resolve === undefined) {
-      this.states.set(name, { status: 'missing' });
-      return 0;
-    }
+    if (existing !== undefined) return existing.status === 'pending' ? existing.promise : existing;
+    if (this.resolver === undefined) return this.settle(name, undefined);
 
+    const generation = this.generation;
     let resolved: ReturnType<ResolveFile>;
+    let asynchronous: boolean;
     try {
-      resolved = this.resolve(name);
+      resolved = this.resolver(name);
+      asynchronous = isPromiseLike(resolved);
     } catch (cause) {
+      if (generation !== this.generation) return this.currentResult(undefined);
       this.fail(name, cause);
-      return -1;
+      return { status: 'failed' };
     }
-    if (!isPromiseLike(resolved)) return this.settle(name, resolved);
+    if (generation !== this.generation) {
+      void Promise.resolve(resolved).catch(() => undefined);
+      return this.currentResult(undefined);
+    }
+    if (!asynchronous) return this.settle(name, resolved as Uint8Array | undefined);
 
-    const promise = Promise.resolve(resolved).then(
-      (bytes) => this.settle(name, bytes),
+    let finish!: (result: ResolutionResult | undefined) => void;
+    const promise = new Promise<ResolutionResult | undefined>((resolve) => {
+      finish = resolve;
+    });
+    const complete = (result: ResolutionResult | undefined): void => {
+      this.pendingClosers.delete(complete);
+      finish(result);
+    };
+    this.pendingClosers.add(complete);
+    void Promise.resolve(resolved).then(
+      (bytes) => {
+        if (generation !== this.generation) return;
+        complete(this.settle(name, bytes));
+      },
       (cause: unknown) => {
+        if (generation !== this.generation) return;
         this.fail(name, cause);
-        return -1;
+        complete({ status: 'failed' });
       },
     );
     this.states.set(name, { status: 'pending', promise });
-    this.pendingSinceRun.add(promise);
-    return suspending ? promise : -1;
+    return promise;
+  }
+
+  private wasmResult(name: string, result: ResolutionResult | undefined): number {
+    result = this.currentResult(result);
+    if (result === undefined || result.status === 'failed' || result.status === 'aborted') return -1;
+    if (result.status === 'missing') return 0;
+    return this.allocate(name, result.bytes);
   }
 
   public dispatch({
@@ -181,9 +259,14 @@ export class ResolutionContext {
     second = unsignedWasmI32(second);
     if (operation === 1) {
       const name = new TextDecoder().decode(new Uint8Array(memory.buffer, first, second));
-      return this.begin(name, suspending);
+      const resolution = this.resolve(name);
+      if (!(resolution instanceof Promise)) return this.wasmResult(name, resolution);
+      if (suspending) return resolution.then((result) => this.wasmResult(name, result));
+      this.pendingSinceRun.add(resolution);
+      return -1;
     }
-    const bytes = this.handles.get(first);
+    const transfer = this.handles.get(first);
+    const bytes = transfer?.bytes;
     if (operation === 2) return bytes?.byteLength ?? -1;
     if (operation === 3) {
       if (bytes === undefined) return -1;
@@ -191,29 +274,43 @@ export class ResolutionContext {
       return bytes.byteLength;
     }
     if (operation === 4) {
+      if (transfer !== undefined) this.release(transfer.name);
       this.handles.delete(first);
       return 0;
     }
     return -1;
   }
 
-  public takePending(): readonly Promise<number>[] {
+  public takePending(): readonly PendingResolution[] {
     const pending = [...this.pendingSinceRun];
     this.pendingSinceRun.clear();
     return pending;
   }
 
-  /** Resolve and stage one native replay answer without exposing resolver state. @internal */
-  public stageNative(name: string, supply: (bytes: Uint8Array | undefined) => void): void {
-    const resolution = this.begin(name, true);
-    if (typeof resolution !== 'number') this.pendingSinceRun.delete(resolution);
-    const pending = Promise.resolve(resolution).then((handle) => {
-      if (handle < 0) return handle;
-      const bytes = handle === 0 ? undefined : this.handles.get(handle);
-      supply(bytes);
-      return handle;
-    });
-    this.pendingSinceRun.add(pending);
+  /** Fence a queued consumer against abort or disposal after Promise settlement. @internal */
+  public currentResult(result: ResolutionResult | undefined): ResolutionResult | undefined {
+    if (this.disposed) return undefined;
+    if (this.aborted) return { status: 'aborted' };
+    return result;
+  }
+
+  /** Bind cancellation after a plan exists, including an abort during preparation. @internal */
+  public setCancel(cancel: () => void): void {
+    if (this.aborted) cancel();
+    else this.cancel = cancel;
+  }
+
+  /** Throw the signal's exact reason after an asynchronous boundary. @internal */
+  public throwIfAborted(): void {
+    if (this.aborted) throw this.abortReason;
+  }
+
+  /** Close this call and fence every late resolver settlement. @internal */
+  public dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.cancel = undefined;
+    this.close(undefined);
   }
 
   public getFailure(): ResolutionContext['failure'] {
@@ -227,6 +324,7 @@ export type NativeRuntime = Readonly<{
   buildIdentity?: string;
   preparePlan: (entryName: string, files: readonly AssimpFile[], options: NativePlanOptions) => unknown;
   runPlan: (handle: unknown, context: ResolutionContext) => Promise<number>;
+  cancelPlan: (handle: unknown) => void;
   takePlanResult: (handle: unknown) => NativeResult;
   destroyPlan: (handle: unknown) => void;
   dispose: () => void;
@@ -239,6 +337,7 @@ export type PreparedConversion<
   files: readonly [AssimpFile, ...AssimpFile[]];
   nativeOptions: NativePlanOptions;
   resolve: ResolveFile | undefined;
+  signal: AbortSignal | undefined;
   targets: Targets;
 }>;
 
@@ -248,7 +347,7 @@ const isAssimpFile = (value: unknown): value is AssimpFile =>
   'name' in value &&
   typeof value.name === 'string' &&
   'bytes' in value &&
-  value.bytes instanceof Uint8Array;
+  isBytes(value.bytes);
 
 const normalizeFiles = (
   files: AssimpFile | readonly AssimpFile[],
@@ -270,9 +369,16 @@ export const prepareConversion = <const Targets extends readonly [ConvertTarget,
   options: ConvertFormatsOptions<Targets>,
   supportedFormats: ReadonlySet<string>,
 ): PreparedConversion<Targets> => {
+  if (options.signal?.aborted) throw options.signal.reason;
   const list = normalizeFiles(files);
   const nativeOptions = validatePlanOptions(options, supportedFormats);
-  return { files: list, nativeOptions, resolve: options.resolve, targets: options.targets };
+  return {
+    files: list,
+    nativeOptions,
+    resolve: options.resolve,
+    signal: options.signal,
+    targets: options.targets,
+  };
 };
 
 const resolverFailure = (failure: NonNullable<ResolutionContext['failure']>): AssimpError =>
@@ -285,11 +391,26 @@ export const runPreparedConversion = async <
   runtime: NativeRuntime,
   request: PreparedConversion<Targets>,
 ): Promise<ConvertFormatsResult<Targets>> => {
-  const context = new ResolutionContext(request.resolve);
-  const handle = runtime.preparePlan(request.files[0].name, request.files, request.nativeOptions);
+  const context = new ResolutionContext(request.resolve, request.signal);
+  let handle: unknown;
+  let prepared = false;
   try {
+    context.throwIfAborted();
+    handle = runtime.preparePlan(request.files[0].name, request.files, request.nativeOptions);
+    prepared = true;
+    context.setCancel(() => {
+      runtime.cancelPlan(handle);
+    });
+    context.throwIfAborted();
     for (;;) {
-      const status = await runtime.runPlan(handle, context);
+      let status: number;
+      try {
+        status = await runtime.runPlan(handle, context);
+      } catch (error) {
+        context.throwIfAborted();
+        throw error;
+      }
+      context.throwIfAborted();
       const failure = context.getFailure();
       if (failure !== undefined) throw resolverFailure(failure);
       if (status !== -1) break;
@@ -298,6 +419,7 @@ export const runPreparedConversion = async <
         throw new Error('libassimp replay invariant failed: PENDING without new resolver work.');
       }
       await Promise.all(pending);
+      context.throwIfAborted();
       const settledFailure = context.getFailure();
       if (settledFailure !== undefined) throw resolverFailure(settledFailure);
     }
@@ -310,6 +432,7 @@ export const runPreparedConversion = async <
     }
     return result.formats as ConvertFormatsResult<Targets>;
   } finally {
-    runtime.destroyPlan(handle);
+    context.dispose();
+    if (prepared) runtime.destroyPlan(handle);
   }
 };

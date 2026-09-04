@@ -7,8 +7,7 @@ export const packageVersion = (createRequire(import.meta.url)('../../package.jso
   .version;
 export const preparePlan = vi.fn(() => ({}));
 export const runPlan = vi.fn(async () => 1);
-export const pendingName = vi.fn(() => undefined);
-export const supplyPlan = vi.fn();
+export const cancelPlan = vi.fn();
 export const takePlanResult = vi.fn(() => ({
   ok: true,
   code: '',

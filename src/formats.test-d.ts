@@ -5,10 +5,12 @@ import {
   assimpCapabilities,
   convertFormats,
   type ConversionEdge,
+  type ConvertFormatsOptions,
   type ConvertOptions,
   type ConvertTarget,
   type ConvertedFormat,
   type ExportFormat,
+  type ResolveFile,
 } from './index.js';
 
 declare const bytes: Uint8Array;
@@ -26,6 +28,11 @@ test('format union and positional tuple inference remain exact', () => {
 });
 
 test('format options are correlated and native escape hatches do not exist', () => {
+  expectTypeOf<Parameters<ResolveFile>>().toEqualTypeOf<[name: string]>();
+  expectTypeOf<ConvertOptions<'glb'>>().toExtend<{ signal?: AbortSignal }>();
+  expectTypeOf<ConvertFormatsOptions<readonly [{ readonly to: 'glb' }]>>().toExtend<{
+    signal?: AbortSignal;
+  }>();
   expectTypeOf<ConvertOptions<'stl'>>().toExtend<{ exportOptions?: { binary?: boolean } }>();
   expectTypeOf<ConvertOptions<'obj'>>().toExtend<{ exportOptions?: { materials?: boolean } }>();
   expectTypeOf<ConvertOptions<'glb'>>().not.toExtend<{ exportOptions?: { binary?: boolean } }>();

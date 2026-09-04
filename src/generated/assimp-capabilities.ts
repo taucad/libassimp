@@ -2639,7 +2639,7 @@ export const internalImportOptionDescriptors = {
     phases: ['import'],
     description:
       'Enables time measurements. If enabled, measures the time needed for each part of the loading process (i.e. IO time, importing, postprocessing, ..) and dumps these timings to the DefaultLogger. See the @link perf Performance Page@endlink for more information on this topic. Property type: bool. Default value: false.',
-    source: 'assimp/code/Common/Importer.cpp:621',
+    source: 'assimp/code/Common/Importer.cpp:635',
   },
   ifcUnitScaleToMeters: {
     publicName: 'ifcUnitScaleToMeters',
@@ -3603,7 +3603,7 @@ export const internalImportOptionDescriptors = {
     phases: ['export', 'import'],
     description:
       'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-    source: 'assimp/code/Common/Exporter.cpp:522',
+    source: 'assimp/code/Common/Exporter.cpp:534',
   },
   ppCtMaxSmoothingAngle: {
     publicName: 'ppCtMaxSmoothingAngle',
@@ -4119,7 +4119,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   '3mf': {
@@ -4176,7 +4176,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     unit: {
       publicName: 'unit',
@@ -4238,7 +4238,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     skipWhitespaces: {
       publicName: 'skipWhitespaces',
@@ -4282,7 +4282,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   fbx: {
@@ -4337,7 +4337,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     transparencyFactorRefersToOpacity: {
       publicName: 'transparencyFactorRefersToOpacity',
@@ -4419,7 +4419,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     sparseAccessors: {
       publicName: 'sparseAccessors',
@@ -4526,7 +4526,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     sparseAccessors: {
       publicName: 'sparseAccessors',
@@ -4619,7 +4619,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   ply: {
@@ -4662,7 +4662,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   step: {
@@ -4693,7 +4693,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   stl: {
@@ -4736,7 +4736,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   usda: {
@@ -4815,7 +4815,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     subdivision: {
       publicName: 'subdivision',
@@ -4918,7 +4918,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     subdivision: {
       publicName: 'subdivision',
@@ -4973,7 +4973,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     use64Bit: {
       publicName: 'use64Bit',
@@ -5017,7 +5017,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
 } as const;

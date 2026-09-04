@@ -228,6 +228,7 @@ export const loadModule = async (
         }
       },
       takePlanResult: (handle) => native.takePlanResult(handle as number),
+      cancelPlan: () => undefined,
       destroyPlan: (handle) => {
         native.destroyPlan(handle as number);
       },
@@ -240,6 +241,39 @@ export const loadModule = async (
 };
 
 const disposedError = (): Error => new Error('assimp instance disposed; create another with createAssimp().');
+
+const waitFor = <Value>(start: () => Promise<Value>, signal: AbortSignal | undefined): Promise<Value> => {
+  if (signal === undefined) return start();
+  return new Promise((resolve, reject) => {
+    let watched: AbortSignal | undefined = signal;
+    const stop = (): void => {
+      watched?.removeEventListener('abort', abort);
+      watched = undefined;
+    };
+    const abort = (): void => {
+      const reason: unknown = watched?.reason;
+      stop();
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+      reject(reason);
+    };
+    signal.addEventListener('abort', abort, { once: true });
+    if (signal.aborted) {
+      abort();
+      return;
+    }
+    void start().then(
+      (value) => {
+        stop();
+        resolve(value);
+      },
+      (error: unknown) => {
+        stop();
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+        reject(error);
+      },
+    );
+  });
+};
 
 /** Bind one package entry to its artifact and generated static format tables. @internal */
 export const createEntry = <ImportFormat extends string, ExportFormat extends AllExportFormat>(
@@ -275,26 +309,32 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
     }
     let runtime: NativeRuntime | undefined = await loadRuntime(options);
     let disposed = false;
-    let tail: Promise<void> = Promise.resolve();
+    let drain: Promise<void> = Promise.resolve();
+    const serialize = runtime.backend === 'wasm';
 
-    const enqueue = <Result>(operation: () => Promise<Result>): Promise<Result> => {
-      const result = tail.then(operation);
-      tail = result.then(
+    const run = <Result>(operation: () => Promise<Result>, signal: AbortSignal | undefined) => {
+      const predecessor = drain;
+      const result = serialize ? waitFor(() => predecessor, signal).then(operation) : operation();
+      const settled = result.then(
         () => undefined,
         () => undefined,
       );
+      drain = Promise.all([predecessor, settled]).then(() => undefined);
       return result;
     };
 
     const convertFormats: ConvertFormatsFunction<ExportFormat> = (files, convertOptions) => {
       if (disposed) return Promise.reject(disposedError());
+      // AbortSignal.reason is deliberately not constrained to Error.
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+      if (convertOptions.signal?.aborted) return Promise.reject(convertOptions.signal.reason);
       let request;
       try {
         request = prepareConversion(files, convertOptions, supportedFormats);
       } catch (error) {
         return Promise.reject(error instanceof Error ? error : new Error(String(error)));
       }
-      return enqueue(() => runPreparedConversion(runtime as NativeRuntime, request));
+      return run(() => runPreparedConversion(runtime as NativeRuntime, request), convertOptions.signal);
     };
 
     const convert: ConvertFunction<ExportFormat> = (files, convertOptions) => {
@@ -307,6 +347,7 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
       const plural = {
         targets: [target] as [ConvertTarget<ExportFormat>],
         ...(convertOptions.resolve === undefined ? {} : { resolve: convertOptions.resolve }),
+        ...(convertOptions.signal === undefined ? {} : { signal: convertOptions.signal }),
         ...(convertOptions.importOptions === undefined
           ? {}
           : { importOptions: convertOptions.importOptions }),
@@ -318,7 +359,7 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
     const dispose = (): void => {
       if (disposed) return;
       disposed = true;
-      void tail.then(() => {
+      void drain.then(() => {
         runtime?.dispose();
         runtime = undefined;
       });
@@ -342,9 +383,9 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
       throw error;
     }));
   const convert: ConvertFunction<ExportFormat> = async (files, options) =>
-    (await instance()).convert(files, options);
+    (await waitFor(instance, options.signal)).convert(files, options);
   const convertFormats: ConvertFormatsFunction<ExportFormat> = async (files, options) =>
-    (await instance()).convertFormats(files, options);
+    (await waitFor(instance, options.signal)).convertFormats(files, options);
 
   return { convert, convertFormats, createAssimp };
 };

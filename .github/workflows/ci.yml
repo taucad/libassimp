@@ -485,7 +485,7 @@ jobs:
         run: |
           printf '%s\n' '{"error":"benchmark did not complete"}' > /tmp/current-benchmark.json
           printf '%s\n' '<!-- libassimp-benchmark -->' '### Benchmark' '' 'Benchmark did not complete.' > /tmp/benchmark.md
-      - name: Compare native and Wasm from the frozen tarballs
+      - name: Compare native, Wasm, and dependency-heavy resolution from the frozen tarballs
         id: current
         continue-on-error: true # Preserve the report before the final fail-closed step.
         shell: bash
@@ -534,8 +534,8 @@ jobs:
           : "${entry:?current benchmark did not produce an entry}"
           : "${base_directory:?base build did not produce a directory}"
           LIBASSIMP_BENCH_ENTRY="$entry" LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/current-regression-1.json || failed=1
-          (cd "$base_directory" && node bench/gated.mjs > /tmp/base-benchmark-1.json) || failed=1
-          (cd "$base_directory" && node bench/gated.mjs > /tmp/base-benchmark-2.json) || failed=1
+          (cd "$base_directory" && LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/base-benchmark-1.json) || failed=1
+          (cd "$base_directory" && LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/base-benchmark-2.json) || failed=1
           LIBASSIMP_BENCH_ENTRY="$entry" LIBASSIMP_BENCH_BACKEND=wasm node bench/gated.mjs > /tmp/current-regression-2.json || failed=1
           node scripts/compare-benchmark.mjs \
             /tmp/current-regression-1.json,/tmp/current-regression-2.json \
@@ -730,7 +730,8 @@ jobs:
           const needs = JSON.parse(process.env.RESULTS);
           const required = ['preflight', 'build-wasm', 'quality', 'docs-prose', 'node', 'native-build', 'assemble', 'smoke', 'browser', 'security'];
           if (process.env.PUBLISH === 'true') required.push('publish', 'registry-verify', 'registry-smoke', 'registry-release');
+          if (needs.preflight.outputs.kind === 'pull-request') required.push('benchmark');
           const failures = required.filter((name) => needs[name]?.result !== 'success');
-          if (!['success', 'skipped'].includes(needs.benchmark?.result)) failures.push('benchmark');
+          if (!required.includes('benchmark') && !['success', 'skipped'].includes(needs.benchmark?.result)) failures.push('benchmark');
           if (failures.length) throw new Error(`required jobs did not pass: ${failures.join(', ')}`);
           NODE

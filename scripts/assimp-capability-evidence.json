@@ -1,6 +1,6 @@
 {
-  "engineSha": "a206261669b51ee68c92dfaa8cbed89dfc534b85",
-  "sourceSha256": "67faac82e4d37f5baa2349017bf3bbca78dd29d10d0d5caae6d19c29063c0b08",
+  "engineSha": "f5b88d929321d86972530792c3291a499a91a370",
+  "sourceSha256": "066bc0cf9592e146e31b812992868f0827b1829b43c8591dd226ea813998783c",
   "sourceSha256ByPath": {
     "assimp-builds.json": "80194988321739a036709113fc0c32d536b2f654d9cb726968dbc5488d3c8c21",
     "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "5dc9b5a66e066a0e5bb5f83de6bb9de1a29d3b7837a4dfa543006f640b3a1edd",
@@ -37,8 +37,8 @@
     "assimp/code/AssetLib/Unreal/UnrealLoader.cpp": "2651b54ccdb63cf50742a31106b4261d55ce91fd5806bf0e52d52d33eaa74c4a",
     "assimp/code/AssetLib/USD/USDZExporter.cpp": "7d46c008e16a317c47b01d4ae32d4fc435eea2d41ace2e37ea2554a7638beb80",
     "assimp/code/AssetLib/X/XFileExporter.cpp": "730178631df48132ac12e0c1d68fab8f2f7b8ef949e0155cad66335674afd260",
-    "assimp/code/Common/Exporter.cpp": "d9abdb1572b28f4cd8c0db00000ea46e25c817abdee897bc966ec6a922b78d45",
-    "assimp/code/Common/Importer.cpp": "02b3283d3bb08596e867d59dfad40b7e4d8edd29531d36d235a0581996e5571f",
+    "assimp/code/Common/Exporter.cpp": "b2e1d08ac356324e485b0e15882f8c64d02b5466364234b47279ad0ef7d2aa59",
+    "assimp/code/Common/Importer.cpp": "30c38fe670a7dec9c109373480b8f72b8664583848f3c4e8824e77597877b829",
     "assimp/code/Common/UnitAxisContract.cpp": "fc0ddf1a7ac862ac41e1d56ae18020a9821bfd9f14e016e4e64af64fe64a6a88",
     "assimp/code/PostProcessing/CalcTangentsProcess.cpp": "dad8b4f1f57f3f59cdf593e780b4336e3c9bc54213a49533849c9da7dcd791f8",
     "assimp/code/PostProcessing/DeboneProcess.cpp": "42dfed100536a81764aa6df23d221cccb77dcc6410786202ed77857b78d87064",
@@ -623,7 +623,7 @@
       "owners": ["Common", "PostProcessing"],
       "symbols": ["AI_CONFIG_EXPORT_POINT_CLOUDS"],
       "sources": [
-        "assimp/code/Common/Exporter.cpp:522",
+        "assimp/code/Common/Exporter.cpp:534",
         "assimp/code/PostProcessing/PretransformVertices.cpp:113"
       ]
     },
@@ -667,9 +667,9 @@
       "owners": ["Common"],
       "symbols": ["AI_CONFIG_GLOB_MEASURE_TIME"],
       "sources": [
-        "assimp/code/Common/Importer.cpp:621",
-        "assimp/code/Common/Importer.cpp:833",
-        "assimp/code/Common/Importer.cpp:928"
+        "assimp/code/Common/Importer.cpp:635",
+        "assimp/code/Common/Importer.cpp:852",
+        "assimp/code/Common/Importer.cpp:953"
       ]
     },
     {

@@ -13,11 +13,15 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cstring>
 #include <fstream>
+#include <future>
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <assimp/postprocess.h>
@@ -177,6 +181,10 @@ libassimp::Plan makePlan(const std::string &file,
                          std::move(targets), {});
 }
 
+libassimp::Bytes textBytes(const std::string &text) {
+  return {text.begin(), text.end()};
+}
+
 TEST(PlanTest, ImportsOnceForOrderedTargets) {
   libassimp::Plan plan =
       makePlan("OBJ/box.obj",
@@ -198,6 +206,43 @@ TEST(PlanTest, KeepsRepeatedTargetResultsSeparate) {
   ASSERT_FALSE(plan.result().formats[1].files.empty());
   EXPECT_NE(plan.result().formats[0].files[0].bytes,
             plan.result().formats[1].files[0].bytes);
+}
+
+TEST(PlanTest, ResolvesMultipleSidecarsInOneImport) {
+  const std::string source =
+      "mtllib first.mtl\nmtllib second.mtl\no triangle\nv 0 0 0\nv 1 0 0\n"
+      "v 0 1 0\nusemtl first\nf 1 2 3\n";
+  std::vector<std::string> requests;
+  libassimp::Plan plan(
+      "multiple.obj", {{"multiple.obj", textBytes(source)}}, {}, kPostProcess,
+      {{"glb", "glb2", {}}},
+      [&](const std::string &name, libassimp::Bytes &out) {
+        requests.push_back(name);
+        out = textBytes("newmtl first\nKd 1 0 0\n");
+        return libassimp::ResolveStatus::Found;
+      });
+
+  ASSERT_EQ(plan.run(), libassimp::PlanStatus::Completed)
+      << plan.result().message;
+  EXPECT_EQ(plan.importAttempts(), 1u);
+  EXPECT_EQ(requests,
+            (std::vector<std::string>{"first.mtl", "second.mtl"}));
+}
+
+TEST(PlanTest, OmittedResolverMatchesAnExplicitMissingAnswer) {
+  const std::string source =
+      "mtllib missing.mtl\no triangle\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
+  libassimp::Plan omitted(
+      "optional.obj", {{"optional.obj", textBytes(source)}}, {}, kPostProcess,
+      {{"glb", "glb2", {}}}, {});
+  libassimp::Plan missing(
+      "optional.obj", {{"optional.obj", textBytes(source)}}, {}, kPostProcess,
+      {{"glb", "glb2", {}}},
+      [](const std::string &, libassimp::Bytes &) { return libassimp::ResolveStatus::Missing; });
+  ASSERT_EQ(omitted.run(), libassimp::PlanStatus::Completed) << omitted.result().message;
+  ASSERT_EQ(missing.run(), libassimp::PlanStatus::Completed) << missing.result().message;
+  EXPECT_EQ(omitted.result().formats[0].files[0].bytes, missing.result().formats[0].files[0].bytes);
+  EXPECT_EQ(omitted.importAttempts(), 1u);
 }
 
 TEST(PlanTest, PublishesNoPartialResultWhenALaterTargetFails) {
@@ -252,28 +297,270 @@ TEST(PlanTest, KeepsPendingReplayAndCachesMissingSupply) {
   EXPECT_EQ(plan.importAttempts(), 2u);
 }
 
+TEST(PlanTest, PendingReplayPreservesTerminalStates) {
+  for (const libassimp::ResolveStatus terminal : {
+           libassimp::ResolveStatus::Failed,
+           libassimp::ResolveStatus::Aborted,
+       }) {
+    Input input = loadInput("OBJ/spider.obj");
+    int calls = 0;
+    libassimp::Plan plan(
+        input.entry, std::move(input.files), {}, kPostProcess,
+        {{"glb", "glb2", {}}},
+        [&](const std::string &, libassimp::Bytes &) {
+          return ++calls == 1 ? libassimp::ResolveStatus::Pending : terminal;
+        });
+    EXPECT_EQ(plan.run(), libassimp::PlanStatus::Pending);
+    EXPECT_EQ(plan.run(), terminal == libassimp::ResolveStatus::Failed
+                              ? libassimp::PlanStatus::Failed
+                              : libassimp::PlanStatus::Aborted)
+        << plan.result().code << ": " << plan.result().message;
+  }
+}
+
+TEST(PlanTest, CatchesPendingReplayExceptions) {
+  for (const bool standard : {true, false}) {
+    Input input = loadInput("OBJ/spider.obj");
+    int calls = 0;
+    libassimp::Plan plan(
+        input.entry, std::move(input.files), {}, kPostProcess,
+        {{"glb", "glb2", {}}},
+        [&](const std::string &, libassimp::Bytes &) -> libassimp::ResolveStatus {
+          if (++calls == 1)
+            return libassimp::ResolveStatus::Pending;
+          if (standard)
+            throw std::runtime_error("resolver failed");
+          throw 1;
+        });
+    EXPECT_EQ(plan.run(), libassimp::PlanStatus::Pending);
+    EXPECT_EQ(plan.run(), libassimp::PlanStatus::Failed);
+  }
+}
+
+TEST(PlanTest, CancellationWinsOverPendingReplayExceptions) {
+  for (const bool standard : {true, false}) {
+    Input input = loadInput("OBJ/spider.obj");
+    int calls = 0;
+    libassimp::Plan *current = nullptr;
+    libassimp::Plan plan(
+        input.entry, std::move(input.files), {}, kPostProcess,
+        {{"glb", "glb2", {}}},
+        [&](const std::string &,
+            libassimp::Bytes &) -> libassimp::ResolveStatus {
+          if (++calls == 1)
+            return libassimp::ResolveStatus::Pending;
+          current->cancel();
+          if (standard)
+            throw std::runtime_error("cancelled resolver");
+          throw 1;
+        });
+    current = &plan;
+    EXPECT_EQ(plan.run(), libassimp::PlanStatus::Pending);
+    EXPECT_EQ(plan.run(), libassimp::PlanStatus::Aborted)
+        << plan.result().code << ": " << plan.result().message;
+  }
+}
+
+TEST(PlanTest, CancellationWinsOverPendingReplayResolution) {
+  Input input = loadInput("OBJ/spider.obj");
+  int calls = 0;
+  libassimp::Plan *current = nullptr;
+  libassimp::Plan plan(
+      input.entry, std::move(input.files), {}, kPostProcess,
+      {{"glb", "glb2", {}}},
+      [&](const std::string &, libassimp::Bytes &) {
+        if (++calls == 1)
+          return libassimp::ResolveStatus::Pending;
+        current->cancel();
+        return libassimp::ResolveStatus::Missing;
+      });
+  current = &plan;
+  EXPECT_EQ(plan.run(), libassimp::PlanStatus::Pending);
+  EXPECT_EQ(plan.run(), libassimp::PlanStatus::Aborted);
+}
+
+TEST(PlanTest, ResolverTerminalStateWinsOverSwallowedIoErrors) {
+  const std::string source =
+      "mtllib sidecar.mtl\no triangle\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
+  const auto check = [&](libassimp::ResolveStatus resolveStatus,
+                         libassimp::PlanStatus planStatus) {
+    libassimp::Plan plan(
+        "terminal.obj", {{"terminal.obj", textBytes(source)}}, {},
+        kPostProcess, {{"glb", "glb2", {}}},
+        [resolveStatus](const std::string &, libassimp::Bytes &) {
+          return resolveStatus;
+        });
+    EXPECT_EQ(plan.run(), planStatus);
+    EXPECT_FALSE(plan.result().ok);
+    EXPECT_EQ(plan.importAttempts(), 1u);
+  };
+  check(libassimp::ResolveStatus::Failed, libassimp::PlanStatus::Failed);
+  check(libassimp::ResolveStatus::Aborted, libassimp::PlanStatus::Aborted);
+}
+
 TEST(PlanTest, TurnsResolverExceptionsIntoFailures) {
   for (const bool standard : {true, false}) {
     Input input = loadInput("OBJ/spider.obj");
-    bool replay = false;
     libassimp::Plan plan(input.entry, std::move(input.files), {}, kPostProcess,
                          {{"glb", "glb2", {}}},
                          [&](const std::string &,
                              libassimp::Bytes &) -> libassimp::ResolveStatus {
-                           if (!replay) {
-                             replay = true;
-                             return libassimp::ResolveStatus::Pending;
-                           }
                            if (standard)
                              throw std::runtime_error("resolver failed");
                            throw 1;
                          });
-    EXPECT_EQ(plan.run(), libassimp::PlanStatus::Pending);
     EXPECT_EQ(plan.run(), libassimp::PlanStatus::Failed);
-    EXPECT_EQ(plan.result().message,
-              standard ? "resolver failed" : "Unknown error.");
+    EXPECT_EQ(plan.result().code, "RESOLVE_FAILED");
+    EXPECT_EQ(plan.importAttempts(), 1u);
   }
 }
+
+TEST(PlanTest, CancelsBeforeImport) {
+  libassimp::Plan plan = makePlan("OBJ/box.obj", {{"glb", "glb2", {}}});
+  plan.cancel();
+  EXPECT_EQ(plan.run(), libassimp::PlanStatus::Aborted);
+  EXPECT_EQ(plan.importAttempts(), 0u);
+}
+
+#ifdef LIBASSIMP_CPP_COVERAGE
+void expectCancellationAtPhase(libassimp::ProgressPhase phase) {
+  libassimp::Plan plan = makePlan("OBJ/box.obj", {{"glb", "glb2", {}}});
+  libassimp::detail::blockNextProgress(phase);
+  std::future<libassimp::PlanStatus> running =
+      std::async(std::launch::async, [&] { return plan.run(); });
+  for (int attempt = 0;
+       attempt < 1000 && libassimp::detail::progressBlocked() != phase;
+       ++attempt) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  EXPECT_EQ(libassimp::detail::progressBlocked(), phase);
+  plan.cancel();
+  EXPECT_EQ(running.get(), libassimp::PlanStatus::Aborted);
+  EXPECT_EQ(plan.importAttempts(), 1u);
+  EXPECT_TRUE(plan.result().formats.empty());
+  EXPECT_EQ(libassimp::detail::progressBlocked(),
+            libassimp::ProgressPhase::None);
+  libassimp::detail::releaseProgress();
+}
+
+TEST(PlanTest, CancelsWhileImporting) {
+  expectCancellationAtPhase(libassimp::ProgressPhase::Importing);
+}
+
+TEST(PlanTest, CancelsWhilePostProcessing) {
+  expectCancellationAtPhase(libassimp::ProgressPhase::PostProcessing);
+}
+
+TEST(PlanTest, CancelsWhileExporting) {
+  expectCancellationAtPhase(libassimp::ProgressPhase::Exporting);
+}
+
+TEST(PlanTest, ContinuesAfterAProgressCheckpointIsReleased) {
+  libassimp::Plan plan = makePlan("OBJ/box.obj", {{"glb", "glb2", {}}});
+  libassimp::detail::blockNextProgress(libassimp::ProgressPhase::Importing);
+  std::future<libassimp::PlanStatus> running =
+      std::async(std::launch::async, [&] { return plan.run(); });
+  for (int attempt = 0;
+       attempt < 1000 && libassimp::detail::progressBlocked() !=
+                               libassimp::ProgressPhase::Importing;
+       ++attempt) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  EXPECT_EQ(libassimp::detail::progressBlocked(),
+            libassimp::ProgressPhase::Importing);
+  libassimp::detail::releaseProgress();
+  EXPECT_EQ(running.get(), libassimp::PlanStatus::Completed);
+  EXPECT_EQ(libassimp::detail::progressBlocked(),
+            libassimp::ProgressPhase::None);
+  EXPECT_EQ(plan.phaseDiagnostics().observed,
+            (std::array<bool, 3>{true, true, true}));
+}
+
+TEST(PlanTest, HandlesResolverStateDuringExport) {
+  for (const libassimp::ResolveStatus terminal : {
+           libassimp::ResolveStatus::Failed,
+           libassimp::ResolveStatus::Aborted,
+       }) {
+    Input input = loadInput("OBJ/box.obj");
+    libassimp::Plan plan(
+        input.entry, std::move(input.files), {}, kPostProcess,
+        {{"probe", "__test_probe", {}}},
+        [terminal](const std::string &, libassimp::Bytes &) {
+          return terminal;
+        });
+    EXPECT_EQ(plan.run(), terminal == libassimp::ResolveStatus::Failed
+                              ? libassimp::PlanStatus::Failed
+                              : libassimp::PlanStatus::Aborted)
+        << plan.result().code << ": " << plan.result().message;
+  }
+
+  for (const libassimp::ResolveStatus terminal : {
+           libassimp::ResolveStatus::Failed,
+           libassimp::ResolveStatus::Aborted,
+       }) {
+    Input input = loadInput("OBJ/box.obj");
+    int calls = 0;
+    libassimp::Plan plan(
+        input.entry, std::move(input.files), {}, kPostProcess,
+        {{"probe", "__test_probe", {}}},
+        [&](const std::string &, libassimp::Bytes &) {
+          return ++calls == 1 ? libassimp::ResolveStatus::Pending : terminal;
+        });
+    EXPECT_EQ(plan.run(), libassimp::PlanStatus::Pending);
+    EXPECT_TRUE(plan.result().formats.empty());
+    EXPECT_EQ(plan.run(), terminal == libassimp::ResolveStatus::Failed
+                              ? libassimp::PlanStatus::Failed
+                              : libassimp::PlanStatus::Aborted)
+        << plan.result().code << ": " << plan.result().message;
+    EXPECT_TRUE(plan.result().formats.empty());
+    EXPECT_EQ(plan.importAttempts(), 1u);
+    EXPECT_EQ(calls, 2);
+  }
+
+  Input input = loadInput("OBJ/box.obj");
+  libassimp::Plan *current = nullptr;
+  libassimp::Plan plan(
+      input.entry, std::move(input.files), {}, kPostProcess,
+      {{"probe", "__test_probe", {}}},
+      [&](const std::string &, libassimp::Bytes &) {
+        current->cancel();
+        return libassimp::ResolveStatus::Missing;
+      });
+  current = &plan;
+  EXPECT_EQ(plan.run(), libassimp::PlanStatus::Aborted)
+      << plan.result().code << ": " << plan.result().message;
+}
+
+TEST(PlanTest, ReplaysASecondExportWithFreshOutputsAfterPending) {
+  Input input = loadInput("OBJ/box.obj");
+  int calls = 0;
+  libassimp::Plan plan(
+      input.entry, std::move(input.files), {}, kPostProcess,
+      {{"stl", "stl", {}}, {"probe", "__test_probe", {}}},
+      [&](const std::string &name, libassimp::Bytes &out) {
+        EXPECT_EQ(name, "coverage.sidecar");
+        if (++calls == 1) return libassimp::ResolveStatus::Pending;
+        out = {2};
+        return libassimp::ResolveStatus::Found;
+      });
+
+  EXPECT_EQ(plan.run(), libassimp::PlanStatus::Pending);
+  EXPECT_TRUE(plan.result().formats.empty());
+  EXPECT_EQ(plan.importAttempts(), 1u);
+  ASSERT_EQ(plan.run(), libassimp::PlanStatus::Completed)
+      << plan.result().code << ": " << plan.result().message;
+  EXPECT_EQ(plan.importAttempts(), 2u);
+  EXPECT_EQ(calls, 2);
+  ASSERT_EQ(plan.result().formats.size(), 2u);
+  const std::vector<libassimp::NamedBytes> &outputs =
+      plan.result().formats[1].files;
+  ASSERT_EQ(outputs.size(), 2u);
+  EXPECT_EQ(outputs[0].name, "result.probe");
+  EXPECT_EQ(outputs[0].bytes, (libassimp::Bytes{1}));
+  EXPECT_EQ(outputs[1].name, "result.sidecar");
+  EXPECT_EQ(outputs[1].bytes, (libassimp::Bytes{2}));
+}
+#endif
 
 TEST(PlanTest, RejectsAnEmptyTargetList) {
   libassimp::Plan plan = makePlan("OBJ/box.obj", {});
@@ -403,6 +690,26 @@ TEST(MemoryIOTest, CachesResolverOutcomesAndImplementsTheIOSystem) {
   ASSERT_NE(writerReadStream, nullptr);
   writer.Close(writerReadStream);
   EXPECT_TRUE(writer.Exists("append.bin"));
+}
+
+TEST(MemoryIOTest, StopsCachedAndUnknownOpensAfterTerminalResolution) {
+  for (const libassimp::ResolveStatus status : {
+           libassimp::ResolveStatus::Pending,
+           libassimp::ResolveStatus::Failed,
+           libassimp::ResolveStatus::Aborted,
+       }) {
+    std::deque<libassimp::NamedBytes> inputs{{"dir/input.bin", {1, 2, 3}}};
+    int calls = 0;
+    libassimp::MemoryFiles files(inputs, [&](const std::string &, libassimp::Bytes &) {
+      ++calls;
+      return status;
+    });
+    EXPECT_EQ(files.find("missing.bin"), nullptr);
+    EXPECT_EQ(files.find("dir/input.bin"), nullptr);
+    EXPECT_EQ(files.find("input.bin"), nullptr);
+    EXPECT_EQ(files.find("another.bin"), nullptr);
+    EXPECT_EQ(calls, 1);
+  }
 }
 
 TEST(FormatTest, ReportsCompiledFormats) {

@@ -10,6 +10,9 @@ describe('Node-conditioned entry', () => {
     const browser = await import('./index.js');
     expect(Object.keys(node).toSorted()).toEqual(Object.keys(browser).toSorted());
     expect(generated.preparePlan).not.toHaveBeenCalled();
+    expect(generated.cancelPlan).not.toHaveBeenCalled();
+    expect(generated).not.toHaveProperty('pendingName');
+    expect(generated).not.toHaveProperty('supplyPlan');
 
     using assimp = await node.createAssimp();
     expect(assimp).toMatchObject({

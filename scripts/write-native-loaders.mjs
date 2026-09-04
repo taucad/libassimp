@@ -11,13 +11,12 @@ const { manifest } = readNapiTargets(new URL('../package.json', import.meta.url)
 const outputDir = fileURLToPath(new URL('../dist/native/', import.meta.url));
 const idents = [
   'buildIdentity',
+  'cancelPlan',
   'destroyPlan',
   'napiVersion',
   'packageVersion',
-  'pendingName',
   'preparePlan',
   'runPlan',
-  'supplyPlan',
   'takePlanResult',
 ];
 

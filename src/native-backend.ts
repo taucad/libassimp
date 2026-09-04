@@ -3,7 +3,17 @@
 import packageMetadata from '../package.json' with { type: 'json' };
 import { AssimpError } from './assimp-error.js';
 import type { CreateAssimpOptions, RuntimeLoader } from './create-assimp.js';
-import type { NativeRuntime, ResolutionContext } from './convert.js';
+import type { NativeRuntime, ResolutionContext, ResolutionResult } from './convert.js';
+
+type NativeSettlement = (status: 0 | 1 | 2 | 3, bytes?: Uint8Array) => void;
+type NativeResolveRequest = (name: string, settle: NativeSettlement) => void;
+
+const nativeStatus: Readonly<Record<ResolutionResult['status'], 0 | 1 | 2 | 3>> = {
+  missing: 0,
+  found: 1,
+  failed: 2,
+  aborted: 3,
+};
 
 /** Minimal generated-loader surface consumed by the facade. @internal */
 export type NativeAddon = Readonly<{
@@ -11,9 +21,8 @@ export type NativeAddon = Readonly<{
   napiVersion: number;
   packageVersion: string;
   preparePlan: NativeRuntime['preparePlan'];
-  runPlan: (handle: unknown) => Promise<number>;
-  pendingName: (handle: unknown) => string | undefined;
-  supplyPlan: (handle: unknown, name: string, bytes: Uint8Array | undefined) => void;
+  runPlan: (handle: unknown, resolveRequest: NativeResolveRequest) => Promise<number>;
+  cancelPlan: NativeRuntime['cancelPlan'];
   takePlanResult: NativeRuntime['takePlanResult'];
   destroyPlan: NativeRuntime['destroyPlan'];
 }>;
@@ -22,10 +31,10 @@ const expectedNapiVersion = packageMetadata.binary.napi_versions[0];
 
 /** Generated loader import kept behind the Node-conditioned graph. @internal */
 export const loadNativeAddon = async (): Promise<NativeAddon> => {
-  return (await import('./native/index.js')) as unknown as NativeAddon;
+  return import('./native/index.js');
 };
 
-/** Adapt pending-name/supply replay to the same runtime used by Wasm. @internal */
+/** Adapt the native resolver callback to the backend-neutral runtime. @internal */
 export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
   const expected = `${process.platform}-${process.arch}-napi${expectedNapiVersion}`;
   if (addon.napiVersion !== expectedNapiVersion) {
@@ -43,14 +52,7 @@ export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
       `libassimp native package version mismatch: expected ${packageMetadata.version}, received ${addon.packageVersion}.`,
     );
   }
-  for (const name of [
-    'preparePlan',
-    'runPlan',
-    'pendingName',
-    'supplyPlan',
-    'takePlanResult',
-    'destroyPlan',
-  ] as const) {
+  for (const name of ['cancelPlan', 'preparePlan', 'runPlan', 'takePlanResult', 'destroyPlan'] as const) {
     if (typeof addon[name] !== 'function') {
       throw new TypeError(`libassimp native loader is missing '${name}'.`);
     }
@@ -59,18 +61,21 @@ export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
     backend: 'native',
     buildIdentity: addon.buildIdentity,
     preparePlan: addon.preparePlan,
-    runPlan: async (handle, context: ResolutionContext) => {
-      const status = await addon.runPlan(handle);
-      if (status === -1) {
-        const name = addon.pendingName(handle);
-        if (name !== undefined) {
-          context.stageNative(name, (bytes) => {
-            addon.supplyPlan(handle, name, bytes);
-          });
-        }
-      }
-      return status;
-    },
+    runPlan: (handle, context: ResolutionContext) =>
+      addon.runPlan(handle, (name, settle) => {
+        const deliver = (result: ResolutionResult | undefined): void => {
+          result = context.currentResult(result);
+          if (result === undefined) return;
+          if (result.status === 'found') {
+            settle(nativeStatus[result.status], result.bytes);
+            context.release(name);
+          } else settle(nativeStatus[result.status]);
+        };
+        const result = context.resolve(name);
+        if (result instanceof Promise) void result.then(deliver);
+        else deliver(result);
+      }),
+    cancelPlan: addon.cancelPlan,
     takePlanResult: addon.takePlanResult,
     destroyPlan: addon.destroyPlan,
     dispose: () => undefined,

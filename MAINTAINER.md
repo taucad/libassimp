@@ -20,16 +20,18 @@ tags, GitHub Releases, and Vercel deployment. Do not publish from a
 workstation, push to `release/next`, or enable auto-merge on the release pull
 request.
 
-Before the first native release, an authenticated npm 11.15+ operator must
-enable account-level 2FA, then reserve `libassimp-darwin-arm64`,
-`libassimp-linux-x64-gnu`, and `libassimp-win32-x64-msvc` with manifest-only
-`0.0.0` packages under a non-default `bootstrap` tag. For the root and each
-native package, run `npm trust github <package> --repo taucad/libassimp --file
-ci.yml --allow-publish`, then set publishing access to require 2FA and disallow
-tokens. Do not merge the release pull request until `npm trust list libassimp`,
-`npm trust list libassimp-darwin-arm64`, `npm trust list
-libassimp-linux-x64-gnu`, and `npm trust list libassimp-win32-x64-msvc` each
-confirm the expected binding.
+Before the first native release, an authenticated npm 11.15+ operator with
+account-level 2FA must reserve `libassimp-darwin-arm64`,
+`libassimp-linux-x64-gnu`, and `libassimp-win32-x64-msvc` from a workstation as
+manifest-only `0.0.0` packages under a non-default `bootstrap` tag. The
+workstation publishes no native binaries and stops after this one-time package
+name reservation.
+
+For the existing root and exactly three platform packages, run `npm trust
+github <package> --repo taucad/libassimp --file ci.yml --allow-publish`, set
+publishing access to require 2FA and disallow tokens, and confirm each binding
+with `npm trust list <package>`. Do not merge the first native release pull
+request until all four bindings name `taucad/libassimp` and `ci.yml` exactly.
 
 Manual fallback when the bot is broken: on a fresh branch off `main`, run
 `pnpm release:prepare -- <version> --dry-run` and then the real run, commit
