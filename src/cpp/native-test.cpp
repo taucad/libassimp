@@ -61,6 +61,8 @@ constexpr ConversionCase kCases[] = {
     {"collada_to_glb", "Collada/cube_triangulate.dae", "glb", "", "glTF",
      "result.glb"},
     {"stl_to_glb", "STL/triangle.stl", "glb", "", "glTF", "result.glb"},
+    {"stl_binary_to_glb", "STL/Spider_binary.stl", "glb", "", "glTF",
+     "result.glb"},
     {"ply_to_glb", "PLY/cube.ply", "glb", "", "glTF", "result.glb"},
     {"ply_pointcloud_to_glb", "PLY/points.ply", "glb", "", "glTF",
      "result.glb"},
