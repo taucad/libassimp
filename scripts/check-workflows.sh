@@ -22,3 +22,11 @@ grep -qF "image: $emsdk_image" .github/workflows/ci.yml || {
   echo "ERROR: .github/workflows/ci.yml does not pin the emsdk image from emsdk-image.txt" >&2
   exit 1
 }
+
+benchmark_policy="if (needs.preflight.outputs.kind === 'pull-request') required.push('benchmark');"
+if ! grep -qF "if: github.event_name == 'pull_request'" .github/workflows/ci.yml ||
+  ! grep -qF 'node bench/compare-backends.mjs' .github/workflows/ci.yml ||
+  ! grep -qF "$benchmark_policy" .github/workflows/ci.yml; then
+  echo "ERROR: implementation pull requests must run and require the dependency-heavy benchmark" >&2
+  exit 1
+fi

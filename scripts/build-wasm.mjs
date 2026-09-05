@@ -110,6 +110,15 @@ function build(script, options = {}) {
     // emcc's own cache lives under the mount too, so the container user can write it.
     '--env',
     'EM_CACHE=/src/build/.emcache',
+    // Docker Desktop can report the freshly cloned MeshLab checkout as
+    // foreign-owned before its bind-mount metadata settles. Trust this path
+    // only inside the disposable container; host Git stays unchanged.
+    '--env',
+    'GIT_CONFIG_COUNT=1',
+    '--env',
+    'GIT_CONFIG_KEY_0=safe.directory',
+    '--env',
+    'GIT_CONFIG_VALUE_0=/src/assimp/contrib/meshlab/autoclone/meshlab_repo-src',
     '--env',
     `SOURCE_DATE_EPOCH=${sourceDateEpoch}`,
     derivedImage(),
@@ -251,7 +260,7 @@ for (const [name, bytes] of [
   const text = bytes.toString('latin1');
   for (const path of [root.replace(/\/$/, ''), '/src/', '/__w/']) {
     if (new RegExp(`(?<![\\w./-])${RegExp.escape(path)}`, 'u').test(text)) {
-      throw new Error(`${target} ${name} embeds the build path ${path}`);
+      throw new Error([target, name, 'embeds the build path', path].join(' '));
     }
   }
 }

@@ -7,6 +7,9 @@
 - Removed glTF 1 import/export and the public `glb1`, `gltf1`, `glb2`, and `gltf2` names. `glb` and `gltf` always mean glTF 2.
 - Added positional `convertFormats`; no public target/result ID is accepted.
 - Made `resolve` Promise-capable on every supported host.
+- Added optional `AbortSignal` cancellation to `convert` and `convertFormats`; `ResolveFile` remains a one-argument callback and can close over the same signal for cancellable I/O.
+- Native and JSPI resolution now preserve a single import. Only non-JSPI Wasm can replay an import N+1 times for N asynchronously discovered sidecars.
+- Binary X3D now reports `IMPORT_FAILED` instead of an empty successful result. The engine recognizes its extension but has no binary decoder; XML X3D is unaffected.
 - Split `FormatInfo` into directional `ImportFormatInfo` and `ExportFormatInfo`, and added static `conversionEdges` and `assimpCapabilities`.
 - Removed `libassimp/importer`, `libassimp/exporter`, and their `/wasm` subpaths. Use the complete root entry and the sole `libassimp/wasm` artifact.
 

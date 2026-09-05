@@ -131,7 +131,7 @@ export const ConvertDemo = ({
       const loadMs = cold ? Math.round(performance.now() - loadStarted) : 0;
       const started = performance.now();
       const target = String(current['to'] ?? 'glb');
-      if (!isDemoExportFormat(target)) throw new Error(`Unsupported demo export format: ${target}`);
+      if (!isDemoExportFormat(target)) throw new Error('Unsupported demo export format: '.concat(target));
       const exportOptions = demoExportOptions(current, target);
       const options = { to: target, exportOptions } satisfies ConvertOptions;
       const result = await assimp.convert(inputs, options);

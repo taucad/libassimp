@@ -29,10 +29,12 @@ const root = new URL('../', import.meta.url);
 
 /** The parsed source for the production and native-test Assimp builds. */
 export const builds = JSON.parse(readFileSync(new URL('assimp-builds.json', root), 'utf8'));
+const aliasedBuilds = { native: builds.wasm, 'native-test': builds.nativeTest };
+const buildSpec = (name) => aliasedBuilds[name] ?? builds[name];
 
 /** Format ids, per side, compiled by one build. */
 export const buildFormats = (name) => {
-  const spec = name === 'native-test' ? builds.nativeTest : builds[name];
+  const spec = buildSpec(name);
   if (!spec) throw new Error(`Unknown build: ${name}`);
   return { importers: spec.importers, exporters: spec.exporters, disable: builds.disable.ids };
 };
@@ -40,7 +42,7 @@ export const buildFormats = (name) => {
 /** `ASSIMP_BUILD_<ID>_<SIDE>` cache entries, with shared disables applied last. */
 export const buildCacheVariables = (name) => {
   const { importers, exporters } = buildFormats(name);
-  const spec = name === 'native-test' ? builds.nativeTest : builds[name];
+  const spec = buildSpec(name);
   const variables = {
     ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT: importers === 'all' ? 'ON' : 'OFF',
     ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT: exporters === 'all' ? 'ON' : 'OFF',
@@ -106,10 +108,24 @@ const presets = {
         ...buildCacheVariables('native-test'),
       },
     },
+    {
+      name: 'native',
+      displayName: 'native addon',
+      generator: 'Ninja',
+      binaryDir: '${sourceDir}/build/native',
+      cacheVariables: {
+        CMAKE_BUILD_TYPE: 'Release',
+        CMAKE_C_COMPILER_LAUNCHER: '',
+        CMAKE_CXX_COMPILER_LAUNCHER: '',
+        ...sharedCacheVariables,
+        ...buildCacheVariables('wasm'),
+      },
+    },
   ],
   buildPresets: [
     { name: 'wasm', configurePreset: 'wasm' },
     { name: 'native-test', configurePreset: 'native-test' },
+    { name: 'native', configurePreset: 'native' },
   ],
   testPresets: [
     {

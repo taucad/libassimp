@@ -1,14 +1,14 @@
 {
-  "engineSha": "ef850a10da52f43eb32ae0ac4b22090edb28d2de",
-  "sourceSha256": "a02189f08563c36c7f0dbed5a17b7c50daebf55c18f7f58cda89795ddf054482",
+  "engineSha": "7aba66213c5b9970e4858b0afcbbc53ffa431373",
+  "sourceSha256": "a57be4f309891145518fb7b13adb0e15db0362b6ccde32b14d8346ba8d66ec13",
   "sourceSha256ByPath": {
-    "assimp-builds.json": "12ad123069f3f4685c239f4a844362bad68021bf79acc20694ef0a39544efb21",
+    "assimp-builds.json": "80194988321739a036709113fc0c32d536b2f654d9cb726968dbc5488d3c8c21",
     "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "5dc9b5a66e066a0e5bb5f83de6bb9de1a29d3b7837a4dfa543006f640b3a1edd",
     "assimp/code/AssetLib/AC/ACLoader.cpp": "874aeda14e635ec6d3ad2c0ae47add63f1095693bb088adb6c8db4317494c551",
     "assimp/code/AssetLib/ASE/ASELoader.cpp": "3f24015f200645dbc3d382435d851ca8c8cc7c8e816e095458d41c3b98df5b46",
     "assimp/code/AssetLib/Assjson/json_exporter.cpp": "ef5512005d91bf3ffb191b73e06770bf19b19ec3ecd6442bc9fa01aea9110208",
     "assimp/code/AssetLib/BVH/BVHLoader.cpp": "1c4d9383b9314223ca18908c8e9971a5970c859630cfd4a6e0607cc55dfee6e9",
-    "assimp/code/AssetLib/Collada/ColladaLoader.cpp": "5fcfa380b4f1a52a35f33f2fb28474ed0f3be56f977ce827dc24b2239b9475ca",
+    "assimp/code/AssetLib/Collada/ColladaLoader.cpp": "dca0e26aa4f56a088ac681b3d91347d5717ec25630f3f7c110f19d146fc97c70",
     "assimp/code/AssetLib/CSM/CSMLoader.cpp": "6c459e0e91e6cdf0e99cf247ff8860cfa6e20027e00dc4909e1a28f1f4cd5cf5",
     "assimp/code/AssetLib/FBX/FBXAnimation.cpp": "3edbd928f2f87108c4f4ed63ab341673f1a437c3a0ea74e90bb047b4401ecffb",
     "assimp/code/AssetLib/FBX/FBXDeformer.cpp": "224e80df46d5f8385f6ba995f509ad2aae4ea32eb722c9d7c930ed9781b731d7",
@@ -19,14 +19,14 @@
     "assimp/code/AssetLib/FBX/FBXMaterial.cpp": "41b156ca6292be3bc2b10fc1ca058a5c9098882d60a2e591cc986aa3cae511cd",
     "assimp/code/AssetLib/FBX/FBXModel.cpp": "22cc1f2fe8a00d4fab623de91aee68bc93d7bc0b506a06a5cb9c7401ed270f39",
     "assimp/code/AssetLib/FBX/FBXNodeAttribute.cpp": "3b9654b978c9af0a121bd3c52f7f3292fca6133fe2cc4ba9a7da8d199a1534dc",
-    "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp": "ebe2377c631a6b21efd1a4a12462affd090ed17a60369578613d58b73ebab3e4",
+    "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp": "3802cade4ae6c51b1d6fe23c18b38085976ecbf1ea1ba4cd88a020470f046e46",
     "assimp/code/AssetLib/glTF2/glTF2Importer.cpp": "d8927e385804d24b300318690baf5832636b07f57fc998b7b45e790228e49965",
     "assimp/code/AssetLib/IFC/IFCLoader.cpp": "08504694b6a611e575c21d44cf2056a7cc490431e0b42862c3724a1bb78ccca6",
     "assimp/code/AssetLib/LWO/LWOLoader.cpp": "5c4c00dfc37459b3f837510fdade543f4305585e3569a967f391fb3f3c1aa9fb",
     "assimp/code/AssetLib/LWS/LWSLoader.cpp": "7ea5cf7f588cc209d43052be170f0cb91ed4ab1c08fe19e2303659f419f7f285",
     "assimp/code/AssetLib/MD2/MD2Loader.cpp": "d43d427834d37c57d9f279bde6abfaa0b3e1eca2f830d3f3c4d3269ac9e59b08",
     "assimp/code/AssetLib/MD3/MD3Loader.cpp": "5978c13232158dd6b301e62f76d46e0f39022d030724ad020cf27af6d8296d15",
-    "assimp/code/AssetLib/MD5/MD5Loader.cpp": "1117101d4a13a7eefbbf52ba7b217e051662f3af2358924f7b5a4ba7e8e36364",
+    "assimp/code/AssetLib/MD5/MD5Loader.cpp": "fea4189e8650d30cf1994e766264aee2d88c49e5c0bc713cf0cce748a9a3efcb",
     "assimp/code/AssetLib/MDC/MDCLoader.cpp": "bc37141b9150f325b1cab6237ca9ebe6773429972445978f4e4a9b9cf6393b55",
     "assimp/code/AssetLib/MDL/MDLLoader.cpp": "734526349cce19f77b03b4280ada258f08a0c974b9ee0d766cc5ac7b38d75aa8",
     "assimp/code/AssetLib/Obj/ObjExporter.cpp": "78af9863ac89a3e9e772755d71b553d142191dc9c0f41a8d6dd2d28d110f3c66",
@@ -35,10 +35,10 @@
     "assimp/code/AssetLib/SMD/SMDLoader.cpp": "e3ffc8f5bc9a958dd0a8179a48922236359a2bc081c5914e778f71a9b41663e3",
     "assimp/code/AssetLib/STL/STLExporter.cpp": "6ea5c72e83bef3ced957b089922b85590e7a2bd9ca68f310272bd5a352e9de42",
     "assimp/code/AssetLib/Unreal/UnrealLoader.cpp": "2651b54ccdb63cf50742a31106b4261d55ce91fd5806bf0e52d52d33eaa74c4a",
-    "assimp/code/AssetLib/USD/USDZExporter.cpp": "b0a80f39a5764b82c96a1afaec51592ae5c13838e247f18f6dd9e2b8211e3b26",
+    "assimp/code/AssetLib/USD/USDZExporter.cpp": "7d46c008e16a317c47b01d4ae32d4fc435eea2d41ace2e37ea2554a7638beb80",
     "assimp/code/AssetLib/X/XFileExporter.cpp": "730178631df48132ac12e0c1d68fab8f2f7b8ef949e0155cad66335674afd260",
-    "assimp/code/Common/Exporter.cpp": "d9abdb1572b28f4cd8c0db00000ea46e25c817abdee897bc966ec6a922b78d45",
-    "assimp/code/Common/Importer.cpp": "02b3283d3bb08596e867d59dfad40b7e4d8edd29531d36d235a0581996e5571f",
+    "assimp/code/Common/Exporter.cpp": "b2e1d08ac356324e485b0e15882f8c64d02b5466364234b47279ad0ef7d2aa59",
+    "assimp/code/Common/Importer.cpp": "30c38fe670a7dec9c109373480b8f72b8664583848f3c4e8824e77597877b829",
     "assimp/code/Common/UnitAxisContract.cpp": "fc0ddf1a7ac862ac41e1d56ae18020a9821bfd9f14e016e4e64af64fe64a6a88",
     "assimp/code/PostProcessing/CalcTangentsProcess.cpp": "dad8b4f1f57f3f59cdf593e780b4336e3c9bc54213a49533849c9da7dcd791f8",
     "assimp/code/PostProcessing/DeboneProcess.cpp": "42dfed100536a81764aa6df23d221cccb77dcc6410786202ed77857b78d87064",
@@ -563,7 +563,7 @@
       "symbols": ["AI_CONFIG_IMPORT_REMOVE_EMPTY_BONES"],
       "sources": [
         "assimp/code/PostProcessing/LimitBoneWeightsProcess.cpp:85",
-        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:131",
+        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:146",
         "assimp/code/AssetLib/FBX/FBXImporter.cpp:118"
       ]
     },
@@ -623,7 +623,7 @@
       "owners": ["Common", "PostProcessing"],
       "symbols": ["AI_CONFIG_EXPORT_POINT_CLOUDS"],
       "sources": [
-        "assimp/code/Common/Exporter.cpp:522",
+        "assimp/code/Common/Exporter.cpp:534",
         "assimp/code/PostProcessing/PretransformVertices.cpp:113"
       ]
     },
@@ -667,9 +667,9 @@
       "owners": ["Common"],
       "symbols": ["AI_CONFIG_GLOB_MEASURE_TIME"],
       "sources": [
-        "assimp/code/Common/Importer.cpp:621",
-        "assimp/code/Common/Importer.cpp:833",
-        "assimp/code/Common/Importer.cpp:928"
+        "assimp/code/Common/Importer.cpp:635",
+        "assimp/code/Common/Importer.cpp:852",
+        "assimp/code/Common/Importer.cpp:953"
       ]
     },
     {
@@ -688,7 +688,7 @@
       "defaults": [false],
       "owners": ["glTF2"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1450"]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1453"]
     },
     {
       "nativeName": "GLTF2_TARGET_NORMAL_EXP",
@@ -697,7 +697,7 @@
       "defaults": [false],
       "owners": ["glTF2"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1452"]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1455"]
     },
     {
       "nativeName": "GLTF2_TARGETNAMES_EXP",
@@ -706,7 +706,7 @@
       "defaults": [false],
       "owners": ["glTF2"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1454"]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1457"]
     },
     {
       "nativeName": "IMPORT_3DS_UNIT_SCALE_TO_METERS",
@@ -868,7 +868,7 @@
       "defaults": [0],
       "owners": ["Collada"],
       "symbols": ["AI_CONFIG_IMPORT_COLLADA_IGNORE_UNIT_SIZE"],
-      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:133"]
+      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:148"]
     },
     {
       "nativeName": "IMPORT_COLLADA_IGNORE_UP_DIRECTION",
@@ -877,7 +877,7 @@
       "defaults": [0],
       "owners": ["Collada"],
       "symbols": ["AI_CONFIG_IMPORT_COLLADA_IGNORE_UP_DIRECTION"],
-      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:132"]
+      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:147"]
     },
     {
       "nativeName": "IMPORT_COLLADA_UNIT_SCALE_TO_METERS",
@@ -904,7 +904,7 @@
       "defaults": [0],
       "owners": ["Collada"],
       "symbols": ["AI_CONFIG_IMPORT_COLLADA_USE_COLLADA_NAMES"],
-      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:134"]
+      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:149"]
     },
     {
       "nativeName": "IMPORT_DXF_UNIT_SCALE_TO_METERS",
@@ -1355,7 +1355,7 @@
       "sources": [
         "assimp/code/AssetLib/ASE/ASELoader.cpp:114",
         "assimp/code/AssetLib/BVH/BVHLoader.cpp:101",
-        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:130",
+        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:145",
         "assimp/code/AssetLib/CSM/CSMLoader.cpp:96",
         "assimp/code/AssetLib/LWS/LWSLoader.cpp:185",
         "assimp/code/AssetLib/SMD/SMDLoader.cpp:124"
@@ -1878,7 +1878,7 @@
       "defaults": [true],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:120"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:122"]
     },
     {
       "nativeName": "USDZ_EXPORT_CLEARCOAT",
@@ -1887,7 +1887,7 @@
       "defaults": [true],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:121"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:123"]
     },
     {
       "nativeName": "USDZ_EXPORT_MATERIALX",
@@ -1896,7 +1896,7 @@
       "defaults": [false],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:122"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:124"]
     },
     {
       "nativeName": "USDZ_EXPORT_SUBDIVISION",
@@ -1905,7 +1905,7 @@
       "defaults": [false],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:123"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:125"]
     },
     {
       "nativeName": "USDZ_EXPORT_VOLUMES",
@@ -1914,7 +1914,7 @@
       "defaults": [false],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:124"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:126"]
     },
     {
       "nativeName": "USDZ_OPTIMIZE_FOR_MOBILE",
@@ -1923,7 +1923,7 @@
       "defaults": [true],
       "owners": ["USD"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:125"]
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:127"]
     },
     {
       "nativeName": "USE_GLTF_PBR_SPECULAR_GLOSSINESS",
@@ -1941,7 +1941,7 @@
       "defaults": [false],
       "owners": ["glTF2"],
       "symbols": ["AI_CONFIG_EXPORT_GLTF_UNLIMITED_SKINNING_BONES_PER_VERTEX"],
-      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1441"]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1444"]
     }
   ],
   "postProcess": [

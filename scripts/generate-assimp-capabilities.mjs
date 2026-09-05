@@ -47,14 +47,20 @@ const propertyMethods = new Map([
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 const stableJson = (value) => `${JSON.stringify(value, undefined, 2)}\n`;
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
+const normalizeSourceText = (value) => value.replaceAll('\r\n', '\n');
+const readSource = (path) => normalizeSourceText(readFileSync(path, 'utf8'));
 const sourcePath = (containerPath) => `${root}${containerPath.slice(containerRoot.length + 1)}`;
 const sourceName = (path) => relative(root, path).replaceAll('\\', '/');
 const formatTypescript = (source) =>
-  execFileSync('pnpm', ['exec', 'oxfmt', `--stdin-filepath=${outputPath}`], {
-    cwd: root,
-    encoding: 'utf8',
-    input: source,
-  });
+  execFileSync(
+    process.execPath,
+    [fileURLToPath(import.meta.resolve('oxfmt/bin/oxfmt')), `--stdin-filepath=${outputPath}`],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      input: source,
+    },
+  );
 
 const cleanDoxygen = (comment) =>
   comment
@@ -317,7 +323,7 @@ const postProcessEvidence = () => {
 const sourceFingerprint = (paths, engineSha) => {
   const hash = createHash('sha256').update(engineSha);
   for (const path of [...paths].sort((one, two) => one.localeCompare(two))) {
-    hash.update(sourceName(path)).update('\0').update(readFileSync(path));
+    hash.update(sourceName(path)).update('\0').update(readSource(path));
   }
   return hash.digest('hex');
 };
@@ -326,7 +332,7 @@ const sourceHashes = (paths) =>
   Object.fromEntries(
     [...paths]
       .sort((one, two) => one.localeCompare(two))
-      .map((path) => [sourceName(path), sha256(readFileSync(path))]),
+      .map((path) => [sourceName(path), sha256(readSource(path))]),
   );
 
 const refreshEvidence = () => {
@@ -925,7 +931,7 @@ const generate = (check) => {
   validateEvidence(evidence, overrides);
   const generated = formatTypescript(renderGenerated(evidence, overrides));
   if (check) {
-    const current = readFileSync(outputPath, 'utf8');
+    const current = normalizeSourceText(readFileSync(outputPath, 'utf8'));
     if (current !== generated)
       throw new Error(`${sourceName(outputPath)} is stale; run pnpm generate:capabilities.`);
     console.log(`${sourceName(outputPath)} is current (${sha256(generated)}).`);
@@ -944,4 +950,4 @@ if (isMain) {
   else generate(args.has('--check'));
 }
 
-export { validateOverrideCoverage, validateSourceEvidence };
+export { normalizeSourceText, validateOverrideCoverage, validateSourceEvidence };

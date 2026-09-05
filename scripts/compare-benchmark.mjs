@@ -6,8 +6,26 @@ import { fileURLToPath } from 'node:url';
 const THRESHOLD = 0.1;
 const MARKER = '<!-- libassimp-benchmark -->';
 
+const validateBenchmark = (report) => {
+  if (
+    typeof report?.name !== 'string' ||
+    report.name.length === 0 ||
+    !Number.isFinite(report.medianMs) ||
+    report.medianMs < 0 ||
+    !Number.isFinite(report.initMs) ||
+    report.initMs < 0 ||
+    !Number.isSafeInteger(report.outputBytes) ||
+    report.outputBytes < 0 ||
+    typeof report.outputFnv !== 'string' ||
+    report.outputFnv.length === 0
+  ) {
+    throw new Error('invalid benchmark report');
+  }
+};
+
 export const averageBenchmarks = (reports) => {
   if (reports.length === 0) throw new Error('at least one benchmark report is required');
+  reports.forEach(validateBenchmark);
   const [first] = reports;
   for (const report of reports.slice(1)) {
     if (
@@ -24,7 +42,9 @@ export const averageBenchmarks = (reports) => {
 };
 
 export const compareBenchmark = (current, base) => {
-  if (!base || current.name !== base.name) {
+  validateBenchmark(current);
+  if (base !== undefined) validateBenchmark(base);
+  if (base === undefined || current.name !== base.name) {
     return {
       failed: false,
       markdown: `${MARKER}\n### Benchmark\n\nNew benchmark admitted: \`${current.name}\` (${current.medianMs} ms median).`,

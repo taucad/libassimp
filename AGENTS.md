@@ -11,18 +11,19 @@ pnpm nx run libassimp:validate-pack
 
 ## Architecture
 
-`src/` is the ESM TypeScript facade: one `index` entry over the shared
-`create-assimp` module, which loads `libassimp.wasm` through a bundler-opaque
-glue import. `src/cpp/` is the embind
-binding — one `convert` free function that returns copied bytes, so no handle
-ever reaches a consumer. `assimp/` is the engine, a git submodule tracking
+`src/` is the ESM TypeScript facade: one package entry conditionally selects
+Node-API or the single Wasm artifact. Both use `create-assimp`, one
+`ResolutionContext`, and the private C++ `Plan`/`MemoryFiles` pipeline.
+Native uses one process-wide executor and thread-safe resolver callbacks;
+JSPI suspends Wasm in place, and only non-JSPI Wasm replays. Consumers receive
+copied bytes, never native handles. `assimp/` is the engine submodule tracking
 `taucad/assimp`.
 
 `assimp-builds.json` is the single source for the production and native-test format sets.
 `scripts/assimp-builds-to-presets.mjs` derives `CMakePresets.json` from it and the
-docs format matrix reads it, so adding a format the engine gained is one JSON
-edit; the export unions in `src/formats.ts` are asserted against the compiled
-build rather than derived from it.
+docs format matrix reads it. `scripts/generate-assimp-capabilities.mjs`
+generates the public registry and types from checked compiler evidence and
+semantic overrides; compiled-format tests verify the resulting surface.
 
 `scripts/build-wasm.mjs` runs the digest-pinned toolchain from
 `emsdk-image.txt` and writes `src/wasm/`, which is git-ignored and CI-built:

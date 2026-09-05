@@ -25,6 +25,8 @@
 #include <cstring>
 #include <deque>
 #include <functional>
+#include <limits>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -40,9 +42,15 @@ struct NamedBytes {
   Bytes bytes;
 };
 
-enum class ResolveStatus { Missing, Found, Pending };
+enum class ResolveStatus : int {
+  Pending = -1,
+  Missing = 0,
+  Found = 1,
+  Failed = 2,
+  Aborted = 3,
+};
 
-/** Sidecar loader. Pending marks the current attempt for JS replay. */
+/** Sidecar loader. Pending is reserved for non-JSPI Wasm replay. */
 using Resolver = std::function<ResolveStatus(const std::string& name, Bytes& out)>;
 
 /** Everything one convert call reads and writes. Both IOSystems below share exactly one of these. */
@@ -52,16 +60,31 @@ class MemoryFiles {
 
   /** Exact name, then basename, then the host callback. Both outcomes are cached. */
   const Bytes* find(const std::string& name) {
+    if (pending_ || terminal_.has_value()) return nullptr;
     for (const NamedBytes& input : inputs_) {
       if (input.name == name) return &input.bytes;
     }
     const std::string base = basename(name);
+    const Bytes* basenameMatch = nullptr;
     for (const NamedBytes& input : inputs_) {
-      if (basename(input.name) == base) return &input.bytes;
+      if (basename(input.name) != base) continue;
+      if (basenameMatch != nullptr) {
+        basenameMatch = nullptr;
+        break;
+      }
+      basenameMatch = &input.bytes;
     }
-    if (pending_ || !resolve_ || missing_.count(name) != 0) return nullptr;
+    if (basenameMatch != nullptr) return basenameMatch;
+    if (!resolve_ || missing_.count(name) != 0) return nullptr;
     Bytes resolved;
-    const ResolveStatus status = resolve_(name, resolved);
+    ResolveStatus status;
+    try {
+      status = resolve_(name, resolved);
+    } catch (...) {
+      terminal_ = ResolveStatus::Failed;
+      terminalName_ = name;
+      throw;
+    }
     if (status == ResolveStatus::Pending) {
       pending_ = true;
       pendingName_ = name;
@@ -69,6 +92,11 @@ class MemoryFiles {
     }
     if (status == ResolveStatus::Missing) {
       missing_.insert(name);
+      return nullptr;
+    }
+    if (status != ResolveStatus::Found) {
+      terminal_ = status;
+      terminalName_ = name;
       return nullptr;
     }
     inputs_.push_back(NamedBytes{name, std::move(resolved)});
@@ -99,6 +127,8 @@ class MemoryFiles {
 
   bool pending() const { return pending_; }
   const std::string& pendingName() const { return pendingName_; }
+  const std::optional<ResolveStatus>& terminal() const { return terminal_; }
+  const std::string& terminalName() const { return terminalName_; }
 
   static std::string basename(const std::string& path) {
     const std::size_t slash = path.find_last_of("/\\");
@@ -113,6 +143,8 @@ class MemoryFiles {
   Resolver resolve_;
   bool pending_ = false;
   std::string pendingName_;
+  std::optional<ResolveStatus> terminal_;
+  std::string terminalName_;
 };
 
 /** Append-and-seek stream over one output buffer. */
@@ -123,19 +155,26 @@ class MemoryWriteStream : public Assimp::IOStream {
   std::size_t Read(void*, std::size_t, std::size_t) override { return 0; }
 
   std::size_t Write(const void* buffer, std::size_t size, std::size_t count) override {
+    if (size != 0 && count > std::numeric_limits<std::size_t>::max() / size) return 0;
     const std::size_t total = size * count;
-    if (position_ + total > out_.size()) out_.resize(position_ + total);
+    if (total > std::numeric_limits<std::size_t>::max() - position_) return 0;
+    const std::size_t end = position_ + total;
+    if (end > out_.size()) out_.resize(end);
+    if (total == 0) return count;
     std::memcpy(out_.data() + position_, buffer, total);
-    position_ += total;
+    position_ = end;
     return count;
   }
 
   aiReturn Seek(std::size_t offset, aiOrigin origin) override {
     // aiOrigin_END counts backwards from the end, matching Assimp::MemoryIOStream.
+    if (origin == aiOrigin_END && offset > out_.size()) return AI_FAILURE;
+    if (origin == aiOrigin_CUR && offset > std::numeric_limits<std::size_t>::max() - position_) {
+      return AI_FAILURE;
+    }
     const std::size_t target = origin == aiOrigin_CUR  ? position_ + offset
                                : origin == aiOrigin_END ? out_.size() - offset
                                                         : offset;
-    if (origin == aiOrigin_END && offset > out_.size()) return AI_FAILURE;
     if (target > out_.size()) out_.resize(target);
     position_ = target;
     return AI_SUCCESS;

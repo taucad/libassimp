@@ -5,7 +5,10 @@ import { createMDX } from 'fumadocs-mdx/next';
 const config: NextConfig = {
   output: 'export',
   reactStrictMode: true,
-  turbopack: { root: new URL('..', import.meta.url).pathname },
+  turbopack: {
+    resolveAlias: { libassimp: '../dist/index.mjs' },
+    root: new URL('..', import.meta.url).pathname,
+  },
 };
 
 /**

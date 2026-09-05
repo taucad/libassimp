@@ -16,10 +16,20 @@
       "executor": "nx:run-commands",
       "options": { "command": "cmake --preset native-test && cmake --build --preset native-test --parallel" }
     },
+    "build:native": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": { "command": "pnpm run build:native" }
+    },
     "test:native": {
       "executor": "nx:run-commands",
       "dependsOn": ["build:native-test"],
       "options": { "command": "ctest --preset native-test --output-on-failure" }
+    },
+    "test:native-parity": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": { "command": "pnpm run test:native-parity" }
     },
     "test": {
       "executor": "nx:run-commands",

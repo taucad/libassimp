@@ -2639,7 +2639,7 @@ export const internalImportOptionDescriptors = {
     phases: ['import'],
     description:
       'Enables time measurements. If enabled, measures the time needed for each part of the loading process (i.e. IO time, importing, postprocessing, ..) and dumps these timings to the DefaultLogger. See the @link perf Performance Page@endlink for more information on this topic. Property type: bool. Default value: false.',
-    source: 'assimp/code/Common/Importer.cpp:621',
+    source: 'assimp/code/Common/Importer.cpp:635',
   },
   ifcUnitScaleToMeters: {
     publicName: 'ifcUnitScaleToMeters',
@@ -2722,7 +2722,7 @@ export const internalImportOptionDescriptors = {
     phases: ['import'],
     description:
       'Specifies whether the Collada loader will ignore the provided unit size. If this property is set to true, the unit size provided in the file header will be ignored and the file will be loaded without scaling the assets. Property type: Bool. Default value: false.',
-    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:133',
+    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:148',
   },
   importColladaIgnoreUpDirection: {
     publicName: 'importColladaIgnoreUpDirection',
@@ -2735,7 +2735,7 @@ export const internalImportOptionDescriptors = {
     phases: ['import'],
     description:
       'Specifies whether the Collada loader will ignore the provided up direction. If this property is set to true, the up direction provided in the file header will be ignored and the file will be loaded as is. Property type: Bool. Default value: false.',
-    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:132',
+    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:147',
   },
   importColladaUseColladaNames: {
     publicName: 'importColladaUseColladaNames',
@@ -2748,7 +2748,7 @@ export const internalImportOptionDescriptors = {
     phases: ['import'],
     description:
       'Specifies whether the Collada loader should use Collada names. If this property is set to true, the Collada names will be used as the node and mesh names. The default is to use the id tag (resp. sid tag, if no id tag is present) instead. Property type: Bool. Default value: false.',
-    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:134',
+    source: 'assimp/code/AssetLib/Collada/ColladaLoader.cpp:149',
   },
   importFbxEmbeddedTexturesLegacyNaming: {
     publicName: 'importFbxEmbeddedTexturesLegacyNaming',
@@ -3603,7 +3603,7 @@ export const internalImportOptionDescriptors = {
     phases: ['export', 'import'],
     description:
       'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-    source: 'assimp/code/Common/Exporter.cpp:522',
+    source: 'assimp/code/Common/Exporter.cpp:534',
   },
   ppCtMaxSmoothingAngle: {
     publicName: 'ppCtMaxSmoothingAngle',
@@ -4119,7 +4119,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   '3mf': {
@@ -4176,7 +4176,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     unit: {
       publicName: 'unit',
@@ -4238,7 +4238,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     skipWhitespaces: {
       publicName: 'skipWhitespaces',
@@ -4282,7 +4282,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   fbx: {
@@ -4337,7 +4337,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     transparencyFactorRefersToOpacity: {
       publicName: 'transparencyFactorRefersToOpacity',
@@ -4378,7 +4378,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_TARGETNAMES_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1454',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1457',
     },
     includeTargetNormals: {
       publicName: 'includeTargetNormals',
@@ -4390,7 +4390,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_TARGET_NORMAL_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1452',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1455',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4419,7 +4419,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     sparseAccessors: {
       publicName: 'sparseAccessors',
@@ -4431,7 +4431,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_SPARSE_ACCESSOR_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1450',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1453',
     },
     unlimitedSkinningBonesPerVertex: {
       publicName: 'unlimitedSkinningBonesPerVertex',
@@ -4444,7 +4444,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export'],
       description:
         'Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1441',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1444',
     },
     useGltfPbrSpecularGlossiness: {
       publicName: 'useGltfPbrSpecularGlossiness',
@@ -4485,7 +4485,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_TARGETNAMES_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1454',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1457',
     },
     includeTargetNormals: {
       publicName: 'includeTargetNormals',
@@ -4497,7 +4497,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_TARGET_NORMAL_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1452',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1455',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4526,7 +4526,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     sparseAccessors: {
       publicName: 'sparseAccessors',
@@ -4538,7 +4538,7 @@ export const internalExportOptionDescriptors = {
       formats: ['glb', 'gltf'],
       phases: ['export'],
       description: 'GLTF2_SPARSE_ACCESSOR_EXP',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1450',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1453',
     },
     unlimitedSkinningBonesPerVertex: {
       publicName: 'unlimitedSkinningBonesPerVertex',
@@ -4551,7 +4551,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export'],
       description:
         'Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…',
-      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1441',
+      source: 'assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1444',
     },
     useGltfPbrSpecularGlossiness: {
       publicName: 'useGltfPbrSpecularGlossiness',
@@ -4619,7 +4619,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   ply: {
@@ -4662,7 +4662,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   step: {
@@ -4693,7 +4693,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   stl: {
@@ -4736,7 +4736,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
   usda: {
@@ -4750,7 +4750,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_ANIMATIONS',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:120',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:122',
     },
     clearcoat: {
       publicName: 'clearcoat',
@@ -4762,7 +4762,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_CLEARCOAT',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:121',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:123',
     },
     materialX: {
       publicName: 'materialX',
@@ -4774,7 +4774,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_MATERIALX',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:122',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:124',
     },
     optimizeForMobile: {
       publicName: 'optimizeForMobile',
@@ -4786,7 +4786,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_OPTIMIZE_FOR_MOBILE',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:125',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:127',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4815,7 +4815,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     subdivision: {
       publicName: 'subdivision',
@@ -4827,7 +4827,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_SUBDIVISION',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:123',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:125',
     },
     volumes: {
       publicName: 'volumes',
@@ -4839,7 +4839,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_VOLUMES',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:124',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:126',
     },
   },
   usdz: {
@@ -4853,7 +4853,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_ANIMATIONS',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:120',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:122',
     },
     clearcoat: {
       publicName: 'clearcoat',
@@ -4865,7 +4865,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_CLEARCOAT',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:121',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:123',
     },
     materialX: {
       publicName: 'materialX',
@@ -4877,7 +4877,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_MATERIALX',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:122',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:124',
     },
     optimizeForMobile: {
       publicName: 'optimizeForMobile',
@@ -4889,7 +4889,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_OPTIMIZE_FOR_MOBILE',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:125',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:127',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4918,7 +4918,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     subdivision: {
       publicName: 'subdivision',
@@ -4930,7 +4930,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_SUBDIVISION',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:123',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:125',
     },
     volumes: {
       publicName: 'volumes',
@@ -4942,7 +4942,7 @@ export const internalExportOptionDescriptors = {
       formats: ['usda', 'usdz'],
       phases: ['export'],
       description: 'USDZ_EXPORT_VOLUMES',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:124',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:126',
     },
   },
   x: {
@@ -4973,7 +4973,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
     use64Bit: {
       publicName: 'use64Bit',
@@ -5017,7 +5017,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:522',
+      source: 'assimp/code/Common/Exporter.cpp:534',
     },
   },
 } as const;

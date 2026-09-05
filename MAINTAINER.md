@@ -20,6 +20,19 @@ tags, GitHub Releases, and Vercel deployment. Do not publish from a
 workstation, push to `release/next`, or enable auto-merge on the release pull
 request.
 
+Before the first native release, an authenticated npm 11.15+ operator with
+account-level 2FA must reserve `libassimp-darwin-arm64`,
+`libassimp-linux-x64-gnu`, and `libassimp-win32-x64-msvc` from a workstation as
+manifest-only `0.0.0` packages under a non-default `bootstrap` tag. The
+workstation publishes no native binaries and stops after this one-time package
+name reservation.
+
+For the existing root and exactly three platform packages, run `npm trust
+github <package> --repo taucad/libassimp --file ci.yml --allow-publish`, set
+publishing access to require 2FA and disallow tokens, and confirm each binding
+with `npm trust list <package>`. Do not merge the first native release pull
+request until all four bindings name `taucad/libassimp` and `ci.yml` exactly.
+
 Manual fallback when the bot is broken: on a fresh branch off `main`, run
 `pnpm release:prepare -- <version> --dry-run` and then the real run, commit
 only generated release files as `chore(release): libassimp v<version>`, and
@@ -29,9 +42,10 @@ open the pull request yourself.
 
 Repository rules, secret scanning, push protection, and private vulnerability
 reporting are managed through the `tau-cloud` stack. The npm Trusted
-Publisher is bound to `taucad/libassimp` and `.github/workflows/ci.yml`. npm
-allows one publisher per package and matches the workflow filename exactly, so
-never re-register it and never add an `NPM_TOKEN`.
+Publishers for the root and three platform packages are bound to
+`taucad/libassimp` and workflow filename `ci.yml` at
+`.github/workflows/ci.yml`. npm allows one publisher per package and matches
+the filename exactly, so never add an `NPM_TOKEN`.
 
 ## Toolchain
 

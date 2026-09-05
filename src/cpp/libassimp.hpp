@@ -17,6 +17,10 @@
 #pragma once
 
 #include <array>
+#include <atomic>
+#ifdef LIBASSIMP_CPP_COVERAGE
+#include <chrono>
+#endif
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -25,6 +29,9 @@
 #include <vector>
 
 #include "memory-io.hpp"
+
+struct aiExportFormatDesc;
+struct aiImporterDesc;
 
 namespace libassimp {
 
@@ -58,16 +65,32 @@ struct Result {
   std::vector<ConvertedFormat> formats;
 };
 
-enum class PlanStatus : int { Pending = -1, Completed = 1, Failed = 2 };
+enum class PlanStatus : int { Pending = -1, Completed = 1, Failed = 2, Aborted = 3 };
+
+#ifdef LIBASSIMP_CPP_COVERAGE
+enum class ProgressPhase : int { None = 0, Importing = 1, PostProcessing = 2, Exporting = 3 };
+
+struct PhaseDiagnostics {
+  using Duration = std::chrono::steady_clock::duration;
+  Duration resolverWait{};
+  std::array<Duration, 3> phases{};
+  std::array<bool, 3> observed{};
+};
+#endif
 
 /** Owned request bytes/configuration. Each run reconstructs attempt-local Assimp state. */
 class Plan {
  public:
   Plan(std::string entryName, std::vector<NamedBytes> files, Properties importProperties,
        unsigned int postProcess, std::vector<Target> targets, Resolver resolve);
-  PlanStatus run() noexcept;
+  PlanStatus run();
+  PlanStatus run(Resolver resolve);
+  void cancel();
   const Result& result() const { return result_; }
-  std::size_t importAttempts() const { return importAttempts_; }
+  std::size_t importAttempts() const { return importAttempts_.load(); }
+#ifdef LIBASSIMP_CPP_COVERAGE
+  const PhaseDiagnostics& phaseDiagnostics() const { return phaseDiagnostics_; }
+#endif
 
  private:
   std::string entryName_;
@@ -78,10 +101,28 @@ class Plan {
   Resolver resolve_;
   std::string pendingName_;
   Result result_;
-  std::size_t importAttempts_ = 0;
+  std::atomic<std::size_t> importAttempts_{0};
+  std::atomic<bool> cancelled_{false};
+#ifdef LIBASSIMP_CPP_COVERAGE
+  PhaseDiagnostics phaseDiagnostics_;
+#endif
 };
 
 std::vector<FormatInfo> importFormats();
 std::vector<FormatInfo> exportFormats();
+
+namespace detail {
+
+bool exportFormatMatches(const aiExportFormatDesc* description, const std::string& id);
+void appendImportFormats(std::vector<FormatInfo>& formats, const aiImporterDesc* description);
+void appendExportFormat(std::vector<FormatInfo>& formats, const aiExportFormatDesc* description);
+
+#ifdef LIBASSIMP_CPP_COVERAGE
+void blockNextProgress(ProgressPhase phase);
+ProgressPhase progressBlocked();
+void releaseProgress();
+#endif
+
+}  // namespace detail
 
 }  // namespace libassimp

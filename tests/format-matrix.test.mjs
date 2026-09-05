@@ -20,10 +20,16 @@ const load = (relative) => ({
   bytes: new Uint8Array(readFileSync(join(MODELS, relative))),
 });
 const text = (bytes) => new TextDecoder().decode(bytes);
+const glbJson = (bytes) => {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  expect(view.getUint32(0, true)).toBe(0x4654_6c67);
+  expect(view.getUint32(16, true)).toBe(0x4e4f_534a);
+  return JSON.parse(text(bytes.subarray(20, 20 + view.getUint32(12, true))));
+};
 
 // One representative fixture per importer the reference suite exercised.
 // `error` marks the formats `assimp-builds.json` disables and the fixtures assimp
-// itself refuses; `empty` marks a scene that parses without geometry.
+// itself refuses.
 const IMPORTS = [
   ['3D', ['3D/box.uc', '3D/box_a.3d', '3D/box_d.3d']],
   ['3DS', ['3DS/test1.3ds']],
@@ -74,8 +80,8 @@ const IMPORTS = [
   ['X', ['X/test_cube_text.x']],
   ['X binary', ['X/test_cube_binary.x']],
   ['X3D', ['X3D/HelloWorld.x3d']],
-  // The engine fork parses binary X3D, and hands back a scene with no geometry.
-  ['X3DB', ['X3DB/HelloWorld.x3db'], 'empty'],
+  // Assimp recognizes the extension but has no binary X3D decoder.
+  ['X3DB', ['X3DB/HelloWorld.x3db'], 'error'],
   ['XGL', ['XGL/sample_official.xgl']],
   ['IRR', ['IRR/box.irr'], 'error'],
   ['IRRMesh', ['IRRMesh/spider.irrmesh'], 'error'],
@@ -165,7 +171,20 @@ afterAll(() => {
 });
 
 describe('importers', () => {
-  it.todo('exports a point-cloud PLY as a valid GLB — upstream issue filing pending operator approval');
+  it('exports a point-cloud PLY as a valid, round-trippable GLB', async () => {
+    const { files } = await assimp.convert(load('PLY/points.ply'), { to: 'glb' });
+    const glb = files[0].bytes;
+    const json = glbJson(glb);
+    const primitive = json.meshes[0].primitives[0];
+    expect(primitive.mode).toBe(0);
+    expect(json.accessors[primitive.attributes.POSITION].count).toBe(4);
+
+    const roundTrip = await assimp.convert({ name: 'points.glb', bytes: glb }, { to: 'assjson' });
+    const scene = JSON.parse(text(roundTrip.files[0].bytes));
+    expect(scene.meshes).toHaveLength(1);
+    expect(scene.meshes[0].vertices).toHaveLength(12);
+    expect(scene.meshes[0].primitivetypes).toBe(1);
+  });
 
   it('rejects glTF 1', async () => {
     const inputs = [
@@ -187,8 +206,7 @@ describe('importers', () => {
     }
     const { files: outputs } = await assimp.convert(inputs, { to: 'assjson' });
     const meshes = JSON.parse(text(outputs[0].bytes)).meshes?.length ?? 0;
-    if (outcome === 'empty') expect(meshes).toBe(0);
-    else expect(meshes, `${id} imported without meshes`).toBeGreaterThan(0);
+    expect(meshes, `${id} imported without meshes`).toBeGreaterThan(0);
     pin(`import ${id}`, outputs[0].bytes);
   });
 

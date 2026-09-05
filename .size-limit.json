@@ -7,6 +7,21 @@
   {
     "name": "instance factory",
     "path": "dist/create-assimp.mjs",
-    "limit": "2035 B"
+    "limit": "2605 B"
+  },
+  {
+    "name": "Node ESM facade",
+    "path": "dist/index.node.mjs",
+    "limit": "463 B"
+  },
+  {
+    "name": "generated native loader",
+    "path": "dist/native/index.js",
+    "limit": "3.3 kB"
+  },
+  {
+    "name": "native backend",
+    "path": "dist/native-backend.mjs",
+    "limit": "1.25 kB"
   }
 ]

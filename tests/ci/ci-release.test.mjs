@@ -17,9 +17,11 @@ const stable = {
 };
 
 describe('CI release policy', () => {
-  it('publishes candidate tarballs through explicit relative paths', () => {
+  it('publishes exact frozen tarballs with provenance and the root ordered last', () => {
     const workflow = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
-    assert(workflow.includes('npm publish "./candidate/$filename" --access public --provenance'));
+    assert(workflow.includes('npm publish "./tarballs/$filename" --access public --provenance </dev/null'));
+    assert(workflow.includes("Number(a === 'libassimp') - Number(b === 'libassimp')"));
+    assert(workflow.includes('id-token: write'));
   });
 
   it('publishes one exact release commit on main', () => {
@@ -59,6 +61,18 @@ describe('CI release policy', () => {
     );
   });
 
+  it('never publishes a manual dispatch', () => {
+    assert.deepEqual(deriveRelease({ ...stable, event: 'workflow_dispatch' }), {
+      kind: 'dispatch',
+      npmPublish: false,
+      version: '0.1.0',
+    });
+    assert.throws(
+      () => deriveRelease({ ...stable, event: 'workflow_dispatch', ref: 'refs/heads/feature' }),
+      /protected main/u,
+    );
+  });
+
   it('rejects extra release files', () => {
     assert.throws(
       () => deriveRelease({ ...stable, changedFiles: [...stable.changedFiles, 'src/index.ts'] }),
@@ -76,7 +90,6 @@ describe('fixed release version validation', () => {
     assert.equal(
       validateRequestedVersion({
         currentVersions: ['0.0.0'],
-        optionalDependencyVersions: [],
         plannedVersions: ['0.1.0'],
         requestedVersion: '0.1.0',
       }),
@@ -89,7 +102,6 @@ describe('fixed release version validation', () => {
       () =>
         validateRequestedVersion({
           currentVersions: ['0.0.0', '0.0.1'],
-          optionalDependencyVersions: ['0.0.0'],
           plannedVersions: ['0.1.0', '0.1.0'],
           requestedVersion: '0.1.0',
         }),

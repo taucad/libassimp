@@ -1,0 +1,70 @@
+name: Download a verified artifact
+description: Download one artifact, prove it landed, and retry once when it did not.
+inputs:
+  name:
+    description: Artifact name; leave empty when using pattern.
+    required: false
+    default: ''
+  pattern:
+    description: Artifact pattern; leave empty when using name.
+    required: false
+    default: ''
+  path:
+    description: Destination directory.
+    required: true
+  merge-multiple:
+    description: Merge matched artifacts.
+    required: false
+    default: 'false'
+  expect:
+    description: Whitespace-separated paths required below the destination.
+    required: false
+    default: ''
+  github-token:
+    description: Token for downloading from another workflow run.
+    required: false
+    default: ${{ github.token }}
+  run-id:
+    description: Workflow run containing the artifact.
+    required: false
+    default: ${{ github.run_id }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      with:
+        name: ${{ inputs.name }}
+        pattern: ${{ inputs.pattern }}
+        path: ${{ inputs.path }}
+        merge-multiple: ${{ inputs.merge-multiple }}
+        github-token: ${{ inputs.github-token }}
+        run-id: ${{ inputs.run-id }}
+    - id: verify
+      shell: bash
+      env:
+        ARTIFACT: ${{ inputs.name }}${{ inputs.pattern }}
+        ARTIFACT_PATH: ${{ inputs.path }}
+        ANNOTATE: 'false'
+        EXPECT: ${{ inputs.expect }}
+      run: |
+        if bash .github/actions/download-verified-artifact/verify-artifact.sh; then
+          echo 'complete=true' >> "$GITHUB_OUTPUT"
+        else
+          echo 'complete=false' >> "$GITHUB_OUTPUT"
+        fi
+    - if: steps.verify.outputs.complete == 'false'
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      with:
+        name: ${{ inputs.name }}
+        pattern: ${{ inputs.pattern }}
+        path: ${{ inputs.path }}
+        merge-multiple: ${{ inputs.merge-multiple }}
+        github-token: ${{ inputs.github-token }}
+        run-id: ${{ inputs.run-id }}
+    - if: steps.verify.outputs.complete == 'false'
+      shell: bash
+      env:
+        ARTIFACT: ${{ inputs.name }}${{ inputs.pattern }}
+        ARTIFACT_PATH: ${{ inputs.path }}
+        EXPECT: ${{ inputs.expect }}
+      run: bash .github/actions/download-verified-artifact/verify-artifact.sh

@@ -11,16 +11,23 @@ import type {
   NativeRuntime,
 } from './convert.js';
 import { prepareConversion, ResolutionContext, runPreparedConversion } from './convert.js';
+import { AssimpError } from './assimp-error.js';
 import type { AllExportFormat, ExportFormatInfo, FormatInfo } from './generated/assimp-capabilities.js';
 
 /** Settings for {@link Assimp} creation. @public */
 export type CreateAssimpOptions = {
+  /** Runtime preference. Node defaults to `auto`; browsers always use Wasm. */
+  readonly backend?: 'auto' | 'native' | 'wasm';
   /** Wasm location. Defaults to the single artifact shipped beside this entry. */
   readonly wasmUrl?: string | URL;
   /** Already-fetched bytes used instead of `wasmUrl`. */
   readonly wasmBinary?: ArrayBuffer | Uint8Array;
   /** Receives generated-runtime diagnostics. */
-  readonly onLog?: (entry: { readonly level: 'info' | 'error'; readonly message: string }) => void;
+  readonly onLog?: (entry: {
+    readonly level: 'info' | 'warning' | 'error';
+    readonly message: string;
+    readonly cause?: unknown;
+  }) => void;
 };
 
 /** Singular conversion callable narrowed to one package entry. @public */
@@ -39,6 +46,10 @@ export type ConvertFormatsFunction<ExportFormat extends AllExportFormat> = <
 
 /** Loaded conversion instance. @public */
 export type Assimp<ImportFormat extends string, ExportFormat extends AllExportFormat> = {
+  /** Runtime that actually serves this instance. */
+  readonly backend: 'native' | 'wasm';
+  /** Native target/API identity, absent for Wasm instances. */
+  readonly buildIdentity?: string;
   readonly convert: ConvertFunction<ExportFormat>;
   readonly convertFormats: ConvertFormatsFunction<ExportFormat>;
   readonly formats: {
@@ -72,6 +83,15 @@ type EntryFormats<ImportFormat extends string, ExportFormat extends AllExportFor
   import: readonly FormatInfo<ImportFormat>[];
   export: readonly ExportFormatInfo<ExportFormat>[];
 }>;
+
+type EntryConfig<ImportFormat extends string, ExportFormat extends AllExportFormat> = EntryFormats<
+  ImportFormat,
+  ExportFormat
+> &
+  Readonly<{ loadRuntime?: RuntimeLoader }>;
+
+/** Create one loaded runtime for a package entry. @internal */
+export type RuntimeLoader = (options: CreateAssimpOptions) => Promise<NativeRuntime>;
 
 const sink =
   (onLog: CreateAssimpOptions['onLog'], level: 'info' | 'error') =>
@@ -196,16 +216,23 @@ export const loadModule = async (
     const wasm = WebAssembly as JspiWebAssembly;
     const invoke = jspi && wasm.promising !== undefined ? wasm.promising(raw) : raw;
     return {
-      native,
+      backend: 'wasm',
+      preparePlan: (entryName, files, nativeOptions) => native.preparePlan(entryName, files, nativeOptions),
       runPlan: async (handle, context) => {
         if (active !== undefined) throw new Error('libassimp instance re-entry is not allowed.');
         active = context;
         try {
-          return await invoke(handle);
+          return await invoke(handle as number);
         } finally {
           active = undefined;
         }
       },
+      takePlanResult: (handle) => native.takePlanResult(handle as number),
+      cancelPlan: () => undefined,
+      destroyPlan: (handle) => {
+        native.destroyPlan(handle as number);
+      },
+      dispose: () => undefined,
     };
   } catch (error) {
     options.onLog?.({ level: 'error', message: error instanceof Error ? error.message : String(error) });
@@ -215,38 +242,99 @@ export const loadModule = async (
 
 const disposedError = (): Error => new Error('assimp instance disposed; create another with createAssimp().');
 
+const waitFor = <Value>(start: () => Promise<Value>, signal: AbortSignal | undefined): Promise<Value> => {
+  if (signal === undefined) return start();
+  return new Promise((resolve, reject) => {
+    let watched: AbortSignal | undefined = signal;
+    const stop = (): void => {
+      watched?.removeEventListener('abort', abort);
+      watched = undefined;
+    };
+    const abort = (): void => {
+      const reason: unknown = watched?.reason;
+      stop();
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+      reject(reason);
+    };
+    signal.addEventListener('abort', abort, { once: true });
+    if (signal.aborted) {
+      abort();
+      return;
+    }
+    void start().then(
+      (value) => {
+        stop();
+        resolve(value);
+      },
+      (error: unknown) => {
+        stop();
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+        reject(error);
+      },
+    );
+  });
+};
+
 /** Bind one package entry to its artifact and generated static format tables. @internal */
 export const createEntry = <ImportFormat extends string, ExportFormat extends AllExportFormat>(
   glueUrl: URL,
   wasmUrl: URL,
-  formats: EntryFormats<ImportFormat, ExportFormat>,
+  config: EntryConfig<ImportFormat, ExportFormat>,
 ) => {
+  const formats: EntryFormats<ImportFormat, ExportFormat> = {
+    import: config.import,
+    export: config.export,
+  };
+  const loadRuntime: RuntimeLoader =
+    config.loadRuntime ??
+    ((options) => {
+      if (options.backend === 'native') {
+        return Promise.reject(
+          new AssimpError(
+            'IMPORT_FAILED',
+            'backend: native is unavailable from the browser-safe libassimp entry.',
+            { cause: new Error('The default libassimp entry contains no Node loader.') },
+          ),
+        );
+      }
+      return loadModule(glueUrl, wasmUrl, options);
+    });
   const supportedFormats = new Set<string>(formats.export.map(({ id }) => id));
   const createAssimp = async (
     options: CreateAssimpOptions = {},
   ): Promise<Assimp<ImportFormat, ExportFormat>> => {
-    let runtime: NativeRuntime | undefined = await loadModule(glueUrl, wasmUrl, options);
+    const backend: unknown = options.backend;
+    if (backend !== undefined && backend !== 'auto' && backend !== 'native' && backend !== 'wasm') {
+      throw new AssimpError('INVALID_OPTIONS', 'Invalid backend; expected auto, native, or wasm.');
+    }
+    let runtime: NativeRuntime | undefined = await loadRuntime(options);
     let disposed = false;
-    let tail: Promise<void> = Promise.resolve();
+    let drain: Promise<void> = Promise.resolve();
+    const serialize = runtime.backend === 'wasm';
 
-    const enqueue = <Result>(operation: () => Promise<Result>): Promise<Result> => {
-      const result = tail.then(operation);
-      tail = result.then(
+    const run = <Result>(operation: () => Promise<Result>, signal: AbortSignal | undefined) => {
+      const predecessor = drain;
+      const result = serialize ? waitFor(() => predecessor, signal).then(operation) : operation();
+      const settled = result.then(
         () => undefined,
         () => undefined,
       );
+      drain = Promise.all([predecessor, settled]).then(() => undefined);
       return result;
     };
 
     const convertFormats: ConvertFormatsFunction<ExportFormat> = (files, convertOptions) => {
       if (disposed) return Promise.reject(disposedError());
+      // AbortSignal.reason is deliberately not constrained to Error.
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+      if (convertOptions.signal?.aborted) return Promise.reject(convertOptions.signal.reason);
       let request;
       try {
         request = prepareConversion(files, convertOptions, supportedFormats);
       } catch (error) {
         return Promise.reject(error instanceof Error ? error : new Error(String(error)));
       }
-      return enqueue(() => runPreparedConversion(runtime as NativeRuntime, request));
+      return run(() => runPreparedConversion(runtime as NativeRuntime, request), convertOptions.signal);
     };
 
     const convert: ConvertFunction<ExportFormat> = (files, convertOptions) => {
@@ -259,6 +347,7 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
       const plural = {
         targets: [target] as [ConvertTarget<ExportFormat>],
         ...(convertOptions.resolve === undefined ? {} : { resolve: convertOptions.resolve }),
+        ...(convertOptions.signal === undefined ? {} : { signal: convertOptions.signal }),
         ...(convertOptions.importOptions === undefined
           ? {}
           : { importOptions: convertOptions.importOptions }),
@@ -270,12 +359,15 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
     const dispose = (): void => {
       if (disposed) return;
       disposed = true;
-      void tail.then(() => {
+      void drain.then(() => {
+        runtime?.dispose();
         runtime = undefined;
       });
     };
 
     return {
+      backend: runtime.backend,
+      ...(runtime.buildIdentity === undefined ? {} : { buildIdentity: runtime.buildIdentity }),
       convert,
       convertFormats,
       formats,
@@ -291,9 +383,9 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
       throw error;
     }));
   const convert: ConvertFunction<ExportFormat> = async (files, options) =>
-    (await instance()).convert(files, options);
+    (await waitFor(instance, options.signal)).convert(files, options);
   const convertFormats: ConvertFormatsFunction<ExportFormat> = async (files, options) =>
-    (await instance()).convertFormats(files, options);
+    (await waitFor(instance, options.signal)).convertFormats(files, options);
 
   return { convert, convertFormats, createAssimp };
 };

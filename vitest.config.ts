@@ -1,9 +1,21 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      './native/index.js': fileURLToPath(new URL('./src/native/loader.fixture.test.ts', import.meta.url)),
+    },
+  },
   test: {
     // `tests/ci/**` is deliberately absent: those run under `node --test`.
     include: ['src/**/*.test.ts', 'tests/*.test.mjs', '*.test.ts'],
+    exclude: [
+      'src/native/loader.fixture.test.ts',
+      'tests/napi-targets.test.mjs',
+      'tests/native-packaging.test.mjs',
+    ],
     coverage: {
       exclude: ['src/**/*.{test,spec}.ts', 'src/wasm/**', '**/*.test-d.ts'],
       include: ['src/**/*.ts'],
