@@ -1,6 +1,6 @@
 {
   "name": "libassimp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Assimp for TypeScript with native Node-API and WebAssembly backends: import 69 3D formats and export 15 formats.",
   "keywords": [
     "3d",
