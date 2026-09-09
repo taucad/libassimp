@@ -396,6 +396,35 @@ describe('pull request package previews', () => {
 
     assert.deepEqual(result, { installed: 2, roots: ['libassimp'] });
   });
+
+  it('rejects untrusted or stale metadata before invoking npm', () => {
+    const source = directory('libassimp-preview-rejected-');
+    const root = join(source, '00');
+    const metadata = join(source, 'preview.json');
+    mkdirSync(root);
+    json(join(root, 'package.json'), { name: 'libassimp' });
+
+    for (const url of [
+      'https://example.com/taucad/libassimp@deadbee',
+      'https://pkg.pr.new/taucad/libassimp@stale00',
+    ]) {
+      json(metadata, { packages: [{ name: 'libassimp', url }] });
+      let installs = 0;
+      assert.throws(
+        () =>
+          verifyPreviewInstall({
+            from: source,
+            metadata,
+            sha: 'deadbee',
+            install: () => {
+              installs += 1;
+            },
+          }),
+        /untrusted or stale/u,
+      );
+      assert.equal(installs, 0);
+    }
+  });
 });
 
 describe('deterministic scale fixture', () => {
