@@ -13,3 +13,7 @@ linkWorkspacePackages: true
 overrides:
   # Origin: brace-expansion 5.0.9 fixes GHSA-rgw5-rvv9-x895 in Nx's minimatch path.
   'brace-expansion@5': 5.0.9
+  # Patched transitive versions for the repository's high-severity audit gate.
+  'js-yaml@4': 4.3.2
+  'sharp@<0.35.4': 0.35.4
+  'smol-toml@<=1.7.0': 1.7.1
