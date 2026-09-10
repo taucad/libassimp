@@ -349,6 +349,7 @@ describe('pull request package previews', () => {
   });
 
   it('installs the preview root and verifies rewritten native dependencies', () => {
+    const sha = 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
     const source = directory('libassimp-preview-packages-');
     const root = join(source, '00');
     const native = join(source, '01');
@@ -362,10 +363,10 @@ describe('pull request package previews', () => {
     json(join(native, 'package.json'), { name: 'libassimp-linux-x64-gnu' });
     json(metadata, {
       packages: [
-        { name: 'libassimp', url: 'https://pkg.pr.new/taucad/libassimp@deadbee' },
+        { name: 'libassimp', url: `https://pkg.pr.new/taucad/libassimp@${sha}` },
         {
           name: 'libassimp-linux-x64-gnu',
-          url: 'https://pkg.pr.new/taucad/libassimp/libassimp-linux-x64-gnu@deadbee',
+          url: `https://pkg.pr.new/taucad/libassimp/libassimp-linux-x64-gnu@${sha}`,
         },
       ],
     });
@@ -373,10 +374,10 @@ describe('pull request package previews', () => {
     const result = verifyPreviewInstall({
       from: source,
       metadata,
-      sha: 'deadbee',
+      sha,
       install: (_command, args, options) => {
         if (args[0] !== 'install') return;
-        assert(args.includes('https://pkg.pr.new/taucad/libassimp@deadbee'));
+        assert(args.includes(`https://pkg.pr.new/taucad/libassimp@${sha}`));
         const modules = join(options.cwd, 'node_modules');
         mkdirSync(join(modules, 'libassimp'), { recursive: true });
         mkdirSync(join(modules, 'libassimp-linux-x64-gnu'), { recursive: true });
@@ -384,7 +385,7 @@ describe('pull request package previews', () => {
           name: 'libassimp',
           version: '0.0.0-preview-deadbee',
           optionalDependencies: {
-            'libassimp-linux-x64-gnu': 'https://pkg.pr.new/taucad/libassimp/libassimp-linux-x64-gnu@deadbee',
+            'libassimp-linux-x64-gnu': `https://pkg.pr.new/taucad/libassimp/libassimp-linux-x64-gnu@${sha}`,
           },
         });
         json(join(modules, 'libassimp-linux-x64-gnu', 'package.json'), {
