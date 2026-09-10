@@ -14,11 +14,13 @@ import {
   maxGlibcxxVersion,
 } from '../scripts/check-native-host.mjs';
 import { inspectHeader } from '../scripts/inspect-native.mjs';
+import { extractPreviewPackages } from '../scripts/extract-preview-packages.mjs';
 import { readNapiTargets } from '../scripts/lib/napi-targets.mjs';
 import { nativeMatrices, ELECTRON_VERSION, NODE_VERSION, NODE_VERSIONS } from '../scripts/native-matrix.mjs';
 import { packTestTarballs } from '../scripts/pack-test-tarballs.mjs';
 import { PACKAGE_FILES } from '../scripts/package-files.mjs';
 import { waitForRegistry } from '../scripts/registry-wait.mjs';
+import { verifyPreviewInstall } from '../scripts/verify-preview-install.mjs';
 import {
   readScalePointCount,
   SCALE_BYTES,
@@ -154,6 +156,13 @@ describe('native target source', () => {
     assert(
       workflow.includes("required.push('publish', 'registry-verify', 'registry-smoke', 'registry-release')"),
     );
+    assert(
+      workflow.includes(
+        "if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository",
+      ),
+    );
+    assert(workflow.includes('pnpm exec pkg-pr-new publish'));
+    assert(workflow.includes("required.push('preview', 'preview-consumer')"));
     for (const command of [
       'pnpm exec napi create-npm-dirs --npm-dir npm',
       'pnpm exec napi artifacts --output-dir native-artifacts --npm-dir npm',
@@ -316,6 +325,105 @@ describe('prepared release and tarball integrity set', () => {
         triple: target.triple,
       });
       assert.match(candidate.addonSha256, /^[\da-f]{64}$/u);
+    }
+  });
+});
+
+describe('pull request package previews', () => {
+  it('extracts the exact frozen tarball set', () => {
+    const source = directory('libassimp-preview-source-');
+    const output = directory('libassimp-preview-output-');
+    rmSync(output, { recursive: true });
+    writeFileSync(join(source, 'libassimp.tgz'), '');
+    json(join(source, 'test-tarballs.json'), {
+      packages: { libassimp: { filename: 'libassimp.tgz', version: manifest.version } },
+    });
+
+    const [extracted] = extractPreviewPackages({
+      from: source,
+      out: output,
+      extract: (_tarball, destination) => json(join(destination, 'package.json'), manifest),
+    });
+
+    assert.equal(JSON.parse(readFileSync(join(extracted, 'package.json'), 'utf8')).name, 'libassimp');
+  });
+
+  it('installs the preview root and verifies rewritten native dependencies', () => {
+    const sha = 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
+    const source = directory('libassimp-preview-packages-');
+    const root = join(source, '00');
+    const native = join(source, '01');
+    const metadata = join(source, 'preview.json');
+    mkdirSync(root);
+    mkdirSync(native);
+    json(join(root, 'package.json'), {
+      name: 'libassimp',
+      optionalDependencies: { 'libassimp-linux-x64-gnu': manifest.version },
+    });
+    json(join(native, 'package.json'), { name: 'libassimp-linux-x64-gnu' });
+    json(metadata, {
+      packages: [
+        { name: 'libassimp', url: `https://pkg.pr.new/taucad/libassimp@${sha}` },
+        {
+          name: 'libassimp-linux-x64-gnu',
+          url: `https://pkg.pr.new/taucad/libassimp/libassimp-linux-x64-gnu@${sha}`,
+        },
+      ],
+    });
+
+    const result = verifyPreviewInstall({
+      from: source,
+      metadata,
+      sha,
+      install: (_command, args, options) => {
+        if (args[0] !== 'install') return;
+        assert(args.includes(`https://pkg.pr.new/taucad/libassimp@${sha}`));
+        const modules = join(options.cwd, 'node_modules');
+        mkdirSync(join(modules, 'libassimp'), { recursive: true });
+        mkdirSync(join(modules, 'libassimp-linux-x64-gnu'), { recursive: true });
+        json(join(modules, 'libassimp', 'package.json'), {
+          name: 'libassimp',
+          version: '0.0.0-preview-deadbee',
+          optionalDependencies: {
+            'libassimp-linux-x64-gnu': `https://pkg.pr.new/taucad/libassimp/libassimp-linux-x64-gnu@${sha}`,
+          },
+        });
+        json(join(modules, 'libassimp-linux-x64-gnu', 'package.json'), {
+          name: 'libassimp-linux-x64-gnu',
+          version: '0.0.0-preview-deadbee',
+        });
+      },
+    });
+
+    assert.deepEqual(result, { installed: 2, roots: ['libassimp'] });
+  });
+
+  it('rejects untrusted or stale metadata before invoking npm', () => {
+    const source = directory('libassimp-preview-rejected-');
+    const root = join(source, '00');
+    const metadata = join(source, 'preview.json');
+    mkdirSync(root);
+    json(join(root, 'package.json'), { name: 'libassimp' });
+
+    for (const url of [
+      'https://example.com/taucad/libassimp@deadbee',
+      'https://pkg.pr.new/taucad/libassimp@stale00',
+    ]) {
+      json(metadata, { packages: [{ name: 'libassimp', url }] });
+      let installs = 0;
+      assert.throws(
+        () =>
+          verifyPreviewInstall({
+            from: source,
+            metadata,
+            sha: 'deadbee',
+            install: () => {
+              installs += 1;
+            },
+          }),
+        /untrusted or stale/u,
+      );
+      assert.equal(installs, 0);
     }
   });
 });
