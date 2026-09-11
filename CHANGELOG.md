@@ -1,3 +1,13 @@
+## 0.3.1 (2026-09-11)
+
+### 🩹 Fixes
+
+- Publish installable package previews for same-repository pull requests, verify the hosted root and native-package graph before merge, and refresh security-sensitive build dependencies. ([#37](https://github.com/taucad/libassimp/pull/37))
+
+### ❤️ Thank You
+
+- Richard Fontein @rifont
+
 ## 0.3.0 (2026-09-05)
 
 ### 🚀 Features
