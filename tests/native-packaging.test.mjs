@@ -376,6 +376,11 @@ describe('pull request package previews', () => {
       metadata,
       sha,
       install: (_command, args, options) => {
+        if (args[0] === 'pack') {
+          const [, url] = args;
+          const name = url.slice(url.lastIndexOf('/') + 1, url.lastIndexOf('@'));
+          return `${JSON.stringify([{ name, version: '0.0.0-preview-deadbee' }])}\n`;
+        }
         if (args[0] !== 'install') return;
         assert(args.includes(`https://pkg.pr.new/taucad/libassimp@${sha}`));
         const modules = join(options.cwd, 'node_modules');
@@ -395,7 +400,62 @@ describe('pull request package previews', () => {
       },
     });
 
-    assert.deepEqual(result, { installed: 2, roots: ['libassimp'] });
+    assert.deepEqual(result, { installed: 2, published: 2, roots: ['libassimp'] });
+  });
+
+  // `npm install` honours os/cpu/libc, so a native for another platform never
+  // reaches node_modules and only the published audit can see what it shipped.
+  it('rejects a published native the platform filter hid from the install', () => {
+    const sha = 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
+    const source = directory('libassimp-preview-hidden-');
+    const root = join(source, '00');
+    const native = join(source, '01');
+    const metadata = join(source, 'preview.json');
+    mkdirSync(root);
+    mkdirSync(native);
+    json(join(root, 'package.json'), {
+      name: 'libassimp',
+      optionalDependencies: { 'libassimp-win32-x64-msvc': manifest.version },
+    });
+    json(join(native, 'package.json'), { name: 'libassimp-win32-x64-msvc' });
+    json(metadata, {
+      packages: [
+        { name: 'libassimp', url: `https://pkg.pr.new/taucad/libassimp@${sha}` },
+        {
+          name: 'libassimp-win32-x64-msvc',
+          url: `https://pkg.pr.new/taucad/libassimp/libassimp-win32-x64-msvc@${sha}`,
+        },
+      ],
+    });
+
+    assert.throws(
+      () =>
+        verifyPreviewInstall({
+          from: source,
+          metadata,
+          sha,
+          install: (_command, args, options) => {
+            if (args[0] === 'pack') {
+              const [, url] = args;
+              const name = url.slice(url.lastIndexOf('/') + 1, url.lastIndexOf('@'));
+              // The hidden native never got a preview version.
+              const version = name === 'libassimp' ? '0.0.0-preview-deadbee' : manifest.version;
+              return `${JSON.stringify([{ name, version }])}\n`;
+            }
+            if (args[0] !== 'install') return;
+            const modules = join(options.cwd, 'node_modules');
+            mkdirSync(join(modules, 'libassimp'), { recursive: true });
+            json(join(modules, 'libassimp', 'package.json'), {
+              name: 'libassimp',
+              version: '0.0.0-preview-deadbee',
+              optionalDependencies: {
+                'libassimp-win32-x64-msvc': `https://pkg.pr.new/taucad/libassimp/libassimp-win32-x64-msvc@${sha}`,
+              },
+            });
+          },
+        }),
+      /libassimp-win32-x64-msvc published .+, expected 0\.0\.0-preview-deadbee/u,
+    );
   });
 
   it('rejects untrusted or stale metadata before invoking npm', () => {
