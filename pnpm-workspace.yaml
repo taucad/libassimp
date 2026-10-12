@@ -11,9 +11,17 @@ allowBuilds:
 linkWorkspacePackages: true
 
 overrides:
-  # Origin: brace-expansion 5.0.9 fixes GHSA-rgw5-rvv9-x895 in Nx's minimatch path.
-  'brace-expansion@5': 5.0.9
+  # Origin: brace-expansion 5.0.12 fixes GHSA-rgw5-rvv9-x895 and GHSA-6j4f-fj2g-mc7p in Nx's minimatch path.
+  'brace-expansion@5': 5.0.12
+  # Origin: brace-expansion 1.1.21 fixes GHSA-qhr7-859c-m2p7 in ESLint's minimatch path.
+  'brace-expansion@1': 1.1.21
+  # Origin: axios 1.20.0 fixes GHSA-c29m-xwm3-cm6r and the shouldBypassProxy ReDoS in Nx's client.
+  'axios@1': 1.20.0
+  # Origin: tinypool 2.1.2 fixes GHSA-5gmw-xhrv-c9v3 and GHSA-85c8-ppgw-ccpr in oxfmt's worker pool.
+  'tinypool@2': 2.1.2
+  # Origin: source-map-js 1.2.2 fixes the high-severity advisory in Vite's PostCSS path.
+  'source-map-js@1': 1.2.2
   # Patched transitive versions for the repository's high-severity audit gate.
   'js-yaml@4': 4.3.2
-  'sharp@<0.35.4': 0.35.4
+  'sharp@<0.35.5': 0.35.5
   'smol-toml@<=1.7.0': 1.7.1
