@@ -365,14 +365,20 @@ test('preserves export textures and exact same-artifact resolution across Wasm r
 
   expect(replay).toEqual(normal);
   expect(normal.successful.asked).toEqual(['cube_usemtl.mtl']);
-  expect(normal.textured.asked).toEqual(spiderSidecarFixtures.map(([name]) => name));
+  // Brusttex (wal69ar_small.jpg) is bound to no mesh, so the exporter never asks for it.
+  expect(normal.textured.asked).toEqual([
+    'spider.mtl',
+    'SpiderTex.jpg',
+    'wal67ar_small.jpg',
+    'drkwood2.jpg',
+    'engineflare1.jpg',
+  ]);
   expect(normal.textured.members).toEqual([
-    'model.usda',
+    'result.usdc',
     'textures/SpiderTex.jpg',
+    'textures/wal67ar_small.jpg',
     'textures/drkwood2.jpg',
     'textures/engineflare1.jpg',
-    'textures/wal67ar_small.jpg',
-    'textures/wal69ar_small.jpg',
   ]);
   expect(normal.textureRejected.code).toBe('RESOLVE_FAILED');
   expect(leafName(normal.textureRejected.fileName)).toBe('SpiderTex.jpg');

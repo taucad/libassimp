@@ -35,6 +35,7 @@ describe('format matrix', () => {
       'step',
       'stl',
       'usda',
+      'usdc',
       'usdz',
       'x',
       'x3d',

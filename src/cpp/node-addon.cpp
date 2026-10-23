@@ -21,18 +21,32 @@
 #endif
 #include <cmath>
 #include <condition_variable>
+#include <cerrno>
 #include <cstdlib>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
-#include <thread>
 #include <utility>
 #include <vector>
+
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <process.h>
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 
 #include "libassimp.hpp"
 
@@ -83,6 +97,7 @@ enum class CoverageFailure : int {
   StageTypedArray = 10,
   External = 11,
   CancelStage = 12,
+  WorkerThread = 13,
 };
 std::atomic<int> coverageFailure{0};
 
@@ -628,6 +643,87 @@ void Job::finish(libassimp::PlanStatus status) {
     endPlan();
 }
 
+// One worker thread with an explicit stack. std::thread inherits the platform
+// default (512 KiB on macOS, 1 MiB on Windows), which deep USD composition and
+// recursive scene walks overflow; the Wasm build already runs with -sSTACK_SIZE=8MB.
+class WorkerThread {
+public:
+  static constexpr std::size_t kStackBytes = 8u * 1024u * 1024u;
+
+  WorkerThread() = default;
+  WorkerThread(const WorkerThread &) = delete;
+  WorkerThread &operator=(const WorkerThread &) = delete;
+
+  template <typename Body> void start(Body body) {
+    auto owned = std::make_unique<std::function<void()>>(std::move(body));
+#ifdef _WIN32
+    const uintptr_t handle = _beginthreadex(
+        nullptr, static_cast<unsigned>(kStackBytes), &WorkerThread::trampoline,
+        owned.get(), STACK_SIZE_PARAM_IS_A_RESERVATION, nullptr);
+    if (handle == 0)
+      throw std::runtime_error("libassimp: could not start the worker thread");
+    handle_ = reinterpret_cast<HANDLE>(handle);
+#else
+    pthread_attr_t attributes;
+    pthread_attr_init(&attributes);
+    pthread_attr_setstacksize(&attributes, kStackBytes);
+    int started = EAGAIN;
+#ifdef LIBASSIMP_CPP_COVERAGE
+    if (!takeCoverageFailure(CoverageFailure::WorkerThread))
+#endif
+      started = pthread_create(&thread_, &attributes,
+                               &WorkerThread::trampoline, owned.get());
+    pthread_attr_destroy(&attributes);
+    if (started != 0)
+      throw std::runtime_error("libassimp: could not start the worker thread");
+    running_ = true;
+#endif
+    owned.release();
+  }
+
+  bool joinable() const {
+#ifdef _WIN32
+    return handle_ != nullptr;
+#else
+    return running_;
+#endif
+  }
+
+  void join() {
+#ifdef _WIN32
+    WaitForSingleObject(handle_, INFINITE);
+    CloseHandle(handle_);
+    handle_ = nullptr;
+#else
+    pthread_join(thread_, nullptr);
+    running_ = false;
+#endif
+  }
+
+private:
+#ifdef _WIN32
+  static unsigned __stdcall trampoline(void *body) {
+#else
+  static void *trampoline(void *body) {
+#endif
+    const std::unique_ptr<std::function<void()>> owned(
+        static_cast<std::function<void()> *>(body));
+    (*owned)();
+#ifdef _WIN32
+    return 0;
+#else
+    return nullptr;
+#endif
+  }
+
+#ifdef _WIN32
+  HANDLE handle_ = nullptr;
+#else
+  pthread_t thread_{};
+  bool running_ = false;
+#endif
+};
+
 class Executor {
 public:
   static Executor &instance() {
@@ -650,7 +746,7 @@ public:
   void submit(const std::shared_ptr<Job> &job) {
     const std::lock_guard<std::mutex> lock(mutex_);
     if (!joining_ && !worker_.joinable())
-      worker_ = std::thread([this] { loop(); });
+      worker_.start([this] { loop(); });
     queue_.push_back(job);
     condition_.notify_one();
   }
@@ -726,7 +822,7 @@ private:
     stopping_ = false;
     joining_ = false;
     if (!queue_.empty())
-      worker_ = std::thread([this] { loop(); });
+      worker_.start([this] { loop(); });
     condition_.notify_one();
     lifecycleCondition_.notify_all();
   }
@@ -754,7 +850,7 @@ private:
   std::condition_variable lifecycleCondition_;
   std::deque<std::shared_ptr<Job>> queue_;
   std::shared_ptr<Job> active_;
-  std::thread worker_;
+  WorkerThread worker_;
   std::size_t environments_ = 0;
   bool stopping_ = false;
   bool joining_ = false;

@@ -328,6 +328,8 @@ export type NativeRuntime = Readonly<{
   takePlanResult: (handle: unknown) => NativeResult;
   destroyPlan: (handle: unknown) => void;
   dispose: () => void;
+  /** Current Wasm linear-memory size; the high-water mark, since it never shrinks. */
+  memoryBytes?: () => number;
 }>;
 
 /** A validated request that has not copied bytes into Wasm. @internal */

@@ -51,6 +51,7 @@ constexpr ConversionCase kCases[] = {
      "3mf", "", "PK", "result.3mf"},
     {"obj_to_assjson", "OBJ/box.obj", "assjson", "", "{", "result.json"},
     {"obj_to_usda", "OBJ/box.obj", "usda", "", "#usda", "result.usda"},
+    {"obj_to_usdc", "OBJ/box.obj", "usdc", "", "PXR-USDC", "result.usdc"},
     {"obj_to_usdz", "OBJ/box.obj", "usdz", "", "PK", "result.usdz"},
     {"obj_sidecar_via_resolve", "OBJ/spider.obj", "glb", "", "glTF",
      "result.glb"},
@@ -196,6 +197,19 @@ TEST(PlanTest, ImportsOnceForOrderedTargets) {
   EXPECT_TRUE(plan.result().ok);
   EXPECT_EQ(plan.importAttempts(), 1u);
   EXPECT_EQ(plan.result().formats.size(), 3u);
+}
+
+TEST(PlanTest, ReturnsThePrimaryOutputFirstAndEachSidecarOnce) {
+  libassimp::Plan plan = makePlan("glTF2/BoxTextured-glTF-Binary/BoxTextured.glb",
+                                  {{"usda", "usda", {}}});
+  ASSERT_EQ(plan.run(), libassimp::PlanStatus::Completed)
+      << plan.result().message;
+  const auto &files = plan.result().formats.at(0).files;
+  ASSERT_EQ(files.size(), 2u);
+  EXPECT_EQ(files[0].name, "result.usda");
+  EXPECT_EQ(files[1].name, "result_texture0.png");
+  for (const libassimp::NamedBytes &file : files)
+    EXPECT_FALSE(file.bytes.empty()) << file.name;
 }
 
 TEST(PlanTest, KeepsRepeatedTargetResultsSeparate) {

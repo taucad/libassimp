@@ -15,6 +15,7 @@ export const canonicalExports = [
   'step',
   'stl',
   'usda',
+  'usdc',
   'usdz',
   'x',
   'x3d',

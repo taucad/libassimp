@@ -15,6 +15,8 @@
     "assimp/code/AssetLib/MDL/MDLLoader.cpp": ["MDLImporter"],
     "assimp/code/AssetLib/SMD/SMDLoader.cpp": ["SMDImporter"],
     "assimp/code/AssetLib/Unreal/UnrealLoader.cpp": ["UnrealImporter"],
+    "assimp/code/AssetLib/USD/USDLoader.cpp": ["USDImporter"],
+    "assimp/code/AssetLib/USD/USDZExporter.cpp": ["ReadOptions"],
     "assimp/code/Common/UnitAxisContract.cpp": [],
     "assimp/code/PostProcessing/RemoveRedundantMaterials.cpp": ["RemoveRedundantMatsProcess"]
   },
@@ -153,6 +155,7 @@
       "step",
       "stl",
       "usda",
+      "usdc",
       "usdz",
       "x",
       "x3d"
@@ -286,6 +289,11 @@
         "description": "Universal Scene Description ASCII",
         "nativeId": "usda"
       },
+      "usdc": {
+        "extension": "usdc",
+        "description": "Universal Scene Description binary crate",
+        "nativeId": "usdc"
+      },
       "usdz": {
         "extension": "usdz",
         "description": "Universal Scene Description ZIP container",
@@ -401,6 +409,7 @@
         "step",
         "stl",
         "usda",
+        "usdc",
         "usdz",
         "x",
         "x3d"
@@ -878,6 +887,11 @@
       "publicName": "importUnrealKeyframe",
       "supported": true
     },
+    "IMPORT_USD_MAX_MEMORY_MB": {
+      "publicName": "importUsdMaxMemoryMb",
+      "supported": true,
+      "minimum": 1
+    },
     "IMPORT_USD_UNIT_SCALE_TO_METERS": {
       "publicName": "importUsdUnitScaleToMeters",
       "supported": false,
@@ -1024,35 +1038,53 @@
       "publicName": "importUnrealHandleFlags",
       "supported": true
     },
+    "USD_EXPORT_ANIMATION_INDEX": {
+      "publicName": "animationIndex",
+      "supported": true,
+      "formats": ["usda", "usdc", "usdz"],
+      "minimum": 0
+    },
+    "USD_EXPORT_COMPRESS_FLOAT_ARRAYS": {
+      "publicName": "compressFloatArrays",
+      "supported": true,
+      "formats": ["usdc", "usdz"]
+    },
+    "USD_EXPORT_MAX_FILE_SIZE_MB": {
+      "publicName": "maxFileSizeMb",
+      "supported": true,
+      "formats": ["usda", "usdc", "usdz"],
+      "minimum": 0
+    },
+    "USD_EXPORT_MAX_MEMORY_MB": {
+      "publicName": "maxMemoryMb",
+      "supported": true,
+      "formats": ["usda", "usdc", "usdz"],
+      "minimum": 0
+    },
+    "USD_EXPORT_SOURCE_DIRECTORY": {
+      "publicName": "sourceDirectory",
+      "supported": false,
+      "reason": "libassimp reads textures from the staged and resolved files, never from a host directory."
+    },
     "USDZ_EXPORT_ANIMATIONS": {
       "publicName": "animations",
       "supported": true,
-      "formats": ["usda", "usdz"]
+      "formats": ["usda", "usdc", "usdz"]
     },
     "USDZ_EXPORT_CLEARCOAT": {
       "publicName": "clearcoat",
       "supported": true,
-      "formats": ["usda", "usdz"]
+      "formats": ["usda", "usdc", "usdz"]
     },
-    "USDZ_EXPORT_MATERIALX": {
-      "publicName": "materialX",
+    "USDZ_EXPORT_LIGHTS": {
+      "publicName": "lights",
       "supported": true,
-      "formats": ["usda", "usdz"]
+      "formats": ["usdz"]
     },
-    "USDZ_EXPORT_SUBDIVISION": {
-      "publicName": "subdivision",
+    "USDZ_EXPORT_PHYSICS_JOINTS": {
+      "publicName": "physicsJoints",
       "supported": true,
-      "formats": ["usda", "usdz"]
-    },
-    "USDZ_EXPORT_VOLUMES": {
-      "publicName": "volumes",
-      "supported": true,
-      "formats": ["usda", "usdz"]
-    },
-    "USDZ_OPTIMIZE_FOR_MOBILE": {
-      "publicName": "optimizeForMobile",
-      "supported": true,
-      "formats": ["usda", "usdz"]
+      "formats": ["usdz"]
     },
     "USE_GLTF_PBR_SPECULAR_GLOSSINESS": {
       "publicName": "useGltfPbrSpecularGlossiness",

@@ -209,17 +209,6 @@ void applyProperties(const Properties& properties, TargetProperties& target) {
   }
 }
 
-std::vector<NamedBytes> orderedOutputs(const MemoryFiles& store, const std::string& primaryName) {
-  std::vector<NamedBytes> files;
-  for (const NamedBytes& output : store.outputs()) {
-    if (output.name == primaryName) files.push_back(output);
-  }
-  for (const NamedBytes& output : store.outputs()) {
-    if (output.name != primaryName) files.push_back(output);
-  }
-  return files;
-}
-
 }  // namespace
 
 Plan::Plan(std::string entryName, std::vector<NamedBytes> files, Properties importProperties,
@@ -382,7 +371,7 @@ PlanStatus Plan::run(Resolver resolve) {
         result_ = fail(phase, exporter.GetErrorString(), static_cast<int>(index), target.format);
         return PlanStatus::Failed;
       }
-      std::vector<NamedBytes> files = orderedOutputs(outputs, outputName);
+      std::vector<NamedBytes> files = outputs.takeOutputs(outputName);
       if (files.empty()) {
         result_ = fail(phase, "The exporter produced no output.", static_cast<int>(index), target.format);
         return PlanStatus::Failed;

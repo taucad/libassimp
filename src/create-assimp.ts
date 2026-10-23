@@ -232,7 +232,12 @@ export const loadModule = async (
       destroyPlan: (handle) => {
         native.destroyPlan(handle as number);
       },
-      dispose: () => undefined,
+      // Dropping the instance and memory lets GC return the linear memory, which never shrinks in place.
+      dispose: () => {
+        delete runtimeState.instance;
+        delete runtimeState.memory;
+      },
+      memoryBytes: () => foundMemory.buffer.byteLength,
     };
   } catch (error) {
     options.onLog?.({ level: 'error', message: error instanceof Error ? error.message : String(error) });
@@ -241,6 +246,12 @@ export const loadModule = async (
 };
 
 const disposedError = (): Error => new Error('assimp instance disposed; create another with createAssimp().');
+
+/** Bench-only probe of the runtime's memory; not part of the public API. @internal */
+const memoryBytesKey: unique symbol = Symbol.for('libassimp.memoryBytes');
+
+/** The module-level convert recycles its shared Wasm instance once linear memory passes this. @internal */
+const recycleAboveBytes = 512 * 1024 * 1024;
 
 const waitFor = <Value>(start: () => Promise<Value>, signal: AbortSignal | undefined): Promise<Value> => {
   if (signal === undefined) return start();
@@ -365,7 +376,7 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
       });
     };
 
-    return {
+    const assimp: Assimp<ImportFormat, ExportFormat> = {
       backend: runtime.backend,
       ...(runtime.buildIdentity === undefined ? {} : { buildIdentity: runtime.buildIdentity }),
       convert,
@@ -374,18 +385,43 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
       dispose,
       [Symbol.dispose]: dispose,
     };
+    Object.defineProperty(assimp, memoryBytesKey, { value: () => runtime?.memoryBytes?.() });
+    return assimp;
   };
 
   let shared: Promise<Assimp<ImportFormat, ExportFormat>> | undefined;
+  let sharedJobs = 0;
   const instance = (): Promise<Assimp<ImportFormat, ExportFormat>> =>
     (shared ??= createAssimp().catch((error: unknown) => {
       shared = undefined;
       throw error;
     }));
-  const convert: ConvertFunction<ExportFormat> = async (files, options) =>
-    (await waitFor(instance, options.signal)).convert(files, options);
-  const convertFormats: ConvertFormatsFunction<ExportFormat> = async (files, options) =>
-    (await waitFor(instance, options.signal)).convertFormats(files, options);
+  // Wasm memory only grows, so after a large job the idle shared instance is
+  // dropped and the next call starts from a fresh, small heap.
+  const withShared = async <Value>(
+    signal: AbortSignal | undefined,
+    job: (assimp: Assimp<ImportFormat, ExportFormat>) => Promise<Value>,
+  ): Promise<Value> => {
+    let current: Promise<Assimp<ImportFormat, ExportFormat>> | undefined;
+    const assimp = await waitFor(() => (current = instance()), signal);
+    sharedJobs += 1;
+    try {
+      return await job(assimp);
+    } finally {
+      sharedJobs -= 1;
+      const bytes = (assimp as unknown as Record<symbol, (() => number | undefined) | undefined>)[
+        memoryBytesKey
+      ]?.();
+      if (sharedJobs === 0 && shared === current && bytes !== undefined && bytes > recycleAboveBytes) {
+        shared = undefined;
+        assimp.dispose();
+      }
+    }
+  };
+  const convert: ConvertFunction<ExportFormat> = (files, options) =>
+    withShared(options.signal, (assimp) => assimp.convert(files, options));
+  const convertFormats: ConvertFormatsFunction<ExportFormat> = (files, options) =>
+    withShared(options.signal, (assimp) => assimp.convertFormats(files, options));
 
   return { convert, convertFormats, createAssimp };
 };

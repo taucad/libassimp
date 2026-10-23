@@ -179,6 +179,8 @@ export type ImportOptions = {
   readonly importUnrealHandleFlags?: boolean;
   /** AI_CONFIG_IMPORT_UNREAL_KEYFRAME Default: -1. */
   readonly importUnrealKeyframe?: number;
+  /** USD memory budget in MiB. Upper bound handed to LightUSD for parsing, composition and the Tydra conversion of one USD file (including every composed layer). Raise it for very large scenes; lower it to reject oversized input early. Property type: Int. Default value: 16384. Default: 16384. */
+  readonly importUsdMaxMemoryMb?: number;
   /** Meters represented by one LWO source unit. Default: 1. */
   readonly lwoUnitScaleToMeters?: number;
   /** The LWO source up axis. Default: "y". */
@@ -406,37 +408,56 @@ type FormatStlExportOptions = {
 };
 
 type FormatUsdaExportOptions = {
-  /** USDZ_EXPORT_ANIMATIONS Default: true. */
+  /** USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0. Default: 0. */
+  readonly animationIndex?: number;
+  /** USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true. Default: true. */
   readonly animations?: boolean;
-  /** USDZ_EXPORT_CLEARCOAT Default: true. */
+  /** USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true. Default: true. */
   readonly clearcoat?: boolean;
-  /** USDZ_EXPORT_MATERIALX Default: false. */
-  readonly materialX?: boolean;
-  /** USDZ_OPTIMIZE_FOR_MOBILE Default: true. */
-  readonly optimizeForMobile?: boolean;
+  /** USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0. Default: 0. */
+  readonly maxFileSizeMb?: number;
+  /** USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0. Default: 0. */
+  readonly maxMemoryMb?: number;
   /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false. Default: false. */
   readonly pointClouds?: boolean;
-  /** USDZ_EXPORT_SUBDIVISION Default: false. */
-  readonly subdivision?: boolean;
-  /** USDZ_EXPORT_VOLUMES Default: false. */
-  readonly volumes?: boolean;
+};
+
+type FormatUsdcExportOptions = {
+  /** USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0. Default: 0. */
+  readonly animationIndex?: number;
+  /** USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true. Default: true. */
+  readonly animations?: boolean;
+  /** USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true. Default: true. */
+  readonly clearcoat?: boolean;
+  /** USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays). Property type: Bool. Default value: true. Default: true. */
+  readonly compressFloatArrays?: boolean;
+  /** USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0. Default: 0. */
+  readonly maxFileSizeMb?: number;
+  /** USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0. Default: 0. */
+  readonly maxMemoryMb?: number;
+  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false. Default: false. */
+  readonly pointClouds?: boolean;
 };
 
 type FormatUsdzExportOptions = {
-  /** USDZ_EXPORT_ANIMATIONS Default: true. */
+  /** USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0. Default: 0. */
+  readonly animationIndex?: number;
+  /** USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true. Default: true. */
   readonly animations?: boolean;
-  /** USDZ_EXPORT_CLEARCOAT Default: true. */
+  /** USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true. Default: true. */
   readonly clearcoat?: boolean;
-  /** USDZ_EXPORT_MATERIALX Default: false. */
-  readonly materialX?: boolean;
-  /** USDZ_OPTIMIZE_FOR_MOBILE Default: true. */
-  readonly optimizeForMobile?: boolean;
+  /** USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays). Property type: Bool. Default value: true. Default: true. */
+  readonly compressFloatArrays?: boolean;
+  /** USDZ exporter: keep lights. ARKit allows no UsdLux prims, so USDZ packages drop lights unless this is set. USDA and USDC always keep them. Property type: Bool. Default value: false. Default: false. */
+  readonly lights?: boolean;
+  /** USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0. Default: 0. */
+  readonly maxFileSizeMb?: number;
+  /** USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0. Default: 0. */
+  readonly maxMemoryMb?: number;
+  /** USDZ exporter: keep UsdPhysics joint prims. ARKit allows no joint prim types, so USDZ packages export joint nodes as plain Xforms unless this is set. USDA and USDC always keep them. Property type: Bool. Default value: false. Default: false. */
+  readonly physicsJoints?: boolean;
   /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false. Default: false. */
   readonly pointClouds?: boolean;
-  /** USDZ_EXPORT_SUBDIVISION Default: false. */
-  readonly subdivision?: boolean;
-  /** USDZ_EXPORT_VOLUMES Default: false. */
-  readonly volumes?: boolean;
 };
 
 type FormatXExportOptions = {
@@ -464,6 +485,7 @@ export type ExportOptionsByFormat = {
   readonly step: FormatStepExportOptions;
   readonly stl: FormatStlExportOptions;
   readonly usda: FormatUsdaExportOptions;
+  readonly usdc: FormatUsdcExportOptions;
   readonly usdz: FormatUsdzExportOptions;
   readonly x: FormatXExportOptions;
   readonly x3d: FormatX3dExportOptions;
@@ -1145,25 +1167,38 @@ export const exportFormats = [
     extension: 'usda',
     description: 'Universal Scene Description ASCII',
     exportOptions: {
+      animationIndex: {
+        kind: 'integer',
+        default: 0,
+        minimum: 0,
+        description:
+          "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0.",
+      },
       animations: {
         kind: 'boolean',
         default: true,
-        description: 'USDZ_EXPORT_ANIMATIONS',
+        description:
+          'USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true.',
       },
       clearcoat: {
         kind: 'boolean',
         default: true,
-        description: 'USDZ_EXPORT_CLEARCOAT',
+        description:
+          'USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true.',
       },
-      materialX: {
-        kind: 'boolean',
-        default: false,
-        description: 'USDZ_EXPORT_MATERIALX',
+      maxFileSizeMb: {
+        kind: 'integer',
+        default: 0,
+        minimum: 0,
+        description:
+          'USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
       },
-      optimizeForMobile: {
-        kind: 'boolean',
-        default: true,
-        description: 'USDZ_OPTIMIZE_FOR_MOBILE',
+      maxMemoryMb: {
+        kind: 'integer',
+        default: 0,
+        minimum: 0,
+        description:
+          'USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
       },
       pointClouds: {
         kind: 'boolean',
@@ -1171,15 +1206,57 @@ export const exportFormats = [
         description:
           'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
       },
-      subdivision: {
-        kind: 'boolean',
-        default: false,
-        description: 'USDZ_EXPORT_SUBDIVISION',
+    },
+  },
+  {
+    id: 'usdc',
+    extension: 'usdc',
+    description: 'Universal Scene Description binary crate',
+    exportOptions: {
+      animationIndex: {
+        kind: 'integer',
+        default: 0,
+        minimum: 0,
+        description:
+          "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0.",
       },
-      volumes: {
+      animations: {
+        kind: 'boolean',
+        default: true,
+        description:
+          'USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true.',
+      },
+      clearcoat: {
+        kind: 'boolean',
+        default: true,
+        description:
+          'USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true.',
+      },
+      compressFloatArrays: {
+        kind: 'boolean',
+        default: true,
+        description:
+          "USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays). Property type: Bool. Default value: true.",
+      },
+      maxFileSizeMb: {
+        kind: 'integer',
+        default: 0,
+        minimum: 0,
+        description:
+          'USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
+      },
+      maxMemoryMb: {
+        kind: 'integer',
+        default: 0,
+        minimum: 0,
+        description:
+          'USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
+      },
+      pointClouds: {
         kind: 'boolean',
         default: false,
-        description: 'USDZ_EXPORT_VOLUMES',
+        description:
+          'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
       },
     },
   },
@@ -1188,41 +1265,62 @@ export const exportFormats = [
     extension: 'usdz',
     description: 'Universal Scene Description ZIP container',
     exportOptions: {
+      animationIndex: {
+        kind: 'integer',
+        default: 0,
+        minimum: 0,
+        description:
+          "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0.",
+      },
       animations: {
         kind: 'boolean',
         default: true,
-        description: 'USDZ_EXPORT_ANIMATIONS',
+        description:
+          'USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true.',
       },
       clearcoat: {
         kind: 'boolean',
         default: true,
-        description: 'USDZ_EXPORT_CLEARCOAT',
+        description:
+          'USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true.',
       },
-      materialX: {
-        kind: 'boolean',
-        default: false,
-        description: 'USDZ_EXPORT_MATERIALX',
-      },
-      optimizeForMobile: {
+      compressFloatArrays: {
         kind: 'boolean',
         default: true,
-        description: 'USDZ_OPTIMIZE_FOR_MOBILE',
+        description:
+          "USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays). Property type: Bool. Default value: true.",
+      },
+      lights: {
+        kind: 'boolean',
+        default: false,
+        description:
+          'USDZ exporter: keep lights. ARKit allows no UsdLux prims, so USDZ packages drop lights unless this is set. USDA and USDC always keep them. Property type: Bool. Default value: false.',
+      },
+      maxFileSizeMb: {
+        kind: 'integer',
+        default: 0,
+        minimum: 0,
+        description:
+          'USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
+      },
+      maxMemoryMb: {
+        kind: 'integer',
+        default: 0,
+        minimum: 0,
+        description:
+          'USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
+      },
+      physicsJoints: {
+        kind: 'boolean',
+        default: false,
+        description:
+          'USDZ exporter: keep UsdPhysics joint prims. ARKit allows no joint prim types, so USDZ packages export joint nodes as plain Xforms unless this is set. USDA and USDC always keep them. Property type: Bool. Default value: false.',
       },
       pointClouds: {
         kind: 'boolean',
         default: false,
         description:
           'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      },
-      subdivision: {
-        kind: 'boolean',
-        default: false,
-        description: 'USDZ_EXPORT_SUBDIVISION',
-      },
-      volumes: {
-        kind: 'boolean',
-        default: false,
-        description: 'USDZ_EXPORT_VOLUMES',
       },
     },
   },
@@ -1808,6 +1906,13 @@ const importOptionDescriptors = {
     kind: 'integer',
     default: -1,
     description: 'AI_CONFIG_IMPORT_UNREAL_KEYFRAME',
+  },
+  importUsdMaxMemoryMb: {
+    kind: 'integer',
+    default: 16384,
+    minimum: 1,
+    description:
+      'USD memory budget in MiB. Upper bound handed to LightUSD for parsing, composition and the Tydra conversion of one USD file (including every composed layer). Raise it for very large scenes; lower it to reject oversized input early. Property type: Int. Default value: 16384.',
   },
   lwoUnitScaleToMeters: {
     kind: 'number',
@@ -3327,6 +3432,20 @@ export const internalImportOptionDescriptors = {
     description: 'AI_CONFIG_IMPORT_UNREAL_KEYFRAME',
     source: 'assimp/code/AssetLib/Unreal/UnrealLoader.cpp:188',
   },
+  importUsdMaxMemoryMb: {
+    publicName: 'importUsdMaxMemoryMb',
+    nativeName: 'IMPORT_USD_MAX_MEMORY_MB',
+    kind: 'integer',
+    nativeKind: 'integer',
+    default: 16384,
+    minimum: 1,
+    owners: ['USD'],
+    formats: [],
+    phases: ['import'],
+    description:
+      'USD memory budget in MiB. Upper bound handed to LightUSD for parsing, composition and the Tydra conversion of one USD file (including every composed layer). Raise it for very large scenes; lower it to reject oversized input early. Property type: Int. Default value: 16384.',
+    source: 'assimp/code/AssetLib/USD/USDLoader.cpp:109',
+  },
   lwoUnitScaleToMeters: {
     publicName: 'lwoUnitScaleToMeters',
     nativeName: 'IMPORT_LWO_UNIT_SCALE_TO_METERS',
@@ -3596,6 +3715,7 @@ export const internalImportOptionDescriptors = {
       'step',
       'stl',
       'usda',
+      'usdc',
       'usdz',
       'x',
       'x3d',
@@ -3603,7 +3723,7 @@ export const internalImportOptionDescriptors = {
     phases: ['export', 'import'],
     description:
       'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-    source: 'assimp/code/Common/Exporter.cpp:534',
+    source: 'assimp/code/Common/Exporter.cpp:544',
   },
   ppCtMaxSmoothingAngle: {
     publicName: 'ppCtMaxSmoothingAngle',
@@ -4112,6 +4232,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4119,7 +4240,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
   },
   '3mf': {
@@ -4169,6 +4290,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4176,7 +4298,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
     unit: {
       publicName: 'unit',
@@ -4231,6 +4353,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4238,7 +4361,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
     skipWhitespaces: {
       publicName: 'skipWhitespaces',
@@ -4275,6 +4398,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4282,7 +4406,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
   },
   fbx: {
@@ -4330,6 +4454,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4337,7 +4462,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
     transparencyFactorRefersToOpacity: {
       publicName: 'transparencyFactorRefersToOpacity',
@@ -4412,6 +4537,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4419,7 +4545,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
     sparseAccessors: {
       publicName: 'sparseAccessors',
@@ -4519,6 +4645,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4526,7 +4653,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
     sparseAccessors: {
       publicName: 'sparseAccessors',
@@ -4612,6 +4739,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4619,7 +4747,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
   },
   ply: {
@@ -4655,6 +4783,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4662,7 +4791,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
   },
   step: {
@@ -4686,6 +4815,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4693,7 +4823,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
   },
   stl: {
@@ -4729,6 +4859,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4736,10 +4867,24 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
   },
   usda: {
+    animationIndex: {
+      publicName: 'animationIndex',
+      nativeName: 'USD_EXPORT_ANIMATION_INDEX',
+      kind: 'integer',
+      nativeKind: 'integer',
+      default: 0,
+      minimum: 0,
+      owners: ['USD'],
+      formats: ['usda', 'usdc', 'usdz'],
+      phases: ['export'],
+      description:
+        "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0.",
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:177',
+    },
     animations: {
       publicName: 'animations',
       nativeName: 'USDZ_EXPORT_ANIMATIONS',
@@ -4747,10 +4892,11 @@ export const internalExportOptionDescriptors = {
       nativeKind: 'boolean',
       default: true,
       owners: ['USD'],
-      formats: ['usda', 'usdz'],
+      formats: ['usda', 'usdc', 'usdz'],
       phases: ['export'],
-      description: 'USDZ_EXPORT_ANIMATIONS',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:122',
+      description:
+        'USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:176',
     },
     clearcoat: {
       publicName: 'clearcoat',
@@ -4759,34 +4905,39 @@ export const internalExportOptionDescriptors = {
       nativeKind: 'boolean',
       default: true,
       owners: ['USD'],
-      formats: ['usda', 'usdz'],
+      formats: ['usda', 'usdc', 'usdz'],
       phases: ['export'],
-      description: 'USDZ_EXPORT_CLEARCOAT',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:123',
+      description:
+        'USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:178',
     },
-    materialX: {
-      publicName: 'materialX',
-      nativeName: 'USDZ_EXPORT_MATERIALX',
-      kind: 'boolean',
-      nativeKind: 'boolean',
-      default: false,
+    maxFileSizeMb: {
+      publicName: 'maxFileSizeMb',
+      nativeName: 'USD_EXPORT_MAX_FILE_SIZE_MB',
+      kind: 'integer',
+      nativeKind: 'integer',
+      default: 0,
+      minimum: 0,
       owners: ['USD'],
-      formats: ['usda', 'usdz'],
+      formats: ['usda', 'usdc', 'usdz'],
       phases: ['export'],
-      description: 'USDZ_EXPORT_MATERIALX',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:124',
+      description:
+        'USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:182',
     },
-    optimizeForMobile: {
-      publicName: 'optimizeForMobile',
-      nativeName: 'USDZ_OPTIMIZE_FOR_MOBILE',
-      kind: 'boolean',
-      nativeKind: 'boolean',
-      default: true,
+    maxMemoryMb: {
+      publicName: 'maxMemoryMb',
+      nativeName: 'USD_EXPORT_MAX_MEMORY_MB',
+      kind: 'integer',
+      nativeKind: 'integer',
+      default: 0,
+      minimum: 0,
       owners: ['USD'],
-      formats: ['usda', 'usdz'],
+      formats: ['usda', 'usdc', 'usdz'],
       phases: ['export'],
-      description: 'USDZ_OPTIMIZE_FOR_MOBILE',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:127',
+      description:
+        'USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:183',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4808,6 +4959,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4815,34 +4967,137 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
-    subdivision: {
-      publicName: 'subdivision',
-      nativeName: 'USDZ_EXPORT_SUBDIVISION',
+  },
+  usdc: {
+    animationIndex: {
+      publicName: 'animationIndex',
+      nativeName: 'USD_EXPORT_ANIMATION_INDEX',
+      kind: 'integer',
+      nativeKind: 'integer',
+      default: 0,
+      minimum: 0,
+      owners: ['USD'],
+      formats: ['usda', 'usdc', 'usdz'],
+      phases: ['export'],
+      description:
+        "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0.",
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:177',
+    },
+    animations: {
+      publicName: 'animations',
+      nativeName: 'USDZ_EXPORT_ANIMATIONS',
+      kind: 'boolean',
+      nativeKind: 'boolean',
+      default: true,
+      owners: ['USD'],
+      formats: ['usda', 'usdc', 'usdz'],
+      phases: ['export'],
+      description:
+        'USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:176',
+    },
+    clearcoat: {
+      publicName: 'clearcoat',
+      nativeName: 'USDZ_EXPORT_CLEARCOAT',
+      kind: 'boolean',
+      nativeKind: 'boolean',
+      default: true,
+      owners: ['USD'],
+      formats: ['usda', 'usdc', 'usdz'],
+      phases: ['export'],
+      description:
+        'USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:178',
+    },
+    compressFloatArrays: {
+      publicName: 'compressFloatArrays',
+      nativeName: 'USD_EXPORT_COMPRESS_FLOAT_ARRAYS',
+      kind: 'boolean',
+      nativeKind: 'boolean',
+      default: true,
+      owners: ['USD'],
+      formats: ['usdc', 'usdz'],
+      phases: ['export'],
+      description:
+        "USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays). Property type: Bool. Default value: true.",
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:184',
+    },
+    maxFileSizeMb: {
+      publicName: 'maxFileSizeMb',
+      nativeName: 'USD_EXPORT_MAX_FILE_SIZE_MB',
+      kind: 'integer',
+      nativeKind: 'integer',
+      default: 0,
+      minimum: 0,
+      owners: ['USD'],
+      formats: ['usda', 'usdc', 'usdz'],
+      phases: ['export'],
+      description:
+        'USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:182',
+    },
+    maxMemoryMb: {
+      publicName: 'maxMemoryMb',
+      nativeName: 'USD_EXPORT_MAX_MEMORY_MB',
+      kind: 'integer',
+      nativeKind: 'integer',
+      default: 0,
+      minimum: 0,
+      owners: ['USD'],
+      formats: ['usda', 'usdc', 'usdz'],
+      phases: ['export'],
+      description:
+        'USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:183',
+    },
+    pointClouds: {
+      publicName: 'pointClouds',
+      nativeName: 'EXPORT_POINT_CLOUDS',
       kind: 'boolean',
       nativeKind: 'boolean',
       default: false,
-      owners: ['USD'],
-      formats: ['usda', 'usdz'],
-      phases: ['export'],
-      description: 'USDZ_EXPORT_SUBDIVISION',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:125',
-    },
-    volumes: {
-      publicName: 'volumes',
-      nativeName: 'USDZ_EXPORT_VOLUMES',
-      kind: 'boolean',
-      nativeKind: 'boolean',
-      default: false,
-      owners: ['USD'],
-      formats: ['usda', 'usdz'],
-      phases: ['export'],
-      description: 'USDZ_EXPORT_VOLUMES',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:126',
+      owners: ['Common', 'PostProcessing'],
+      formats: [
+        '3ds',
+        '3mf',
+        'assjson',
+        'dae',
+        'fbx',
+        'glb',
+        'gltf',
+        'obj',
+        'ply',
+        'step',
+        'stl',
+        'usda',
+        'usdc',
+        'usdz',
+        'x',
+        'x3d',
+      ],
+      phases: ['export', 'import'],
+      description:
+        'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
   },
   usdz: {
+    animationIndex: {
+      publicName: 'animationIndex',
+      nativeName: 'USD_EXPORT_ANIMATION_INDEX',
+      kind: 'integer',
+      nativeKind: 'integer',
+      default: 0,
+      minimum: 0,
+      owners: ['USD'],
+      formats: ['usda', 'usdc', 'usdz'],
+      phases: ['export'],
+      description:
+        "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0.",
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:177',
+    },
     animations: {
       publicName: 'animations',
       nativeName: 'USDZ_EXPORT_ANIMATIONS',
@@ -4850,10 +5105,11 @@ export const internalExportOptionDescriptors = {
       nativeKind: 'boolean',
       default: true,
       owners: ['USD'],
-      formats: ['usda', 'usdz'],
+      formats: ['usda', 'usdc', 'usdz'],
       phases: ['export'],
-      description: 'USDZ_EXPORT_ANIMATIONS',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:122',
+      description:
+        'USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:176',
     },
     clearcoat: {
       publicName: 'clearcoat',
@@ -4862,34 +5118,78 @@ export const internalExportOptionDescriptors = {
       nativeKind: 'boolean',
       default: true,
       owners: ['USD'],
-      formats: ['usda', 'usdz'],
+      formats: ['usda', 'usdc', 'usdz'],
       phases: ['export'],
-      description: 'USDZ_EXPORT_CLEARCOAT',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:123',
+      description:
+        'USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:178',
     },
-    materialX: {
-      publicName: 'materialX',
-      nativeName: 'USDZ_EXPORT_MATERIALX',
-      kind: 'boolean',
-      nativeKind: 'boolean',
-      default: false,
-      owners: ['USD'],
-      formats: ['usda', 'usdz'],
-      phases: ['export'],
-      description: 'USDZ_EXPORT_MATERIALX',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:124',
-    },
-    optimizeForMobile: {
-      publicName: 'optimizeForMobile',
-      nativeName: 'USDZ_OPTIMIZE_FOR_MOBILE',
+    compressFloatArrays: {
+      publicName: 'compressFloatArrays',
+      nativeName: 'USD_EXPORT_COMPRESS_FLOAT_ARRAYS',
       kind: 'boolean',
       nativeKind: 'boolean',
       default: true,
       owners: ['USD'],
-      formats: ['usda', 'usdz'],
+      formats: ['usdc', 'usdz'],
       phases: ['export'],
-      description: 'USDZ_OPTIMIZE_FOR_MOBILE',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:127',
+      description:
+        "USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays). Property type: Bool. Default value: true.",
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:184',
+    },
+    lights: {
+      publicName: 'lights',
+      nativeName: 'USDZ_EXPORT_LIGHTS',
+      kind: 'boolean',
+      nativeKind: 'boolean',
+      default: false,
+      owners: ['USD'],
+      formats: ['usdz'],
+      phases: ['export'],
+      description:
+        'USDZ exporter: keep lights. ARKit allows no UsdLux prims, so USDZ packages drop lights unless this is set. USDA and USDC always keep them. Property type: Bool. Default value: false.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:179',
+    },
+    maxFileSizeMb: {
+      publicName: 'maxFileSizeMb',
+      nativeName: 'USD_EXPORT_MAX_FILE_SIZE_MB',
+      kind: 'integer',
+      nativeKind: 'integer',
+      default: 0,
+      minimum: 0,
+      owners: ['USD'],
+      formats: ['usda', 'usdc', 'usdz'],
+      phases: ['export'],
+      description:
+        'USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:182',
+    },
+    maxMemoryMb: {
+      publicName: 'maxMemoryMb',
+      nativeName: 'USD_EXPORT_MAX_MEMORY_MB',
+      kind: 'integer',
+      nativeKind: 'integer',
+      default: 0,
+      minimum: 0,
+      owners: ['USD'],
+      formats: ['usda', 'usdc', 'usdz'],
+      phases: ['export'],
+      description:
+        'USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:183',
+    },
+    physicsJoints: {
+      publicName: 'physicsJoints',
+      nativeName: 'USDZ_EXPORT_PHYSICS_JOINTS',
+      kind: 'boolean',
+      nativeKind: 'boolean',
+      default: false,
+      owners: ['USD'],
+      formats: ['usdz'],
+      phases: ['export'],
+      description:
+        'USDZ exporter: keep UsdPhysics joint prims. ARKit allows no joint prim types, so USDZ packages export joint nodes as plain Xforms unless this is set. USDA and USDC always keep them. Property type: Bool. Default value: false.',
+      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:180',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4911,6 +5211,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4918,31 +5219,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
-    },
-    subdivision: {
-      publicName: 'subdivision',
-      nativeName: 'USDZ_EXPORT_SUBDIVISION',
-      kind: 'boolean',
-      nativeKind: 'boolean',
-      default: false,
-      owners: ['USD'],
-      formats: ['usda', 'usdz'],
-      phases: ['export'],
-      description: 'USDZ_EXPORT_SUBDIVISION',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:125',
-    },
-    volumes: {
-      publicName: 'volumes',
-      nativeName: 'USDZ_EXPORT_VOLUMES',
-      kind: 'boolean',
-      nativeKind: 'boolean',
-      default: false,
-      owners: ['USD'],
-      formats: ['usda', 'usdz'],
-      phases: ['export'],
-      description: 'USDZ_EXPORT_VOLUMES',
-      source: 'assimp/code/AssetLib/USD/USDZExporter.cpp:126',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
   },
   x: {
@@ -4966,6 +5243,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -4973,7 +5251,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
     use64Bit: {
       publicName: 'use64Bit',
@@ -5010,6 +5288,7 @@ export const internalExportOptionDescriptors = {
         'step',
         'stl',
         'usda',
+        'usdc',
         'usdz',
         'x',
         'x3d',
@@ -5017,7 +5296,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export', 'import'],
       description:
         'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:534',
+      source: 'assimp/code/Common/Exporter.cpp:544',
     },
   },
 } as const;
@@ -5419,6 +5698,12 @@ export const internalCanonicalExportRoutes = [
     extension: 'usda',
     description: 'Universal Scene Description ASCII',
     nativeId: 'usda',
+  },
+  {
+    id: 'usdc',
+    extension: 'usdc',
+    description: 'Universal Scene Description binary crate',
+    nativeId: 'usdc',
   },
   {
     id: 'usdz',

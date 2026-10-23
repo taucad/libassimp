@@ -69,7 +69,19 @@ jobs:
         run: |
           pnpm run build
           pnpm run benchmark
-      - if: steps.benchmark.outcome == 'failure'
+      # The drift job has no native addon, so it checks the Wasm baselines only.
+      # Baselines are recorded from the CI benchmark job's artifact, which
+      # measures both backends on the gating runner class.
+      - id: usd
+        continue-on-error: true # Origin: exploratory drift opens an issue; PR gate remains fail-closed in ci.yml.
+        run: |
+          for run in 1 2 3; do
+            LIBASSIMP_BENCH_ENTRY=dist/index.mjs node bench/usd.mjs --backend wasm --output "/tmp/usd-benchmark-$run.json" > /dev/null
+          done
+          node scripts/compare-baselines.mjs \
+            /tmp/usd-benchmark-1.json,/tmp/usd-benchmark-2.json,/tmp/usd-benchmark-3.json \
+            bench/baselines.json /tmp/usd-benchmark.md
+      - if: steps.benchmark.outcome == 'failure' || steps.usd.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

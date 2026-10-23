@@ -28,6 +28,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -56,25 +57,17 @@ using Resolver = std::function<ResolveStatus(const std::string& name, Bytes& out
 /** Everything one convert call reads and writes. Both IOSystems below share exactly one of these. */
 class MemoryFiles {
  public:
-  MemoryFiles(std::deque<NamedBytes>& inputs, Resolver resolve) : inputs_(inputs), resolve_(std::move(resolve)) {}
+  MemoryFiles(std::deque<NamedBytes>& inputs, Resolver resolve) : inputs_(inputs), resolve_(std::move(resolve)) {
+    for (const NamedBytes& input : inputs_) index(input);
+  }
 
-  /** Exact name, then basename, then the host callback. Both outcomes are cached. */
+  /** Exact name, then a unique basename, then the host callback. Both outcomes are cached. */
   const Bytes* find(const std::string& name) {
     if (pending_ || terminal_.has_value()) return nullptr;
-    for (const NamedBytes& input : inputs_) {
-      if (input.name == name) return &input.bytes;
-    }
-    const std::string base = basename(name);
-    const Bytes* basenameMatch = nullptr;
-    for (const NamedBytes& input : inputs_) {
-      if (basename(input.name) != base) continue;
-      if (basenameMatch != nullptr) {
-        basenameMatch = nullptr;
-        break;
-      }
-      basenameMatch = &input.bytes;
-    }
-    if (basenameMatch != nullptr) return basenameMatch;
+    const auto exact = byName_.find(name);
+    if (exact != byName_.end()) return exact->second;
+    const auto base = byBasename_.find(basename(name));
+    if (base != byBasename_.end() && base->second != nullptr) return base->second;
     if (!resolve_ || missing_.count(name) != 0) return nullptr;
     Bytes resolved;
     ResolveStatus status;
@@ -100,30 +93,41 @@ class MemoryFiles {
       return nullptr;
     }
     inputs_.push_back(NamedBytes{name, std::move(resolved)});
+    index(inputs_.back());
     return &inputs_.back().bytes;
   }
 
   /** The write target for `name`, created on first open. */
   Bytes& output(const std::string& name) {
-    for (NamedBytes& out : outputs_) {
-      if (out.name == name) return out.bytes;
-    }
+    const auto found = outputIndex_.find(name);
+    if (found != outputIndex_.end()) return outputs_[found->second].bytes;
+    outputIndex_.emplace(name, outputs_.size());
     outputs_.push_back(NamedBytes{name, Bytes{}});
     return outputs_.back().bytes;
   }
 
-  bool wrote(const std::string& name) const {
-    for (const NamedBytes& out : outputs_) {
-      if (out.name == name) return true;
-    }
-    return false;
-  }
+  bool wrote(const std::string& name) const { return outputIndex_.count(name) != 0; }
 
   /** Answer `name` as missing without ever asking the host: used for names we are about to write. */
   void neverResolve(const std::string& name) { missing_.insert(name); }
 
   /** Everything the exporter wrote, in write order. */
   const std::deque<NamedBytes>& outputs() const { return outputs_; }
+
+  /** Moves every output out, `primary` first and the rest in write order. Call once, after the exporter is gone. */
+  std::vector<NamedBytes> takeOutputs(const std::string& primary) {
+    std::vector<NamedBytes> files;
+    files.reserve(outputs_.size());
+    const auto found = outputIndex_.find(primary);
+    const std::size_t primaryIndex = found == outputIndex_.end() ? outputs_.size() : found->second;
+    if (primaryIndex < outputs_.size()) files.push_back(std::move(outputs_[primaryIndex]));
+    for (std::size_t index = 0; index < outputs_.size(); ++index) {
+      if (index != primaryIndex) files.push_back(std::move(outputs_[index]));
+    }
+    outputs_.clear();
+    outputIndex_.clear();
+    return files;
+  }
 
   bool pending() const { return pending_; }
   const std::string& pendingName() const { return pendingName_; }
@@ -136,9 +140,19 @@ class MemoryFiles {
   }
 
  private:
+  // A basename shared by two inputs is ambiguous and maps to nullptr.
+  void index(const NamedBytes& input) {
+    byName_.emplace(input.name, &input.bytes);
+    const auto inserted = byBasename_.emplace(basename(input.name), &input.bytes);
+    if (!inserted.second) inserted.first->second = nullptr;
+  }
+
   // Deques, not vectors: streams hold pointers into these while assimp keeps opening more files.
   std::deque<NamedBytes>& inputs_;
   std::deque<NamedBytes> outputs_;
+  std::unordered_map<std::string, const Bytes*> byName_;
+  std::unordered_map<std::string, const Bytes*> byBasename_;
+  std::unordered_map<std::string, std::size_t> outputIndex_;
   std::unordered_set<std::string> missing_;
   Resolver resolve_;
   bool pending_ = false;

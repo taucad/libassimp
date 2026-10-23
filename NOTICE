@@ -10,7 +10,10 @@ The engine links the following third-party projects, fetched at configure time
 by assimp's own CMake build. Each project's license text is retained in its
 fetched source tree:
 
-- tinyusdz (taucad/tinyusdz fork), MIT license — USD and USDZ support.
+- LightUSD (lighttransport/LightUSD, consumed as the taucad/tinyusdz fork),
+  Apache License 2.0 — USD, USDA, USDC, USDZ and MaterialX support. Copyright
+  2020-2023 Syoyo Fujita and 2024-present Light Transport Entertainment Inc.
+  The third-party code it bundles is listed in its LICENSE.3rdparty.
 - engine_web-ifc (ThatOpen/engine_web-ifc), Mozilla Public License 2.0 — IFC
   support. Its source is fetched unmodified apart from a C++20 compatibility
   patch retained beside the engine; obtain it from

@@ -936,6 +936,13 @@ if (addon._coverageFailNext) {
     addon.destroyPlan(plan);
   }
 
+  addon._coverageStopExecutor();
+  const unstarted = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
+  addon._coverageFailNext(13);
+  assert.throws(() => run(unstarted), /could not start the worker thread/);
+  assert.equal(await run(unstarted), ABORTED, 'a failed worker start retained plan admission');
+  addon.destroyPlan(unstarted);
+
   for (const [failure, message] of [
     [6, /could not retain native conversion inputs/],
     [11, /could not create native conversion handle/],

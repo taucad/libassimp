@@ -1,7 +1,7 @@
 {
   "name": "libassimp",
   "version": "0.3.0",
-  "description": "Assimp for TypeScript with native Node-API and WebAssembly backends: import 69 3D formats and export 15 formats.",
+  "description": "Assimp for TypeScript with native Node-API and WebAssembly backends: import 69 3D formats and export 16 formats.",
   "keywords": [
     "3d",
     "3mf",
@@ -73,6 +73,8 @@
   },
   "scripts": {
     "benchmark": "node bench/gated.mjs",
+    "benchmark:usd": "node bench/usd.mjs",
+    "benchmark:record": "node scripts/record-baselines.mjs",
     "build": "pnpm run check:capabilities && tsdown && node scripts/copy-wasm.mjs && node scripts/write-native-loaders.mjs",
     "build:native": "node scripts/build-native.mjs",
     "build:wasm": "pnpm run check:capabilities && node scripts/build-wasm.mjs",
@@ -143,6 +145,6 @@
   },
   "packageManager": "pnpm@11.11.0",
   "assimp": {
-    "commit": "7aba66213c5b9970e4858b0afcbbc53ffa431373"
+    "commit": "0b4eac5ac52f3062e614aba9755ced389f6e172c"
   }
 }

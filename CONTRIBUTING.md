@@ -19,7 +19,13 @@
    `LIBASSIMP_RECORD_DETERMINISM=1 pnpm exec vitest run tests/format-matrix.test.mjs`
    when an engine or exporter change alters output bytes on purpose, and say in
    the pull request which formats moved and why.
-9. Open a pull request with commands and results.
+9. Move `bench/baselines.json` only in the pull request that causes the move.
+   Download the `native-wasm-benchmark` artifact from that pull request's CI
+   run and record its three USD reports with
+   `pnpm run benchmark:record -- <reports> --origin "<what moved and why>"`.
+   Tolerances change only as a reviewed edit with a measured origin; never
+   re-record to turn a red gate green.
+10. Open a pull request with commands and results.
 
 Adding a format the engine supports is an edit to `assimp-builds.json`, which the
 CMake presets and the docs matrix read. The export unions in `src/formats.ts`
