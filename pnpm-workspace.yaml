@@ -21,6 +21,12 @@ overrides:
   'tinypool@2': 2.1.2
   # Origin: source-map-js 1.2.2 fixes the high-severity advisory in Vite's PostCSS path.
   'source-map-js@1': 1.2.2
+  # Origin: dompurify 3.4.17 fixes GHSA-mrv2-3pqr-j5jr and the SAFE_FOR_TEMPLATES bypass in Mermaid's sanitizer path.
+  'dompurify@3': 3.4.17
+  # Origin: follow-redirects 1.16.1 fixes the array-form headers and sensitiveHeaders advisories in Nx's axios path.
+  'follow-redirects@1': 1.16.1
+  # Origin: vite 8.2.4 fixes the launch-editor existence-check advisory in Vitest's browser path.
+  'vite@8': 8.2.4
   # Patched transitive versions for the repository's high-severity audit gate.
   'js-yaml@4': 4.3.2
   'sharp@<0.35.5': 0.35.5
