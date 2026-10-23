@@ -27,6 +27,8 @@ overrides:
   'follow-redirects@1': 1.16.1
   # Origin: vite 8.2.4 fixes the launch-editor existence-check advisory in Vitest's browser path.
   'vite@8': 8.2.4
+  # Origin: zod 4.6.6 fixes GHSA-mrhx-c7xc-m3w5 (oversized constrained collections) in knip's and Fumadocs' validation path.
+  'zod@4': 4.6.6
   # Patched transitive versions for the repository's high-severity audit gate.
   'js-yaml@4': 4.3.2
   'sharp@<0.35.5': 0.35.5
