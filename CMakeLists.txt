@@ -253,6 +253,8 @@ if(LIBASSIMP_NATIVE_ADDON)
     target_link_options(
       libassimp-native
       PRIVATE
+        # LightUSD links CMAKE_DL_LIBS but calls nothing from it; drop unused NEEDED entries on old glibc.
+        "LINKER:--as-needed"
         "LINKER:--exclude-libs,ALL"
         "LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/cmake/libassimp-node.map"
     )
