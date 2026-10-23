@@ -42,8 +42,9 @@ TypeScript exports.
 - Admission changes are explicit budget or benchmark-identity diffs. The
   budgets in `.size-limit.json`, `scripts/check-wasm-size.mjs`, and
   `bench/gated.mjs` are the first production build's measurements plus stated
-  headroom, and `tests/determinism.json` pins the output bytes; each moves only
-  in the pull request that causes the move.
+  headroom, `tests/determinism.json` pins the output bytes, and
+  `bench/baselines.json` pins USD time ratios, Wasm memory and peak RSS; each
+  moves only in the pull request that causes the move.
 - Bump `emsdk-image.txt` and the `container:` literals in the workflows
   together; `pnpm run workflows` asserts they stay equal.
 

@@ -1,0 +1,9 @@
+{
+  "name": "usd-v1",
+  "tolerance": {
+    "ratio": 0.15,
+    "memoryBytes": { "relative": 0.02, "absolute": 1048576 },
+    "maxRssBytes": { "relative": 0.1, "absolute": 8388608 }
+  },
+  "platforms": {}
+}

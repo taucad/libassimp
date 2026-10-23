@@ -186,6 +186,49 @@ jobs:
       - run: pnpm nx run libassimp:test
       - run: pnpm nx run libassimp:typecheck
 
+  # OpenUSD validates what the exporters write: usd-core 25.8 still ships the
+  # ARKit ComplianceChecker behind `usdchecker --arkit`; 26.11 runs every
+  # UsdValidation validator. Errors and warnings both fail.
+  usd-validation:
+    name: USD strict validation (usd-core ${{ matrix.usd-core }})
+    needs: [preflight, build-wasm]
+    strategy:
+      fail-fast: false
+      matrix:
+        usd-core: ['25.8', '26.11']
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '26'
+      - uses: ./.github/actions/download-verified-artifact
+        with:
+          name: wasm
+          path: src/wasm
+          expect: libassimp.js libassimp.wasm libassimp.manifest.json
+      - run: pnpm run build
+      - name: Install usd-core ${{ matrix.usd-core }}
+        env:
+          USD_CORE: ${{ matrix.usd-core }}
+        run: |
+          python3 -m venv /tmp/usd
+          /tmp/usd/bin/python -m pip install --quiet "usd-core==$USD_CORE"
+      - name: Export and validate the USD matrix
+        shell: bash
+        run: |
+          mapfile -t layers < <(node scripts/export-usd-matrix.mjs /tmp/usd-matrix)
+          /tmp/usd/bin/python scripts/usd-strict-check.py "${layers[@]}"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: usd-matrix-${{ matrix.usd-core }}
+          path: /tmp/usd-matrix
+          if-no-files-found: warn
+
   native-build:
     name: native build (${{ matrix.target }})
     needs: [preflight, build-wasm]
@@ -500,18 +543,47 @@ jobs:
           LIBASSIMP_BENCH_ENTRY="$entry" \
             LIBASSIMP_BENCH_MARKDOWN=/tmp/native-benchmark.md \
             node bench/compare-backends.mjs > /tmp/current-benchmark.json
-      - name: Build main on the same runner
-        id: base
+      - name: Check out main on the same runner
+        id: base-checkout
         continue-on-error: true # Preserve diagnostics if the detached base cannot be prepared.
         shell: bash
         run: |
-          base_directory="$(mktemp -d)"
+          # Inside the workspace, so hashFiles can key main's own Wasm cache entry.
+          base_directory="$GITHUB_WORKSPACE/.bench-base"
           git worktree add --detach "$base_directory" 'origin/${{ github.base_ref }}'
           git -C "$base_directory" submodule update --init --recursive
-          # Wasm is CI-built and never committed. Reuse this run's exact binary
-          # so the timing comparison isolates the TypeScript facade.
+          echo "directory=$base_directory" >> "$GITHUB_OUTPUT"
+          echo "engine=$(git -C "$base_directory/assimp" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          # The PR's own binary is already installed from the frozen tarball.
+          mkdir -p /tmp/pr-wasm && mv src/wasm/libassimp.* /tmp/pr-wasm/
+      # main's build-wasm job saved its binary under this key (same paths, same
+      # inputs), so the comparison measures main's engine, not the PR's. A miss
+      # (evicted cache) falls back to the PR binary and says so in the report.
+      - name: Restore main's Wasm from its CI cache
+        id: base-wasm
+        if: steps.base-checkout.outcome == 'success'
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: src/wasm/libassimp.*
+          key: wasm-${{ hashFiles('.bench-base/emsdk-image.txt', '.bench-base/assimp-builds.json', '.bench-base/CMakeLists.txt', '.bench-base/CMakePresets.json', '.bench-base/src/cpp/**', '.bench-base/.gitmodules') }}-${{ steps.base-checkout.outputs.engine }}
+      - name: Build main's facade on the same runner
+        id: base
+        if: steps.base-checkout.outcome == 'success'
+        continue-on-error: true # Preserve diagnostics if the detached base cannot be prepared.
+        shell: bash
+        env:
+          BASE_WASM_HIT: ${{ steps.base-wasm.outputs.cache-hit }}
+        run: |
+          base_directory='${{ steps.base-checkout.outputs.directory }}'
           mkdir -p "$base_directory/src/wasm"
-          cp src/wasm/libassimp.* "$base_directory/src/wasm/"
+          if [[ "$BASE_WASM_HIT" == true ]]; then
+            cp src/wasm/libassimp.* "$base_directory/src/wasm/"
+            echo "wasm=main" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::main's Wasm cache entry is gone; comparing the facades over the PR binary"
+            cp /tmp/pr-wasm/libassimp.* "$base_directory/src/wasm/"
+            echo "wasm=pr" >> "$GITHUB_OUTPUT"
+          fi
           cd "$base_directory"
           pnpm install --frozen-lockfile
           pnpm exec tsdown
@@ -541,6 +613,26 @@ jobs:
             /tmp/current-regression-1.json,/tmp/current-regression-2.json \
             /tmp/base-benchmark-1.json,/tmp/base-benchmark-2.json \
             /tmp/regression-benchmark.md || failed=1
+          if [[ '${{ steps.base.outputs.wasm }}' != main ]]; then
+            printf '\n%s\n' "main's Wasm was unavailable, so main ran the PR's binary: this row compares the TypeScript facades only." >> /tmp/regression-benchmark.md
+          fi
+          exit "$failed"
+      # Recorded baselines gate the USD workloads, so an engine regression fails
+      # even when main's binary is unavailable for the same-runner comparison.
+      - name: Gate USD time and memory against the recorded baselines
+        id: usd
+        continue-on-error: true # The final step fails after the comment is preserved.
+        shell: bash
+        run: |
+          entry='${{ steps.current.outputs.entry }}'
+          : "${entry:?current benchmark did not produce an entry}"
+          failed=0
+          for run in 1 2 3; do
+            LIBASSIMP_BENCH_ENTRY="$entry" node bench/usd.mjs --output "/tmp/usd-benchmark-$run.json" > /dev/null || failed=1
+          done
+          node scripts/compare-baselines.mjs \
+            /tmp/usd-benchmark-1.json,/tmp/usd-benchmark-2.json,/tmp/usd-benchmark-3.json \
+            bench/baselines.json /tmp/usd-benchmark.md || failed=1
           exit "$failed"
       - name: Compose the benchmark report
         if: always()
@@ -549,7 +641,7 @@ jobs:
           import { existsSync, readFileSync, writeFileSync } from 'node:fs';
           const marker = '<!-- libassimp-benchmark -->';
           const read = (path) => existsSync(path) ? readFileSync(path, 'utf8').replace(`${marker}\n`, '') : '';
-          const body = [read('/tmp/native-benchmark.md'), read('/tmp/regression-benchmark.md')].filter(Boolean).join('\n');
+          const body = [read('/tmp/native-benchmark.md'), read('/tmp/regression-benchmark.md'), read('/tmp/usd-benchmark.md').replace('<!-- libassimp-usd-baselines -->\n', '')].filter(Boolean).join('\n');
           writeFileSync('/tmp/benchmark.md', `${marker}\n${body || '### Benchmark\n\nBenchmark did not complete.'}\n`);
           NODE
       - if: always()
@@ -572,7 +664,7 @@ jobs:
             const existing = comments.find((comment) => comment.body?.includes(marker));
             if (existing) await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
             else await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
-      - if: steps.current.outcome == 'failure' || steps.base.outcome == 'failure' || steps.regression.outcome == 'failure'
+      - if: steps.current.outcome == 'failure' || steps.base-checkout.outcome == 'failure' || steps.base.outcome == 'failure' || steps.regression.outcome == 'failure' || steps.usd.outcome == 'failure'
         run: exit 1
 
   security:
@@ -770,6 +862,7 @@ jobs:
         quality,
         docs-prose,
         node,
+        usd-validation,
         native-build,
         assemble,
         smoke,
@@ -792,7 +885,7 @@ jobs:
         run: |
           node <<'NODE'
           const needs = JSON.parse(process.env.RESULTS);
-          const required = ['preflight', 'build-wasm', 'quality', 'docs-prose', 'node', 'native-build', 'assemble', 'smoke', 'browser', 'security'];
+          const required = ['preflight', 'build-wasm', 'quality', 'docs-prose', 'node', 'usd-validation', 'native-build', 'assemble', 'smoke', 'browser', 'security'];
           if (process.env.PUBLISH === 'true') required.push('publish', 'registry-verify', 'registry-smoke', 'registry-release');
           if (process.env.PREVIEW === 'true') required.push('preview', 'preview-consumer');
           if (needs.preflight.outputs.kind === 'pull-request') required.push('benchmark');
