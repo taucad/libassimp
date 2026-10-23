@@ -48,6 +48,8 @@ if(LIBASSIMP_SANITIZERS)
   else()
     add_compile_options(-fno-omit-frame-pointer -fsanitize=address,undefined)
     add_link_options(-fno-omit-frame-pointer -fsanitize=address,undefined)
+    # UBSan's vptr check references typeinfo for every polymorphic type, and LightUSD builds without RTTI by default.
+    set(LIGHTUSD_CXX_RTTI ON CACHE BOOL "" FORCE)
   endif()
 endif()
 
