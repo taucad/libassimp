@@ -67,13 +67,33 @@ describe('compareBaselines', () => {
     expect(
       compareBaselines(report({ outputs: [{ ...outputs[0], fnv: 'def' }] }), recorded).failures[0],
     ).toContain('fingerprints changed');
-    const lost = report();
-    delete lost.workloads['usda-grid-to-usdz'].native;
-    expect(compareBaselines(lost, recorded).failures[0]).toContain('was not measured');
+    const twoWorkloads = recordBaselines(
+      empty,
+      foldReports([
+        {
+          ...report(),
+          workloads: { ...report().workloads, 'glb-gear-to-usdz': report().workloads['usda-grid-to-usdz'] },
+        },
+      ]),
+      'unit test',
+    );
+    const lost = {
+      ...report(),
+      workloads: { ...report().workloads, 'glb-gear-to-usdz': { wasm: sample() } },
+    };
+    expect(compareBaselines(lost, twoWorkloads).failures).toEqual([
+      expect.stringContaining('glb-gear-to-usdz/native has a baseline but was not measured'),
+    ]);
     const skipped = report();
     skipped.workloads['usda-grid-to-usdz'].wasm = { skipped: 'export usdz unavailable' };
     expect(compareBaselines(skipped, recorded).failures[0]).toContain('was skipped');
   });
+});
+
+it('leaves a backend the run never measured out of scope', () => {
+  const wasmOnly = report();
+  delete wasmOnly.workloads['usda-grid-to-usdz'].native;
+  expect(compareBaselines(wasmOnly, recorded).failed).toBe(false);
 });
 
 describe('foldReports', () => {

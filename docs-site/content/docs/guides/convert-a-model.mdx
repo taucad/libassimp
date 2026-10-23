@@ -32,7 +32,7 @@ import { readFile } from 'node:fs/promises';
 const load = async (name: string) => ({ name, bytes: new Uint8Array(await readFile(name)) });
 const { files } = await convert([await load('scene.gltf'), await load('scene.bin')], {
   to: 'usdz',
-  exportOptions: { optimizeForMobile: true },
+  exportOptions: { compressFloatArrays: true },
 });
 
 console.log(files[0].name);

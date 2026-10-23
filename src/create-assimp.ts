@@ -249,10 +249,10 @@ export const loadModule = async (
 const disposedError = (): Error => new Error('assimp instance disposed; create another with createAssimp().');
 
 /** Bench-only probe of the runtime's memory; not part of the public API. @internal */
-export const memoryBytesKey: unique symbol = Symbol.for('libassimp.memoryBytes');
+const memoryBytesKey: unique symbol = Symbol.for('libassimp.memoryBytes');
 
 /** The module-level convert recycles its shared Wasm instance once linear memory passes this. @internal */
-export const recycleAboveBytes = 512 * 1024 * 1024;
+const recycleAboveBytes = 512 * 1024 * 1024;
 
 const waitFor = <Value>(start: () => Promise<Value>, signal: AbortSignal | undefined): Promise<Value> => {
   if (signal === undefined) return start();
@@ -403,14 +403,16 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
     signal: AbortSignal | undefined,
     job: (assimp: Assimp<ImportFormat, ExportFormat>) => Promise<Value>,
   ): Promise<Value> => {
-    const current = instance();
-    const assimp = await waitFor(() => current, signal);
+    let current: Promise<Assimp<ImportFormat, ExportFormat>> | undefined;
+    const assimp = await waitFor(() => (current = instance()), signal);
     sharedJobs += 1;
     try {
       return await job(assimp);
     } finally {
       sharedJobs -= 1;
-      const bytes = (assimp as unknown as Record<symbol, (() => number | undefined) | undefined>)[memoryBytesKey]?.();
+      const bytes = (assimp as unknown as Record<symbol, (() => number | undefined) | undefined>)[
+        memoryBytesKey
+      ]?.();
       if (sharedJobs === 0 && shared === current && bytes !== undefined && bytes > recycleAboveBytes) {
         shared = undefined;
         assimp.dispose();

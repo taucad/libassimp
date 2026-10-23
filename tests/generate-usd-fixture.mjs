@@ -81,7 +81,9 @@ export const usdSidecarScene = () => ({
         '    subLayers = [\n        @./layers/base.usda@\n    ]\n)\n\n' +
         'over "World"\n{\n' +
         '    def Xform "Part" (\n        prepend references = @./parts/part.usda@\n    )\n    {\n' +
-        '        double3 xformOp:translate = (0, 2, 0)\n        uniform token[] xformOpOrder = ["xformOp:translate"]\n    }\n\n' +
+        '        double3 xformOp:translate = (0, 2, 0)\n        uniform token[] xformOpOrder = ["xformOp:translate"]\n\n' +
+        '        over "Body" (\n            prepend apiSchemas = ["MaterialBindingAPI"]\n        )\n        {\n' +
+        '            rel material:binding = </World/Looks/Materials/Brass>\n        }\n    }\n\n' +
         '    def Scope "Looks" (\n        prepend references = @./materials/brass.mtlx@</MaterialX>\n    )\n    {\n    }\n}\n',
     ),
   },

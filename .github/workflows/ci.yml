@@ -300,7 +300,7 @@ jobs:
         shell: bash
         run: |
           cmake -E remove_directory assimp/contrib/meshlab/autoclone
-          cmake -E remove_directory assimp/contrib/tinyusdz/autoclone
+          cmake -E remove_directory assimp/contrib/lightusd/autoclone
           cmake -E remove_directory assimp/contrib/web-ifc/autoclone
           cmake -E remove_directory assimp/contrib/lib3mf/autoclone
       - name: Enforce complete first-party C++ coverage

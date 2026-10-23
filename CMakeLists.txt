@@ -66,7 +66,7 @@ if(EMSCRIPTEN)
   # Baseline SIMD is universal in Tau's supported browsers; relaxed SIMD is not.
   # The engine and the binding have to agree on the exception ABI and on SIMD, so
   # these go in before assimp is configured rather than being patched on afterwards.
-  # The prefix maps keep build-machine paths out of the binary: assimp, tinyusdz,
+  # The prefix maps keep build-machine paths out of the binary: assimp, LightUSD,
   # lib3mf and web-ifc all bake __FILE__ into assertion and log strings, which CI
   # caught as /__w/libassimp/libassimp/... inside the wasm. Both directories are
   # named because a preset may put the binary dir outside the source tree.

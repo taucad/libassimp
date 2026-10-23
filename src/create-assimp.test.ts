@@ -216,6 +216,7 @@ describe('createAssimp loading and lifetime', () => {
       'step',
       'stl',
       'usda',
+      'usdc',
       'usdz',
       'x',
       'x3d',

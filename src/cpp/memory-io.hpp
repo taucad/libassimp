@@ -119,9 +119,10 @@ class MemoryFiles {
     std::vector<NamedBytes> files;
     files.reserve(outputs_.size());
     const auto found = outputIndex_.find(primary);
-    if (found != outputIndex_.end()) files.push_back(std::move(outputs_[found->second]));
-    for (NamedBytes& out : outputs_) {
-      if (out.name != primary) files.push_back(std::move(out));
+    const std::size_t primaryIndex = found == outputIndex_.end() ? outputs_.size() : found->second;
+    if (primaryIndex < outputs_.size()) files.push_back(std::move(outputs_[primaryIndex]));
+    for (std::size_t index = 0; index < outputs_.size(); ++index) {
+      if (index != primaryIndex) files.push_back(std::move(outputs_[index]));
     }
     outputs_.clear();
     outputIndex_.clear();
