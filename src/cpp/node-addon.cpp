@@ -21,6 +21,7 @@
 #endif
 #include <cmath>
 #include <condition_variable>
+#include <cerrno>
 #include <cstdlib>
 #include <cstdint>
 #include <deque>
@@ -96,6 +97,7 @@ enum class CoverageFailure : int {
   StageTypedArray = 10,
   External = 11,
   CancelStage = 12,
+  WorkerThread = 13,
 };
 std::atomic<int> coverageFailure{0};
 
@@ -651,10 +653,6 @@ public:
   WorkerThread() = default;
   WorkerThread(const WorkerThread &) = delete;
   WorkerThread &operator=(const WorkerThread &) = delete;
-  ~WorkerThread() {
-    if (joinable())
-      std::terminate();
-  }
 
   template <typename Body> void start(Body body) {
     auto owned = std::make_unique<std::function<void()>>(std::move(body));
@@ -669,8 +667,12 @@ public:
     pthread_attr_t attributes;
     pthread_attr_init(&attributes);
     pthread_attr_setstacksize(&attributes, kStackBytes);
-    const int started = pthread_create(&thread_, &attributes,
-                                       &WorkerThread::trampoline, owned.get());
+    int started = EAGAIN;
+#ifdef LIBASSIMP_CPP_COVERAGE
+    if (!takeCoverageFailure(CoverageFailure::WorkerThread))
+#endif
+      started = pthread_create(&thread_, &attributes,
+                               &WorkerThread::trampoline, owned.get());
     pthread_attr_destroy(&attributes);
     if (started != 0)
       throw std::runtime_error("libassimp: could not start the worker thread");

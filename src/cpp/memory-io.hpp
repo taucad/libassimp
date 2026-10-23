@@ -144,7 +144,7 @@ class MemoryFiles {
   void index(const NamedBytes& input) {
     byName_.emplace(input.name, &input.bytes);
     const auto inserted = byBasename_.emplace(basename(input.name), &input.bytes);
-    if (!inserted.second && inserted.first->second != &input.bytes) inserted.first->second = nullptr;
+    if (!inserted.second) inserted.first->second = nullptr;
   }
 
   // Deques, not vectors: streams hold pointers into these while assimp keeps opening more files.
