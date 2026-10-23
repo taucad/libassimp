@@ -587,6 +587,43 @@ describe('shared entry loader', () => {
     },
   );
 
+  it('recycles the idle shared instance once a job grows its memory past 512 MiB', async () => {
+    let memoryBytes = 600 * 1024 * 1024;
+    const dispose = vi.fn();
+    const loadRuntime = vi.fn(
+      async (): Promise<NativeRuntime> => ({
+        backend: 'wasm',
+        preparePlan: () => 1,
+        runPlan: async () => 1,
+        cancelPlan: vi.fn(),
+        takePlanResult: () => ({
+          ok: true,
+          code: '',
+          message: '',
+          formats: [{ format: 'glb', files: [] }],
+        }),
+        destroyPlan: vi.fn(),
+        dispose,
+        memoryBytes: () => memoryBytes,
+      }),
+    );
+    const entry = createEntry(glueUrl(), new URL('https://example.test/recycle.wasm'), {
+      import: [assimpCapabilities.import.obj],
+      export: [assimpCapabilities.export.glb],
+      loadRuntime,
+    });
+
+    await entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
+    await new Promise<void>(setImmediate);
+    expect(dispose).toHaveBeenCalledOnce();
+    memoryBytes = 64 * 1024 * 1024;
+    await entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
+    await entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
+    await new Promise<void>(setImmediate);
+    expect(loadRuntime).toHaveBeenCalledTimes(2);
+    expect(dispose).toHaveBeenCalledOnce();
+  });
+
   it('retries a failed shared load and reuses the successful instance', async () => {
     const response = (): Response =>
       new Response(testWasm.slice().buffer, { headers: { 'Content-Type': 'application/wasm' } });

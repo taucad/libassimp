@@ -219,7 +219,6 @@ export const loadModule = async (
       backend: 'wasm',
       preparePlan: (entryName, files, nativeOptions) => native.preparePlan(entryName, files, nativeOptions),
       runPlan: async (handle, context) => {
-        if (runtimeState.memory === undefined) throw disposedError();
         if (active !== undefined) throw new Error('libassimp instance re-entry is not allowed.');
         active = context;
         try {
@@ -238,7 +237,7 @@ export const loadModule = async (
         delete runtimeState.instance;
         delete runtimeState.memory;
       },
-      memoryBytes: () => runtimeState.memory?.buffer.byteLength ?? 0,
+      memoryBytes: () => foundMemory.buffer.byteLength,
     };
   } catch (error) {
     options.onLog?.({ level: 'error', message: error instanceof Error ? error.message : String(error) });

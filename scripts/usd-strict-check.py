@@ -5,11 +5,18 @@ Runs every check the installed usd-core offers and fails on any error,
 failed check or warning:
   * usd-core <= 25.x: UsdUtils.ComplianceChecker with ARKit rules (the engine
     behind `usdchecker --arkit`), variants included, asset-level checks on.
+    USDA and USDC may keep UsdLux lights, which only USDZ must drop for ARKit.
   * usd-core >= 26.x: every validator in the UsdValidation registry, run on the
     composed stage; warnings count as failures.
 Usage: usd-strict-check.py FILE [FILE ...]
 """
+import re
 import sys
+
+
+LIGHT_PRIM_TYPE = re.compile(
+    r"has unsupported type '(?:Distant|Sphere|Rect|Disk|Cylinder|Dome|Portal|Geometry)Light'"
+    r".*ARKitPrimTypeChecker")
 
 
 def compliance(path):
@@ -17,6 +24,14 @@ def compliance(path):
         from pxr.UsdUtils import complianceChecker  # removed in 26.x
     except ImportError:
         return None
+    # The usd-core 25.x wheels lack shader resources some Sdr discovery plugins
+    # need; depending on plugin order the first registry query raises a Tf
+    # error. Trigger discovery once up front so the checker itself never does.
+    from pxr import Sdr, Tf
+    try:
+        Sdr.Registry().GetShaderNodeByIdentifier("UsdPreviewSurface")
+    except Tf.ErrorException:
+        pass
     checker = complianceChecker.ComplianceChecker(
         arkit=True, rootPackageOnly=False, skipVariants=False,
         verbose=False, assetLevelChecks=True)
@@ -24,10 +39,14 @@ def compliance(path):
     # The usd-core 25.x wheels ship without the usdShaders discovery plugin, so
     # Sdr cannot resolve UsdPreviewSurface and every shader reads as invalid.
     # usd-core 26.x runs the same Sdr conformance check through UsdValidation.
-    from pxr import Sdr
     sdr_ok = bool(Sdr.Registry().GetShaderNodeByIdentifier("UsdPreviewSurface"))
     failed = [f for f in checker.GetFailedChecks()
               if sdr_ok or "has invalid shader node" not in f]
+    # ARKit allows no UsdLux lights. The USDZ exporter drops them, while USDA
+    # and USDC keep them, so only there the ARKit prim-type rule is waived
+    # for light prims.
+    if not path.endswith(".usdz"):
+        failed = [f for f in failed if not LIGHT_PRIM_TYPE.search(f)]
     return ([f"ComplianceChecker error: {e}" for e in checker.GetErrors()]
             + [f"ComplianceChecker failed: {e}" for e in failed]
             + [f"ComplianceChecker warning: {e}" for e in checker.GetWarnings()])
