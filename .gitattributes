@@ -1,3 +1,6 @@
 # Model fixtures are compared byte for byte against other tools' output, so git
 # must never normalize their line endings or diff them as text.
 tests/fixtures/** -text -diff
+
+# Fuzz seeds are byte-exact libFuzzer inputs written by scripts/generate-fuzz-corpus.mjs.
+tests/fuzz/corpus/** -text -diff

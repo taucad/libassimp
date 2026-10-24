@@ -1,0 +1,37 @@
+---
+title: Untrusted input
+description: Convert files from users safely by choosing the Wasm backend, isolating the work, and containing the resolver.
+---
+
+The assimp engine reads about 70 formats in C++, and a hostile file can crash it, hang it or exhaust its memory. Pick the backend by who wrote the file.
+
+| Risk                           | Wasm                             | Native                 |
+| ------------------------------ | -------------------------------- | ---------------------- |
+| Engine crash or stack overflow | The call rejects                 | The process dies       |
+| Memory corruption              | Stays inside the Wasm heap       | Reaches your process   |
+| Memory exhaustion              | Capped at 4 GB, the call rejects | Unbounded              |
+| A hang                         | Blocks the thread running Wasm   | Blocks a worker thread |
+
+## Use Wasm, off the main thread
+
+```typescript
+import { createAssimp } from 'libassimp';
+
+const MAX_BYTES = 64 * 1024 * 1024;
+const assimp = await createAssimp({ backend: 'wasm' });
+
+export const convertUpload = async (name: string, bytes: Uint8Array) => {
+  if (bytes.byteLength > MAX_BYTES) throw new Error('file too large');
+  return assimp.convert({ name, bytes }, { to: 'glb', signal: AbortSignal.timeout(30_000) });
+};
+```
+
+`backend: 'auto'` picks native on Node, so name the backend. libassimp has no input or memory limit of its own: check sizes first. An abort takes effect at the engine's progress checkpoints, not inside a parser loop, so for a server run this in a worker thread or child process and terminate it when a job overruns. Use native for untrusted files only inside a child process you can restart, with an OS memory limit.
+
+## Contain the resolver
+
+Every name `resolve` receives is written inside the file: `mtllib ../../x`, USD asset paths, glTF URIs. Serve names from one directory, refuse absolute paths and `..` segments, and never fetch arbitrary URLs. The Node example in [Resolve sidecar files](/docs/guides/resolve-sidecar-files) does this.
+
+## What the project tests
+
+Every CI run feeds both backends deep nesting (a 20,000-deep glTF node chain), 1 GiB ZIP and zlib bombs (USDZ, 3MF, ZAE, PK3, FBX), oversized counts, and truncated or garbage files for each format, and requires the same typed verdict from each. A nightly libFuzzer run with sanitizers covers the C++ pipeline. Inputs that still crash the engine are listed in the repository's `SECURITY.md`.

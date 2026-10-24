@@ -1,5 +1,11 @@
 name: OSV scan
 
+# Two inputs: the npm lockfile, and osv-cpp-pins.json, which lists the engine
+# submodule commit and every FetchContent commit the engine builds (LightUSD,
+# web-ifc, lib3mf, CDT, spdlog, ...). OSV matches those against its GIT
+# ecosystem ranges. scripts/generate-sbom.mjs writes the manifest and the
+# quality job fails when it falls behind the engine.
+
 on:
   pull_request:
   push:
@@ -19,6 +25,7 @@ jobs:
     with:
       scan-args: |-
         --lockfile=pnpm-lock.yaml
+        --lockfile=osv-scanner:osv-cpp-pins.json
         --config=osv-scanner.toml
       upload-sarif: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' }}
     permissions:
@@ -33,6 +40,7 @@ jobs:
     with:
       scan-args: |-
         --lockfile=pnpm-lock.yaml
+        --lockfile=osv-scanner:osv-cpp-pins.json
         --config=osv-scanner.toml
       upload-sarif: true
     permissions:

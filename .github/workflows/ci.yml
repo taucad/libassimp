@@ -436,6 +436,18 @@ jobs:
       - run: node scripts/check-prepared-release.mjs
       - run: node scripts/pack-test-tarballs.mjs --out tarballs
       - run: node scripts/validate-pack.mjs
+      # The SBOM names the engine commit, its FetchContent pins, the vendored
+      # C/C++ libraries, the Emscripten image and the npm lockfile. publish
+      # attests it against the tarballs and the release carries it.
+      - name: Emit the CycloneDX SBOM
+        run: |
+          node scripts/generate-sbom.mjs --check
+          node scripts/generate-sbom.mjs --out sbom
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom
+          path: sbom/libassimp.cdx.json
+          if-no-files-found: error
       - id: freeze
         env:
           ARCHIVE_LIMIT: '167772160'
@@ -546,6 +558,12 @@ jobs:
         uses: ./.github/actions/smoke-lane
         with:
           lane: ${{ toJSON(matrix.lanes[3]) }}
+      # Hostile inputs through both backends on every target: same verdict,
+      # no crash, typed errors. Last, so its known failures never hide a lane.
+      - name: Classify adversarial inputs on both backends
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: node tests/adversarial-parity.mjs
 
   browser:
     name: browser (${{ matrix.browser }})
@@ -1031,6 +1049,7 @@ jobs:
     needs: [preflight, assemble, native-gates, smoke, browser, bundlers, security]
     runs-on: ubuntu-24.04
     permissions:
+      attestations: write
       contents: read
       id-token: write
     steps:
@@ -1042,6 +1061,17 @@ jobs:
           name: test-tarballs
           path: tarballs
           expect: test-tarballs.json
+      - uses: ./.github/actions/download-verified-artifact
+        with:
+          name: sbom
+          path: sbom
+          expect: libassimp.cdx.json
+      # A Sigstore-signed SBOM attestation over the exact tarballs npm receives;
+      # `gh attestation verify <tgz> --repo taucad/libassimp` checks it.
+      - uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: tarballs/*.tgz
+          sbom-path: sbom/libassimp.cdx.json
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '26'
@@ -1133,11 +1163,17 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - uses: ./.github/actions/download-verified-artifact
+        with:
+          name: sbom
+          path: sbom
+          expect: libassimp.cdx.json
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag='v${{ needs.preflight.outputs.version }}'
           gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --target '${{ github.sha }}' --generate-notes
+          gh release upload "$tag" sbom/libassimp.cdx.json --clobber
 
   ci-gate:
     if: always()

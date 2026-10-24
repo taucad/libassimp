@@ -25,6 +25,8 @@ const pageCeilings: Readonly<Record<string, number>> = {
   'guides/resolve-sidecar-files.mdx': 300,
   // A complete worker and page pair with transferables (broad review F20).
   'guides/use-in-the-browser.mdx': 660,
+  // Backend choice, isolation, limits and resolver containment for hostile files.
+  'guides/untrusted-input.mdx': 400,
   // The 0.4 breaking-change migration (broad review F19).
   'guides/upgrade-to-0-4.mdx': 420,
   // The end-to-end page now carries the conversion it explains.

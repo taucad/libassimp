@@ -1,0 +1,9 @@
+# UBSan findings that libFuzzer would otherwise report on every job, each with
+# the fix that removes it. A suppression only silences this exact check at this
+# exact place; every other finding still stops the input.
+#
+# Assimp::MemoryIOStream::Read calls memcpy(dst, nullptr, 0) for an empty file
+# (src/cpp/memory-io.hpp passes an empty vector's data()). libFuzzer runs the
+# empty input first in every job. Fix: skip the memcpy when ofs is 0 in
+# assimp/include/assimp/MemoryIOWrapper.h, then delete this line.
+nonnull-attribute:MemoryIOWrapper.h
