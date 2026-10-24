@@ -108,6 +108,7 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_C_COMPILER_LAUNCHER": "",
         "CMAKE_CXX_COMPILER_LAUNCHER": "",
+        "ASSIMP_INSTALL_PDB": "OFF",
         "BUILD_SHARED_LIBS": "OFF",
         "ASSIMP_BUILD_TESTS": "OFF",
         "ASSIMP_BUILD_ASSIMP_TOOLS": "OFF",

@@ -1,0 +1,25 @@
+name: Smoke one lane
+description: Install one lane's Node.js and smoke the frozen tarballs in a clean install.
+inputs:
+  lane:
+    description: One lane object from scripts/native-matrix.mjs, as JSON.
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version: ${{ fromJSON(inputs.lane).node }}
+    - name: Smoke the frozen tarballs in a clean install
+      shell: bash
+      env:
+        LIBASSIMP_ELECTRON_VERSION: ${{ fromJSON(inputs.lane).electron }}
+        LIBASSIMP_NATIVE_SUFFIX: ${{ fromJSON(inputs.lane).suffix }}
+        LIBASSIMP_RUNTIME: ${{ fromJSON(inputs.lane).runtime }}
+        # Origin: the local 512 MiB packed-addon witness peaked at 4,783,603,712
+        # bytes RSS. The 4 GiB floor proves native memory can exceed Wasm32.
+        LIBASSIMP_SCALE: ${{ fromJSON(inputs.lane).scale }}
+        LIBASSIMP_SCALE_BYTES: ${{ fromJSON(inputs.lane).scaleBytes }}
+        LIBASSIMP_MIN_SCALE_RSS_BYTES: ${{ fromJSON(inputs.lane).minScaleRssBytes }}
+        LIBASSIMP_TARBALL_DIR: tarballs
+      run: node scripts/test-package.mjs
