@@ -510,6 +510,19 @@ jobs:
           pnpm run build
           cp native-artifacts/libassimp.*.node dist/native/
           node tests/native-parity.mjs
+      # The quality job runs these suites on Wasm; native must reproduce the
+      # same determinism.json fingerprints on every target, except the
+      # documented PARITY_EXCEPTIONS in the format matrix.
+      - name: Run the format matrix and USD suite on the native backend
+        env:
+          LIBASSIMP_FINGERPRINTS_OUT: ${{ runner.temp }}/fingerprints-${{ matrix.suffix }}.json
+        run: pnpm exec vitest run --config vitest.native.config.ts
+      - if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-fingerprints-${{ matrix.suffix }}
+          path: ${{ runner.temp }}/fingerprints-${{ matrix.suffix }}.json
+          if-no-files-found: ignore
       - uses: ./.github/actions/download-verified-artifact
         with:
           name: test-tarballs

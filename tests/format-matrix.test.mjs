@@ -3,7 +3,9 @@
 // the exporters honour. Every primary
 // output is fingerprinted in `determinism.json`, so an engine or flag change
 // that alters bytes fails here instead of downstream. Re-record deliberate
-// changes with LIBASSIMP_RECORD_DETERMINISM=1 (see CONTRIBUTING.md).
+// changes with LIBASSIMP_RECORD_DETERMINISM=1 (see CONTRIBUTING.md). The same
+// suite runs once per backend (`tests/backend.mjs`): native output must match
+// the Wasm fingerprints, except the entries in `PARITY_EXCEPTIONS`.
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +13,7 @@ import { inflateRawSync } from 'node:zlib';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createAssimp } from '../src/index.ts';
+import { backend, createTestAssimp } from './backend.mjs';
 import { fnv64 } from './fnv64.mjs';
 
 const MODELS = fileURLToPath(new URL('../assimp/test/models/', import.meta.url));
@@ -118,15 +120,46 @@ const TIMESTAMPED = new Set(['3mf', 'dae', 'fbx', 'step']);
 
 const fingerprints = fileURLToPath(new URL('./determinism.json', import.meta.url));
 const recorded = JSON.parse(readFileSync(fingerprints, 'utf8'));
-const recording = process.env['LIBASSIMP_RECORD_DETERMINISM'] === '1';
+// Wasm is the recording backend; native is checked against what it recorded.
+const recording = backend === 'wasm' && process.env['LIBASSIMP_RECORD_DETERMINISM'] === '1';
 const observed = {};
+
+// Fingerprints native may not share with Wasm, each with the cause. An entry
+// must still differ on the platforms it names, so a fixed difference fails
+// until its entry is removed. All causes are in the engine (taucad/assimp and
+// its LightUSD), not in libassimp's bridge.
+const LIBM =
+  'The importer computes float32 values with std::sin/std::cos. Wasm links musl libm and each native ' +
+  'platform its own libm; they differ in the last ulp, which the assjson text shows.';
+const USD_ROOT_ORDER =
+  "LightUSD's Layer::primspecs() is an std::unordered_map and LayerToStage adds root prims in its " +
+  "iteration order (its own TODO: follow primChildren), so root children follow each standard library's " +
+  'string hash instead of the authored order. Engine bug, reported to the engine workstream.';
+const PARITY_EXCEPTIONS = {
+  'import ASE': {
+    platforms: ['linux'],
+    reason:
+      'SGSpatialSort sorts vertices with std::sort on plane distance alone; each standard library orders ' +
+      'ties differently, so smoothing-group normals sum in a different order (last-ulp float32 difference).',
+  },
+  'import BVH': { platforms: ['linux'], reason: `Euler channels become quaternions. ${LIBM}` },
+  'import MDC': { platforms: ['linux'], reason: `MD3::LatLngNormalToVec3 decodes the normals. ${LIBM}` },
+  'import MDL HL1': { platforms: ['linux'], reason: `Bone Euler angles become quaternions. ${LIBM}` },
+  'import USDA': { platforms: ['linux'], reason: USD_ROOT_ORDER },
+  'import USDC': { platforms: ['linux'], reason: USD_ROOT_ORDER },
+};
 
 /** Pin one primary output's fingerprint, or record it when re-recording. */
 const pin = (id, bytes) => {
   const hash = fnv64(bytes);
   observed[id] = hash;
   if (recording) return;
-  expect(hash, `${id} output bytes changed; re-record deliberately`).toBe(recorded[id]);
+  const exception = backend === 'native' ? PARITY_EXCEPTIONS[id] : undefined;
+  if (exception?.platforms.includes(process.platform)) {
+    expect.soft(hash, `${id} now matches Wasm; remove its parity exception`).not.toBe(recorded[id]);
+    return;
+  }
+  expect.soft(hash, `${id} ${backend} output bytes differ from determinism.json`).toBe(recorded[id]);
 };
 
 /** Read `3D/3dmodel.model` out of a 3MF, which is a ZIP of local file entries. */
@@ -157,11 +190,15 @@ const maxVertexDigits = (xml) =>
 let assimp;
 
 beforeAll(async () => {
-  assimp = await createAssimp();
+  assimp = await createTestAssimp();
 });
 
 afterAll(() => {
   assimp?.dispose();
+  // CI uploads each backend's observed fingerprints to diagnose a parity failure.
+  const report = process.env['LIBASSIMP_FINGERPRINTS_OUT'];
+  if (report)
+    writeFileSync(report, `${JSON.stringify({ backend, platform: process.platform, observed }, null, 2)}\n`);
   if (recording) {
     const sorted = Object.fromEntries(
       Object.entries(observed).sort(([left], [right]) => (left < right ? -1 : 1)),
