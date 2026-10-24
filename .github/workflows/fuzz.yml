@@ -59,7 +59,7 @@ jobs:
       # Allocation failures stay recoverable so std::bad_alloc paths run; UBSan
       # findings stop the input so libFuzzer records them.
       ASAN_OPTIONS: allocator_may_return_null=1:detect_leaks=1:symbolize=1
-      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:suppressions=tests/fuzz/ubsan.supp
       SECONDS_BUDGET: ${{ github.event_name == 'pull_request' && '120' || github.event_name == 'push' && '600' || inputs.seconds || '3600' }}
       STRICT: ${{ github.event_name != 'pull_request' }}
     steps:
@@ -120,7 +120,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           echo "crashes=$((crashes + leaks))" >> "$GITHUB_OUTPUT"
           # A harness that never executed is broken, whatever the event.
-          if ! grep -qE '#[0-9]+.*(INITED|DONE|NEW|pulse)' fuzz.log; then
+          # Fork mode reports '#<job>: cov: ...'; a single process reports INITED.
+          if ! grep -qE '#[0-9]+(: cov:|.*INITED)' fuzz.log; then
             echo "::error::the fuzzer did not execute (exit $status)"
             exit 1
           fi

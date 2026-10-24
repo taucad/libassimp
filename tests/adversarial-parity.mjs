@@ -44,13 +44,30 @@ const describeError = async (error, entry) => {
   };
 };
 
+// A runaway native allocation (garbage MDL) took the whole 16 GB CI runner
+// down with it. The worker stops itself above this resident size and the case
+// records `memory-limit`. Origin: the heaviest passing case, the 1 GiB ZAE
+// bomb, peaked at 3.1 GiB on both backends locally (generator included);
+// 5 GiB keeps 1.9 GiB of headroom and still fits the 7 GB macOS runners.
+const RSS_LIMIT_BYTES = 5 * 1024 ** 3;
+
 const worker = async (backend, start) => {
+  let current = start;
+  // Native conversions run off the main thread, so this timer keeps firing
+  // while the engine allocates. Wasm is capped by its own 4 GB heap.
+  setInterval(() => {
+    if (process.memoryUsage.rss() <= RSS_LIMIT_BYTES) return;
+    process.stdout.write(`RESULT ${current} ${JSON.stringify({ outcome: 'memory-limit' })}\n`, () =>
+      process.exit(70),
+    );
+  }, 50).unref();
   const entry = new URL(
     backend === 'native' ? '../dist/index.node.mjs' : '../dist/index.mjs',
     import.meta.url,
   ).href;
   const { createAssimp } = await import(entry);
   for (let index = start; index < selected.length; index += 1) {
+    current = index;
     process.stdout.write(`START ${index}\n`);
     const { files, to } = selected[index].generate('full');
     let result;
@@ -65,6 +82,8 @@ const worker = async (backend, start) => {
       assimp.dispose();
     }
     result.ms = Math.round(performance.now() - started);
+    // The worker's high-water mark so far (maxRSS is in KiB).
+    result.peakMiB = Math.round(process.resourceUsage().maxRSS / 1024);
     process.stdout.write(`RESULT ${index} ${JSON.stringify(result)}\n`);
   }
 };
