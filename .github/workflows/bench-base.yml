@@ -1,0 +1,192 @@
+name: Benchmark base build
+
+# Builds one revision's Wasm pair and linux-x64 addon for the format matrix
+# (bench/matrix.mjs) and caches both under that revision's build inputs, so a
+# pull request measures its base without compiling it again:
+# - pushes to main and next fill the cache that pull requests into them read;
+# - ci.yml calls this for each pull request's base and downloads the
+#   `bench-base-*` artifacts, a cache hit unless the base moved since its push;
+# - a manual run builds any revision and measures it on its own.
+# The keys hash the same inputs as ci.yml's own `wasm-` and `addon-v1-` keys,
+# so a revision CI already built on main is restored from that entry instead.
+
+on:
+  push:
+    branches: [main, next]
+  workflow_call:
+    inputs:
+      sha:
+        description: Revision to build.
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Revision to build and measure (default the selected branch).
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  wasm:
+    runs-on: ubuntu-24.04
+    # Origin: the same ceiling as ci.yml's build-wasm job, which this mirrors.
+    timeout-minutes: 90
+    container:
+      image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
+    env:
+      CCACHE_COMPILERTYPE: clang
+      CCACHE_MAXSIZE: 1G
+      CCACHE_NOHASHDIR: 'true'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.sha || inputs.ref || github.sha }}
+          persist-credentials: false
+      - name: Record the engine submodule commit
+        id: engine
+        run: echo "sha=$(git rev-parse HEAD:assimp)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        id: restore
+        with:
+          path: src/wasm/libassimp.*
+          key: bench-base-v1-wasm-${{ hashFiles('emsdk-image.txt', 'assimp-builds.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**', '.gitmodules', 'scripts/build-wasm.mjs') }}-${{ steps.engine.outputs.sha }}
+          restore-keys: wasm-${{ hashFiles('emsdk-image.txt', 'assimp-builds.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**', '.gitmodules', 'scripts/build-wasm.mjs') }}-${{ steps.engine.outputs.sha }}
+      - name: Fetch the engine and the build tools the emsdk image omits
+        if: steps.restore.outputs.cache-matched-key == ''
+        run: |
+          git submodule update --init assimp
+          apt-get update && apt-get install -y --no-install-recommends ccache ninja-build
+          {
+            echo "CCACHE_DIR=$GITHUB_WORKSPACE/.ccache"
+            echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"
+            echo "CCACHE_COMPILERCHECK=string:$(cat emsdk-image.txt)"
+          } >> "$GITHUB_ENV"
+      # Restore only: ci.yml's build-wasm job owns these entries.
+      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        if: steps.restore.outputs.cache-matched-key == ''
+        with:
+          path: .ccache
+          key: ccache-v1-wasm-${{ steps.engine.outputs.sha }}-${{ hashFiles('emsdk-image.txt') }}
+          restore-keys: |
+            ccache-v1-wasm-${{ steps.engine.outputs.sha }}-
+            ccache-v1-wasm-
+      - name: Build libassimp.wasm
+        if: steps.restore.outputs.cache-matched-key == ''
+        env:
+          LIBASSIMP_EMSDK: host
+        run: node scripts/build-wasm.mjs
+      - uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        if: steps.restore.outputs.cache-hit != 'true'
+        with:
+          path: src/wasm/libassimp.*
+          key: ${{ steps.restore.outputs.cache-primary-key }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bench-base-wasm
+          path: src/wasm/libassimp.*
+          if-no-files-found: error
+          retention-days: 7
+
+  native:
+    runs-on: ubuntu-24.04
+    # Origin: the same ceiling as ci.yml's native-build job, which this mirrors.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.sha || inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '26'
+      # The pull-request addon comes from ci.yml's manylinux lane, so the base
+      # is built by the same recipe; the key is ci.yml's linux-x64-gnu key.
+      - name: Key the addon on its inputs
+        id: addon
+        shell: bash
+        env:
+          INPUTS: ${{ hashFiles('CMakeLists.txt', 'CMakePresets.json', 'assimp-builds.json', '.gitmodules', 'cmake/**', 'src/cpp/**', 'src/generated/**', 'scripts/build-native.mjs', 'scripts/build-manylinux.sh', 'scripts/check-cpp-exports.mjs', 'scripts/check-native-host.mjs', 'scripts/lib/**', 'scripts/assimp-capability-*.json', 'scripts/generate-assimp-capabilities.mjs') }}
+        run: |
+          manifest="$(node -p "const p=require('./package.json');const h=require('node:crypto').createHash('sha256');h.update(JSON.stringify([p.version,p.binary,p.devDependencies['node-addon-api'],p.devDependencies['cmake-js'],process.versions.node.split('.')[0]]));h.digest('hex').slice(0,16)")"
+          echo "key=addon-v1-linux-x64-gnu-manylinux-$manifest-$INPUTS-$(git rev-parse HEAD:assimp)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        id: restore
+        with:
+          path: native-artifacts
+          key: bench-base-v1-${{ steps.addon.outputs.key }}
+          restore-keys: ${{ steps.addon.outputs.key }}
+      - name: Build the glibc 2.17 addon
+        if: steps.restore.outputs.cache-matched-key == ''
+        shell: bash
+        run: |
+          git submodule update --init assimp
+          inc="$(pnpm exec cmake-js print-cmakejs-include | tail -n 1)"
+          scripts/build-manylinux.sh "${inc%%;*}" native-output
+          mkdir -p native-artifacts
+          cp native-output/libassimp.node native-artifacts/libassimp.linux-x64-gnu.node
+      - uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        if: steps.restore.outputs.cache-hit != 'true'
+        with:
+          path: native-artifacts
+          key: ${{ steps.restore.outputs.cache-primary-key }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bench-base-native
+          path: native-artifacts/libassimp.linux-x64-gnu.node
+          if-no-files-found: error
+          retention-days: 7
+
+  # A manual run measures the revision alone: one build per report, which
+  # `node bench/matrix-report.mjs base=<a.json> pr=<b.json>` compares later.
+  # The harness is the selected branch's, so older revisions measure too.
+  measure:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [wasm, native]
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [wasm, native]
+        tier: [small, large]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          submodules: ${{ matrix.tier == 'small' }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '26'
+      - uses: ./.github/actions/download-verified-artifact
+        with:
+          name: bench-base-wasm
+          path: /tmp/build/wasm
+          expect: libassimp.js libassimp.wasm
+      - uses: ./.github/actions/download-verified-artifact
+        with:
+          name: bench-base-native
+          path: /tmp/build/native
+          expect: libassimp.linux-x64-gnu.node
+      - name: Measure the revision
+        shell: bash
+        env:
+          BACKEND: ${{ matrix.backend }}
+          REVISION: ${{ inputs.ref || github.sha }}
+          TIER: ${{ matrix.tier }}
+        run: |
+          revision="$(git rev-parse "$REVISION^{commit}")"
+          entry="$(bench/prepare-build.sh "$GITHUB_WORKSPACE/.bench-build" "$revision" /tmp/build/wasm)"
+          mkdir -p /tmp/format-matrix
+          node bench/matrix.mjs --backend "$BACKEND" --tier "$TIER" --inputs "$RUNNER_TEMP/matrix-inputs" \
+            --build "build=$entry,addon=/tmp/build/native/libassimp.linux-x64-gnu.node,rev=$revision" \
+            --out "/tmp/format-matrix/$BACKEND-$TIER.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: format-matrix-${{ matrix.backend }}-${{ matrix.tier }}
+          path: /tmp/format-matrix/*.json
+          if-no-files-found: error

@@ -12,6 +12,7 @@ import { inflateRawSync } from 'node:zlib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createAssimp } from '../src/index.ts';
+import { IMPORTS, TIMESTAMPED } from './format-fixtures.mjs';
 import { fnv64 } from './fnv64.mjs';
 
 const MODELS = fileURLToPath(new URL('../assimp/test/models/', import.meta.url));
@@ -26,71 +27,6 @@ const glbJson = (bytes) => {
   expect(view.getUint32(16, true)).toBe(0x4e4f_534a);
   return JSON.parse(text(bytes.subarray(20, 20 + view.getUint32(12, true))));
 };
-
-// One representative fixture per importer the reference suite exercised.
-// `error` marks the formats `assimp-builds.json` disables and the fixtures assimp
-// itself refuses.
-const IMPORTS = [
-  ['3D', ['3D/box.uc', '3D/box_a.3d', '3D/box_d.3d']],
-  ['3DS', ['3DS/test1.3ds']],
-  ['3MF', ['3MF/box.3mf']],
-  ['AC', ['AC/SphereWithLight.ac']],
-  ['AMF', ['AMF/test1.amf']],
-  ['ASE', ['ASE/ThreeCubesGreen.ASE']],
-  ['B3D', ['B3D/WusonBlitz.b3d']],
-  ['BLEND', ['BLEND/box.blend']],
-  ['BVH', ['BVH/Boxing_Toes.bvh']],
-  ['COB', ['COB/molecule.cob']],
-  ['COLLADA', ['Collada/duck.dae']],
-  ['CSM', ['CSM/ThomasFechten.csm']],
-  ['DXF', ['DXF/PinkEggFromLW.dxf']],
-  ['FBX', ['FBX/box.fbx']],
-  ['FBX ascii', ['FBX/embedded_ascii/box.FBX']],
-  ['glTF2', ['glTF2/BoxTextured-glTF-Binary/BoxTextured.glb']],
-  ['HMP', ['HMP/terrain.hmp']],
-  ['IFC', ['IFC/cube-blender-ifc4.ifc']],
-  ['IQM', ['IQM/mrfixit.iqm']],
-  ['LWO', ['LWO/LWO2/hierarchy.lwo']],
-  ['LWS', ['LWS/move_x.lws']],
-  ['MD2', ['MD2/faerie.md2']],
-  ['MD3', ['../models-nonbsd/MD3/watercan.md3']],
-  ['MD5', ['MD5/SimpleCube.md5mesh']],
-  ['MDC', ['MDC/spider.mdc']],
-  ['MDL HL1', ['MDL/MDL (HL1)/chrome_sphere.mdl']],
-  ['MDL3', ['MDL/MDL3 (3DGS A4)/minigun.MDL']],
-  ['MDL5', ['MDL/MDL5 (3DGS A5)/minigun_mdl5.mdl']],
-  ['MDL7', ['MDL/MDL7 (3DGS A7)/Sphere_DiffPinkBlueSpec_Alpha90.mdl']],
-  ['MS3D', ['MS3D/twospheres.ms3d']],
-  ['NFF', ['NFF/cylinder.nff']],
-  ['OBJ', ['OBJ/cube_usemtl.obj', 'OBJ/cube_usemtl.mtl']],
-  ['OFF', ['OFF/Cube.off']],
-  ['Ogre', ['Ogre/TheThing/Mesh.mesh.xml', 'Ogre/TheThing/BlockMat.material']],
-  ['OpenGEX', ['OpenGEX/Example.ogex']],
-  ['PLY', ['PLY/cube.ply']],
-  ['PLY binary', ['PLY/cube_binary.ply']],
-  ['Q3D', ['Q3D/earth.q3o']],
-  ['SIB', ['SIB/heffalump.sib']],
-  ['SMD', ['SMD/triangle.smd']],
-  ['STL ascii', ['STL/Spider_ascii.stl']],
-  ['STL binary', ['STL/Spider_binary.stl']],
-  ['USDA', ['../models-nonbsd/USD/usda/texturedcube.usda']],
-  ['USDC', ['../models-nonbsd/USD/usdc/texturedcube.usdc']],
-  ['USDZ', ['../models-nonbsd/USD/usdz/damaged-helmet-gltf.usdz']],
-  ['VRML', ['WRL/Wuson.wrl']],
-  ['X', ['X/test_cube_text.x']],
-  ['X binary', ['X/test_cube_binary.x']],
-  ['X3D', ['X3D/HelloWorld.x3d']],
-  // Assimp recognizes the extension but has no binary X3D decoder.
-  ['X3DB', ['X3DB/HelloWorld.x3db'], 'error'],
-  ['XGL', ['XGL/sample_official.xgl']],
-  ['IRR', ['IRR/box.irr'], 'error'],
-  ['IRRMesh', ['IRRMesh/spider.irrmesh'], 'error'],
-  ['M3D', ['M3D/cube_usemtl.m3d'], 'error'],
-  ['RAW', ['RAW/WithColor.raw'], 'error'],
-  ['TERRAGEN', ['TER/RealisticTerrain.ter'], 'error'],
-  ['glTF2 Draco', ['glTF2/draco/robot.glb'], 'error'],
-  ['not a model', ['3DS/test.png'], 'error'],
-];
 
 it('names every fixture path with exact case', () => {
   for (const [, files] of IMPORTS) {
@@ -111,10 +47,6 @@ it('names every fixture path with exact case', () => {
 
 const EXPORT_SOURCE = 'glTF2/simple_skin/quad_skin.glb';
 const TEXTURED_SOURCE = 'glTF2/BoxTextured-glTF-Binary/BoxTextured.glb';
-
-// Exporters that stamp the wall-clock time into their output: their bytes are
-// never equal twice, so the matrix asserts their shape instead of a hash.
-const TIMESTAMPED = new Set(['3mf', 'dae', 'fbx', 'step']);
 
 const fingerprints = fileURLToPath(new URL('./determinism.json', import.meta.url));
 const recorded = JSON.parse(readFileSync(fingerprints, 'utf8'));
