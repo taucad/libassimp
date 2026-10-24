@@ -46,9 +46,15 @@ jobs:
         with:
           ref: ${{ inputs.sha || inputs.ref || github.sha }}
           persist-credentials: false
+      # The container runs as root over a checkout the runner user owns, so git
+      # refuses the tree until it is marked safe; an empty SHA would key the
+      # cache on any engine.
       - name: Record the engine submodule commit
         id: engine
-        run: echo "sha=$(git rev-parse HEAD:assimp)" >> "$GITHUB_OUTPUT"
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          sha="$(git rev-parse HEAD:assimp)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         id: restore
         with:
