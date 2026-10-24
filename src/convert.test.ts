@@ -1110,7 +1110,7 @@ describe('streamed output, progress, and the conversion report', () => {
 
 describe('engine diagnostics and resource limits on the real Wasm runtime', () => {
   const header = (vertices: number, padding = 0): Uint8Array => {
-    const text = `ply\nformat ascii 1.0\nelement vertex ${vertices}\nproperty float x\nproperty float y\nproperty float z\nend_header\n0 0 0\n`;
+    const text = `ply\nformat ascii 1.0\nelement vertex ${vertices}\n${['x', 'y', 'z', 'nx', 'ny', 'nz'].map((axis) => `property float ${axis}\n`).join('')}end_header\n0 0 0 0 0 1\n`;
     const encoded = new TextEncoder().encode(text);
     const bytes = new Uint8Array(encoded.length + padding);
     bytes.set(encoded);
@@ -1120,9 +1120,10 @@ describe('engine diagnostics and resource limits on the real Wasm runtime', () =
 
   it('reports an allocation failure as LIMIT_EXCEEDED and keeps the instance working', async () => {
     await using assimp = await createAssimp({ recycleAboveBytes: Number.POSITIVE_INFINITY });
-    // 357 million float3 vertices need ~4.28 GB: below the 32-bit size limit, above what Wasm can grow to.
+    // 200 million vertices with normals need two 2.4 GB arrays: the positions
+    // fit, the normals cannot fit beside them in the 4 GiB address space.
     const error = await failure(
-      assimp.convert({ name: 'huge.ply', bytes: header(357_000_000) }, { to: 'stl' }),
+      assimp.convert({ name: 'huge.ply', bytes: header(200_000_000) }, { to: 'stl' }),
     );
     expect(error.code).toBe('LIMIT_EXCEEDED');
     expect(error.message).toContain("importing 'huge.ply'");
@@ -1140,7 +1141,7 @@ describe('engine diagnostics and resource limits on the real Wasm runtime', () =
     const fail = async (): Promise<void> => {
       await failure(assimp.convert({ name: 'broken.ply', bytes: broken }, { to: 'stl' }));
       await failure(
-        assimp.convert({ name: 'huge.ply', bytes: header(357_000_000, 1024 * 1024) }, { to: 'stl' }),
+        assimp.convert({ name: 'huge.ply', bytes: header(200_000_000, 1024 * 1024) }, { to: 'stl' }),
       );
       await failure(
         assimp.convert(
