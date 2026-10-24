@@ -860,8 +860,9 @@ const renderGenerated = (evidence, overrides) => {
   const stepDescriptors = Object.fromEntries(
     steps.map(({ publicName: name, conflicts = [] }) => [name, { conflicts }]),
   );
-  const internalRoutes = routes.map(({ id, nativeId, routes: choices }) => ({
+  const internalRoutes = routes.map(({ id, extension, nativeId, routes: choices }) => ({
     id,
+    extension,
     nativeId,
     ...(choices === undefined ? {} : { routes: choices }),
   }));

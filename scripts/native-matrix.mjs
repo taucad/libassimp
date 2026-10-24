@@ -24,6 +24,8 @@ export const nativeMatrices = (packageJson = new URL('../package.json', import.m
   const smoke = packages.flatMap(({ os, suffix }) => [
     ...NODE_VERSIONS.map((node) => {
       const scale = os === 'linux' && node === '26';
+      // The scale lane proves native goes past Wasm32's 4 GiB (minScaleRssBytes); raise
+      // scaleBytes, never the floor, when an engine or runtime change lowers peak memory.
       return {
         lane: `node-${node}`,
         minScaleRssBytes: scale ? '4294967296' : '0',

@@ -333,7 +333,7 @@ describe('exporters', () => {
       const input = id === '3mf' ? load(TEXTURED_SOURCE) : source;
       const { files } = await assimp.convert(input, { to: id });
       const [plural] = await assimp.convertFormats(input, { targets: [{ to: id }] });
-      expect(files[0].name, `${id} output name`).toBe(`result.${extension}`);
+      expect(files[0].name, `${id} output name`).toBe(`${input.name.replace(/\.[^.]+$/u, '')}.${extension}`);
       if (TIMESTAMPED.has(id)) {
         expect(
           plural.files.map(({ name, bytes }) => ({ name, size: bytes.byteLength })),
@@ -349,11 +349,14 @@ describe('exporters', () => {
   it('returns the sidecars each exporter writes beside the primary output', async () => {
     const source = load(EXPORT_SOURCE);
     const obj = await assimp.convert(source, { to: 'obj' });
-    expect(obj.files.map(({ name }) => name)).toEqual(['result.obj', 'result.mtl']);
+    expect(obj.files.map(({ name }) => name)).toEqual(['quad_skin.obj', 'quad_skin.mtl']);
     const gltf = await assimp.convert(source, { to: 'gltf' });
-    expect(gltf.files.map(({ name }) => name)).toEqual(['result.gltf', 'result.bin']);
+    expect(gltf.files.map(({ name }) => name)).toEqual(['quad_skin.gltf', 'quad_skin.bin']);
     const dae = await assimp.convert(load(TEXTURED_SOURCE), { to: 'dae' });
-    expect(dae.files.map(({ name }) => name)).toEqual(['result.dae', 'result.dae/result_texture_0001.png']);
+    expect(dae.files.map(({ name }) => name)).toEqual([
+      'BoxTextured.dae',
+      'BoxTextured.dae/BoxTextured_texture_0001.png',
+    ]);
   });
 });
 

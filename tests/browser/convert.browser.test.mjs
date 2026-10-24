@@ -17,6 +17,9 @@ const withAssimp = async (operation) => {
   }
 };
 
+// Timings and peak memory are measurements, not output.
+const outputOf = ({ files, warnings }) => ({ files, warnings });
+
 const filesSnapshot = (results) =>
   results.map(({ format, files }) => ({
     format,
@@ -118,7 +121,9 @@ beforeAll(async () => {
 
 test('loads default entry artifacts and round-trips geometry in the browser', async () => {
   const { files: gltf } = await convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
-  expect(gltf.map(({ name }) => name)).toEqual(['result.glb']);
+  expect(gltf.map(({ name }) => name)).toEqual(['cube.glb']);
+  // Web APIs reject views of resizable buffers, so browser output is fixed-length.
+  expect(gltf[0].bytes.buffer.resizable).toBe(false);
   expect(new TextDecoder().decode(gltf[0].bytes.subarray(0, 4))).toBe('glTF');
 
   const { files: stl } = await convert({ name: 'model.glb', bytes: gltf[0].bytes }, { to: 'stl' });
@@ -159,7 +164,7 @@ test('cancels unresolved sidecars, ignores late settlement, and reuses both Wasm
     withAssimp(async (assimp) => {
       const input = { name: 'cube_usemtl.obj', bytes: materialCube };
       const options = { to: 'glb', resolve: () => material };
-      const expected = await assimp.convert(input, options);
+      const expected = outputOf(await assimp.convert(input, options));
       for (const lateFailure of [false, true]) {
         const controller = new AbortController();
         const reason = { kind: 'superseded', lateFailure };
@@ -198,7 +203,7 @@ test('cancels unresolved sidecars, ignores late settlement, and reuses both Wasm
           }),
         ).rejects.toBe(reason);
         expect(resolverCalls).toBe(0);
-        expect(await assimp.convert(input, options)).toEqual(expected);
+        expect(outputOf(await assimp.convert(input, options))).toEqual(expected);
       }
       return expected;
     });
@@ -374,7 +379,7 @@ test('preserves export textures and exact same-artifact resolution across Wasm r
     'engineflare1.jpg',
   ]);
   expect(normal.textured.members).toEqual([
-    'result.usdc',
+    'spider.usdc',
     'textures/SpiderTex.jpg',
     'textures/wal67ar_small.jpg',
     'textures/drkwood2.jpg',

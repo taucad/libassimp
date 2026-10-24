@@ -3,7 +3,15 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ResolutionContext, type NativeRuntime } from './convert.js';
-import { compileUrl, createEntry, isJspiAvailable, loadModule, missingImport } from './create-assimp.js';
+import {
+  compileCached,
+  compileUrl,
+  createEntry,
+  isJspiAvailable,
+  loadModule,
+  missingImport,
+  type CreateAssimpOptions,
+} from './create-assimp.js';
 import { assimpCapabilities } from './generated/assimp-capabilities.js';
 import { createAssimp } from './index.js';
 
@@ -224,7 +232,10 @@ describe('createAssimp loading and lifetime', () => {
 
   it('rejects forced native loading from the browser-safe entry', async () => {
     await expect(createAssimp({ backend: 'native' })).rejects.toMatchObject({
-      message: 'backend: native is unavailable from the browser-safe libassimp entry.',
+      code: 'BACKEND_UNAVAILABLE',
+      message: expect.stringContaining(
+        'backend: native is unavailable from the browser-safe libassimp entry',
+      ),
     });
   });
 
@@ -240,14 +251,14 @@ describe('createAssimp loading and lifetime', () => {
   ])('loads the one artifact from wasmUrl given as %s', async (_label, wasmUrl) => {
     using assimp = await createAssimp({ wasmUrl });
     expect((await assimp.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).files[0]?.name).toBe(
-      'result.glb',
+      'cube.glb',
     );
   });
 
   it('instantiates the same artifact from wasmBinary', async () => {
     using assimp = await createAssimp({ wasmBinary: new Uint8Array(readFileSync(wasmPath)) });
     expect((await assimp.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).files[0]?.name).toBe(
-      'result.glb',
+      'cube.glb',
     );
   });
 
@@ -329,6 +340,7 @@ describe('createAssimp loading and lifetime', () => {
       }),
       destroyPlan: vi.fn(),
       dispose: vi.fn(),
+      peakMemoryBytes: () => 0,
     };
     const entry = createEntry(glueUrl(), new URL('https://example.test/queued.wasm'), {
       import: [assimpCapabilities.import.obj],
@@ -390,6 +402,7 @@ describe('createAssimp loading and lifetime', () => {
       }),
       destroyPlan: vi.fn(),
       dispose: vi.fn(),
+      peakMemoryBytes: () => 0,
     };
     const entry = createEntry(glueUrl(), new URL('https://example.test/native.wasm'), {
       import: [assimpCapabilities.import.obj],
@@ -402,14 +415,16 @@ describe('createAssimp loading and lifetime', () => {
     const secondSettled = vi.fn();
     void second.then(secondSettled);
     await new Promise<void>(setImmediate);
-    expect(secondSettled).toHaveBeenCalledWith({ files: [] });
+    expect(secondSettled).toHaveBeenCalledWith(expect.objectContaining({ files: [] }));
     expect(runtime.preparePlan).toHaveBeenCalledTimes(2);
 
-    assimp.dispose();
+    const disposed = assimp.dispose();
+    expect(assimp.dispose()).toBe(disposed);
+    await new Promise<void>(setImmediate);
     expect(runtime.dispose).not.toHaveBeenCalled();
     release?.();
-    await expect(first).resolves.toEqual({ files: [] });
-    await new Promise<void>(setImmediate);
+    await expect(first).resolves.toMatchObject({ files: [] });
+    await expect(disposed).resolves.toBeUndefined();
     expect(runtime.dispose).toHaveBeenCalledOnce();
   });
 
@@ -436,13 +451,14 @@ describe('createAssimp loading and lifetime', () => {
     });
     await Promise.resolve();
     expect(secondSettled).toBe(false);
-    assimp.dispose();
+    const disposed = assimp.dispose();
     await expect(assimp.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).rejects.toThrow(
       'assimp instance disposed',
     );
     release?.();
-    expect((await first).files[0]?.name).toBe('result.glb');
-    expect((await second).files[0]?.name).toBe('result.stl');
+    expect((await first).files[0]?.name).toBe('cube_usemtl.glb');
+    expect((await second).files[0]?.name).toBe('cube.stl');
+    await disposed;
   });
 
   it('advances the queue after a resolver rejection', async () => {
@@ -453,7 +469,7 @@ describe('createAssimp loading and lifetime', () => {
     );
     const next = assimp.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
     await expect(failed).rejects.toMatchObject({ code: 'RESOLVE_FAILED' });
-    await expect(next).resolves.toMatchObject({ files: [{ name: 'result.glb' }] });
+    await expect(next).resolves.toMatchObject({ files: [{ name: 'cube.glb' }] });
   });
 
   it('allows separate instances to progress independently', async () => {
@@ -481,7 +497,7 @@ describe('createAssimp loading and lifetime', () => {
   it('registers no process listeners', async () => {
     const before = ['unhandledRejection', 'uncaughtException'].map((event) => process.listenerCount(event));
     const instances = await Promise.all(Array.from({ length: 3 }, () => createAssimp()));
-    for (const assimp of instances) assimp.dispose();
+    await Promise.all(instances.map(async (assimp) => assimp.dispose()));
     expect(['unhandledRejection', 'uncaughtException'].map((event) => process.listenerCount(event))).toEqual(
       before,
     );
@@ -500,9 +516,9 @@ describe('createAssimp loading and lifetime', () => {
           exportOptions: { materials: false },
         },
       ),
-    ).resolves.toMatchObject({ files: [{ name: 'result.obj' }] });
-    assimp.dispose();
-    assimp.dispose();
+    ).resolves.toMatchObject({ files: [{ name: 'cube.obj' }] });
+    await assimp.dispose();
+    await assimp.dispose();
   });
 
   it('normalizes a non-Error validation throw', async () => {
@@ -537,6 +553,7 @@ describe('shared entry loader', () => {
         }),
         destroyPlan: vi.fn(),
         dispose: vi.fn(),
+        peakMemoryBytes: () => 0,
       };
       const loadRuntime = vi.fn(
         () =>
@@ -602,6 +619,7 @@ describe('shared entry loader', () => {
         destroyPlan: vi.fn(),
         dispose,
         memoryBytes: () => memoryBytes,
+        peakMemoryBytes: () => memoryBytes,
       }),
     );
     const entry = createEntry(glueUrl(), new URL('https://example.test/recycle.wasm'), {
@@ -645,12 +663,201 @@ describe('shared entry loader', () => {
       entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb', signal: loading.signal }),
     ).rejects.toThrow('503 Offline');
     expect(remove).toHaveBeenCalledOnce();
-    await expect(entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).resolves.toEqual({
+    await expect(entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).resolves.toMatchObject({
       files: [],
     });
-    await expect(entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).resolves.toEqual({
+    await expect(entry.convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' })).resolves.toMatchObject({
       files: [],
     });
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('runtime replacement, recycling, and disposal', () => {
+  const fake = (overrides: Partial<NativeRuntime> = {}): NativeRuntime => ({
+    backend: 'wasm',
+    preparePlan: () => 1,
+    runPlan: async () => 1,
+    cancelPlan: vi.fn(),
+    takePlanResult: () => ({ ok: true, code: '', message: '', formats: [{ format: 'glb', files: [] }] }),
+    destroyPlan: vi.fn(),
+    dispose: vi.fn(),
+    peakMemoryBytes: () => 0,
+    ...overrides,
+  });
+  const entryWith = (loadRuntime: (options: CreateAssimpOptions) => Promise<NativeRuntime>) =>
+    createEntry(glueUrl(), new URL('https://example.test/replace.wasm'), {
+      import: [assimpCapabilities.import.obj],
+      export: [assimpCapabilities.export.glb],
+      loadRuntime,
+    });
+  const input = { name: 'cube.obj', bytes: cube };
+
+  it.each([-1, Number.NaN, '1'])('rejects recycleAboveBytes %s before loading', async (recycleAboveBytes) => {
+    const loadRuntime = vi.fn(async () => fake());
+    await expect(
+      entryWith(loadRuntime).createAssimp({ recycleAboveBytes: recycleAboveBytes as number }),
+    ).rejects.toMatchObject({
+      code: 'INVALID_OPTIONS',
+      message: expect.stringContaining('recycleAboveBytes'),
+    });
+    expect(loadRuntime).not.toHaveBeenCalled();
+  });
+
+  it('replaces a trapped Wasm runtime on the next conversion and keeps the backend', async () => {
+    const trap = new WebAssembly.RuntimeError('unreachable');
+    const first = fake({ runPlan: async () => Promise.reject(trap) });
+    const second = fake();
+    const loadRuntime = vi.fn<(options: CreateAssimpOptions) => Promise<NativeRuntime>>();
+    loadRuntime.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+    await using assimp = await entryWith(loadRuntime).createAssimp({ backend: 'auto' });
+    await expect(assimp.convert(input, { to: 'glb' })).rejects.toMatchObject({
+      code: 'ENGINE_FAILED',
+      cause: trap,
+    });
+    expect(first.dispose).toHaveBeenCalledOnce();
+    expect(first.destroyPlan).not.toHaveBeenCalled();
+    await expect(assimp.convert(input, { to: 'glb' })).resolves.toMatchObject({ files: [] });
+    expect(loadRuntime).toHaveBeenLastCalledWith({ backend: 'wasm' });
+    expect(second.dispose).not.toHaveBeenCalled();
+  });
+
+  it('keeps a native runtime after an engine failure and never recycles one without memory figures', async () => {
+    const runtime = fake({ backend: 'native', runPlan: async () => Promise.reject(new Error('napi')) });
+    const assimp = await entryWith(async () => runtime).createAssimp({ recycleAboveBytes: 0 });
+    await expect(assimp.convert(input, { to: 'glb' })).rejects.toMatchObject({ code: 'ENGINE_FAILED' });
+    expect(runtime.dispose).not.toHaveBeenCalled();
+    await assimp.dispose();
+    expect(runtime.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('recycles an idle instance above its threshold, never while another job runs, and not at Infinity', async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let prepared = 0;
+    const runtimes: NativeRuntime[] = [];
+    const loadRuntime = vi.fn(async () => {
+      const runtime = fake({
+        backend: 'native',
+        preparePlan: () => (prepared++ === 0 ? 'slow' : 'fast'),
+        runPlan: async (handle) => {
+          if (handle === 'slow') await gate;
+          return 1;
+        },
+        memoryBytes: () => 2048,
+      });
+      runtimes.push(runtime);
+      return runtime;
+    });
+    const assimp = await entryWith(loadRuntime).createAssimp({ recycleAboveBytes: 1024 });
+    const slow = assimp.convert(input, { to: 'glb' });
+    await assimp.convert(input, { to: 'glb' });
+    expect(runtimes[0]?.dispose).not.toHaveBeenCalled();
+    release?.();
+    await slow;
+    expect(runtimes[0]?.dispose).toHaveBeenCalledOnce();
+    await Promise.all([assimp.convert(input, { to: 'glb' }), assimp.convert(input, { to: 'glb' })]);
+    expect(loadRuntime).toHaveBeenCalledTimes(2);
+    await assimp.dispose();
+
+    const keep = fake({ memoryBytes: () => 8 * 1024 * 1024 * 1024 });
+    await using kept = await entryWith(async () => keep).createAssimp({
+      recycleAboveBytes: Number.POSITIVE_INFINITY,
+    });
+    await kept.convert(input, { to: 'glb' });
+    expect(keep.dispose).not.toHaveBeenCalled();
+  });
+
+  it('retries a failed reload on the next conversion', async () => {
+    const loadRuntime = vi.fn<() => Promise<NativeRuntime>>();
+    const failedReload = new Error('instantiate failed');
+    loadRuntime
+      .mockResolvedValueOnce(fake({ runPlan: async () => Promise.reject(new Error('trap')) }))
+      .mockRejectedValueOnce(failedReload)
+      .mockResolvedValueOnce(fake());
+    await using assimp = await entryWith(loadRuntime).createAssimp();
+    await expect(assimp.convert(input, { to: 'glb' })).rejects.toMatchObject({ code: 'ENGINE_FAILED' });
+    await expect(assimp.convert(input, { to: 'glb' })).rejects.toBe(failedReload);
+    await expect(assimp.convert(input, { to: 'glb' })).resolves.toMatchObject({ files: [] });
+    expect(loadRuntime).toHaveBeenCalledTimes(3);
+  });
+
+  it('settles disposal after the drain, including a reload, and supports both dispose symbols', async () => {
+    let finishReload: ((runtime: NativeRuntime) => void) | undefined;
+    const recycled = fake({ memoryBytes: () => 1 });
+    const reloaded = fake();
+    const assimp = await entryWith(
+      vi
+        .fn<() => Promise<NativeRuntime>>()
+        .mockResolvedValueOnce(recycled)
+        .mockReturnValueOnce(
+          new Promise((resolve) => {
+            finishReload = resolve;
+          }),
+        ),
+    ).createAssimp({ recycleAboveBytes: 0 });
+    expect(assimp[Symbol.asyncDispose]).toBe(assimp.dispose);
+    await assimp.convert(input, { to: 'glb' });
+    expect(recycled.dispose).toHaveBeenCalledOnce();
+    const pending = assimp.convert(input, { to: 'glb' });
+    const disposed = vi.fn();
+    assimp[Symbol.dispose]();
+    void assimp.dispose().then(disposed);
+    await new Promise<void>(setImmediate);
+    expect(disposed).not.toHaveBeenCalled();
+    finishReload?.(reloaded);
+    await expect(pending).resolves.toMatchObject({ files: [] });
+    await vi.waitFor(() => {
+      expect(disposed).toHaveBeenCalledOnce();
+    });
+    expect(reloaded.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('forwards onProgress through the singular call and returns the report', async () => {
+    const reports: unknown[] = [];
+    const runtime = fake({
+      runPlan: async (_handle, context) => {
+        context.reportProgress({ phase: 3, step: 4, total: 4, formatIndex: 0 });
+        return 1;
+      },
+      peakMemoryBytes: () => 131_072,
+    });
+    await using assimp = await entryWith(async () => runtime).createAssimp();
+    const result = await assimp.convert(input, {
+      to: 'glb',
+      onProgress: (progress) => reports.push(progress),
+    });
+    expect(result).toEqual({
+      files: [],
+      warnings: [],
+      timings: { import: 0, postProcess: 0, export: 0, total: expect.any(Number) },
+      peakMemoryBytes: 131_072,
+    });
+    expect(reports).toEqual([{ phase: 'export', step: 4, total: 4, formatIndex: 0, format: 'glb' }]);
+  });
+
+  it('compiles each Wasm source once and evicts a failed compile', async () => {
+    const module = new WebAssembly.Module(testWasm);
+    const url = new URL('https://example.test/cached.wasm');
+    const compile = vi.fn(async () => module);
+    await expect(compileCached(url, compile)).resolves.toBe(module);
+    await expect(compileCached(new URL(url.href), compile)).resolves.toBe(module);
+    expect(compile).toHaveBeenCalledOnce();
+
+    const failing = new URL('https://example.test/failing.wasm');
+    const broken = vi.fn(async () => Promise.reject(new Error('compile failed')));
+    await expect(compileCached(failing, broken)).rejects.toThrow('compile failed');
+    await expect(compileCached(failing, compile)).resolves.toBe(module);
+
+    const binary = new Uint8Array(testWasm);
+    const fromBytes = vi.fn(async () => module);
+    await compileCached(binary, fromBytes);
+    await compileCached(binary, fromBytes);
+    expect(fromBytes).toHaveBeenCalledOnce();
+    const brokenBinary = new Uint8Array(testWasm);
+    await expect(compileCached(brokenBinary, broken)).rejects.toThrow('compile failed');
+    await expect(compileCached(brokenBinary, fromBytes)).resolves.toBe(module);
   });
 });

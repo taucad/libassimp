@@ -7,8 +7,8 @@ import type {
   ConvertOptions,
   ConvertResult,
   ConvertTarget,
-  NativeModule,
   NativeRuntime,
+  WasmModule,
 } from './convert.js';
 import { prepareConversion, ResolutionContext, runPreparedConversion } from './convert.js';
 import { AssimpError } from './assimp-error.js';
@@ -28,6 +28,16 @@ export type CreateAssimpOptions = {
     readonly message: string;
     readonly cause?: unknown;
   }) => void;
+  /**
+   * Wasm only: once a conversion leaves the instance idle with linear memory
+   * above this size, the Wasm runtime is dropped and the next conversion starts
+   * from a fresh, small heap (the compiled module is reused). Wasm memory never
+   * shrinks in place, so without this a long-lived instance keeps its largest
+   * heap forever. `Infinity` keeps the runtime. Bytes.
+   *
+   * @defaultValue 536870912 (512 MiB)
+   */
+  readonly recycleAboveBytes?: number;
 };
 
 /** Singular conversion callable narrowed to one package entry. @public */
@@ -56,7 +66,15 @@ export type Assimp<ImportFormat extends string, ExportFormat extends AllExportFo
     readonly import: readonly FormatInfo<ImportFormat>[];
     readonly export: readonly ExportFormatInfo<ExportFormat>[];
   };
-  readonly dispose: () => void;
+  /**
+   * Stop accepting conversions, let queued ones finish, then release the
+   * runtime. Settles once the queue has drained. Calling it again returns the
+   * same promise.
+   */
+  readonly dispose: () => Promise<void>;
+  /** `await using` support: the same as {@link Assimp.dispose}. */
+  readonly [Symbol.asyncDispose]: () => Promise<void>;
+  /** `using` support: starts {@link Assimp.dispose} without waiting for the drain. */
   readonly [Symbol.dispose]: () => void;
 };
 
@@ -70,7 +88,7 @@ type ModuleOptions = {
   ) => WebAssembly.Exports;
 };
 
-type ModuleFactory = (options: ModuleOptions) => Promise<NativeModule>;
+type ModuleFactory = (options: ModuleOptions) => Promise<WasmModule>;
 
 type JspiWebAssembly = typeof WebAssembly & {
   readonly Suspending?: new (
@@ -123,6 +141,29 @@ export const compileUrl = async (url: URL): Promise<WebAssembly.Module> => {
   }
 };
 
+const compiledByUrl = new Map<string, Promise<WebAssembly.Module>>();
+const compiledByBinary = new WeakMap<object, Promise<WebAssembly.Module>>();
+
+/**
+ * Compile each Wasm source once per realm, so recycling or replacing a runtime
+ * only instantiates. A failed compile is not cached. @internal
+ */
+export const compileCached = (
+  source: URL | ArrayBuffer | Uint8Array,
+  compile: () => Promise<WebAssembly.Module>,
+): Promise<WebAssembly.Module> => {
+  const cached = source instanceof URL ? compiledByUrl.get(source.href) : compiledByBinary.get(source);
+  if (cached !== undefined) return cached;
+  const compiling = compile();
+  if (source instanceof URL) compiledByUrl.set(source.href, compiling);
+  else compiledByBinary.set(source, compiling);
+  compiling.catch(() => {
+    if (source instanceof URL) compiledByUrl.delete(source.href);
+    else compiledByBinary.delete(source);
+  });
+  return compiling;
+};
+
 /** Report whether the host exposes both JSPI primitives used by libassimp. @internal */
 export const isJspiAvailable = (): boolean => {
   const wasm = WebAssembly as JspiWebAssembly;
@@ -155,10 +196,10 @@ export const loadModule = async (
   options: CreateAssimpOptions,
 ): Promise<NativeRuntime> => {
   try {
-    const compiled =
-      options.wasmBinary === undefined
-        ? await compileUrl(wasmSourceUrl(options.wasmUrl, defaultWasmUrl))
-        : await WebAssembly.compile(options.wasmBinary as BufferSource);
+    const source = options.wasmBinary ?? wasmSourceUrl(options.wasmUrl, defaultWasmUrl);
+    const compiled = await compileCached(source, () =>
+      source instanceof URL ? compileUrl(source) : WebAssembly.compile(source as BufferSource),
+    );
     const glue = (await import(/* webpackIgnore: true */ /* @vite-ignore */ glueUrl.href)) as {
       default: ModuleFactory;
     };
@@ -221,7 +262,9 @@ export const loadModule = async (
     const invoke = jspi && wasm.promising !== undefined ? wasm.promising(raw) : raw;
     return {
       backend: 'wasm',
-      preparePlan: (entryName, files, nativeOptions) => native.preparePlan(entryName, files, nativeOptions),
+      // With JSPI a run never replays, so the engine may drop the entry file once it is imported.
+      preparePlan: (entryName, files, nativeOptions) =>
+        native.preparePlan(entryName, files, { ...nativeOptions, releaseEntry: jspi }),
       runPlan: async (handle, context) => {
         if (active !== undefined) throw new Error('libassimp instance re-entry is not allowed.');
         active = context;
@@ -242,6 +285,7 @@ export const loadModule = async (
         delete runtimeState.memory;
       },
       memoryBytes: () => foundMemory.buffer.byteLength,
+      peakMemoryBytes: () => foundMemory.buffer.byteLength,
     };
   } catch (error) {
     options.onLog?.({ level: 'error', message: error instanceof Error ? error.message : String(error) });
@@ -254,8 +298,8 @@ const disposedError = (): Error => new Error('assimp instance disposed; create a
 /** Bench-only probe of the runtime's memory; not part of the public API. @internal */
 const memoryBytesKey: unique symbol = Symbol.for('libassimp.memoryBytes');
 
-/** The module-level convert recycles its shared Wasm instance once linear memory passes this. @internal */
-const recycleAboveBytes = 512 * 1024 * 1024;
+/** Default {@link CreateAssimpOptions.recycleAboveBytes}. @internal */
+const defaultRecycleAboveBytes = 512 * 1024 * 1024;
 
 const waitFor = <Value>(start: () => Promise<Value>, signal: AbortSignal | undefined): Promise<Value> => {
   if (signal === undefined) return start();
@@ -276,7 +320,7 @@ const waitFor = <Value>(start: () => Promise<Value>, signal: AbortSignal | undef
       abort();
       return;
     }
-    void start().then(
+    start().then(
       (value) => {
         stop();
         resolve(value);
@@ -288,6 +332,20 @@ const waitFor = <Value>(start: () => Promise<Value>, signal: AbortSignal | undef
       },
     );
   });
+};
+
+const validateCreateOptions = (options: CreateAssimpOptions): void => {
+  const backend: unknown = options.backend;
+  if (backend !== undefined && backend !== 'auto' && backend !== 'native' && backend !== 'wasm') {
+    throw new AssimpError('INVALID_OPTIONS', 'Invalid backend; expected auto, native, or wasm.');
+  }
+  const recycle: unknown = options.recycleAboveBytes;
+  if (recycle !== undefined && (typeof recycle !== 'number' || Number.isNaN(recycle) || recycle < 0)) {
+    throw new AssimpError(
+      'INVALID_OPTIONS',
+      'Invalid recycleAboveBytes; expected a non-negative number of bytes, or Infinity to keep the runtime.',
+    );
+  }
 };
 
 /** Bind one package entry to its artifact and generated static format tables. @internal */
@@ -306,8 +364,8 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
       if (options.backend === 'native') {
         return Promise.reject(
           new AssimpError(
-            'IMPORT_FAILED',
-            'backend: native is unavailable from the browser-safe libassimp entry.',
+            'BACKEND_UNAVAILABLE',
+            "backend: native is unavailable from the browser-safe libassimp entry; use backend: 'auto' or 'wasm', or import libassimp from Node.js.",
             { cause: new Error('The default libassimp entry contains no Node loader.') },
           ),
         );
@@ -318,14 +376,58 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
   const createAssimp = async (
     options: CreateAssimpOptions = {},
   ): Promise<Assimp<ImportFormat, ExportFormat>> => {
-    const backend: unknown = options.backend;
-    if (backend !== undefined && backend !== 'auto' && backend !== 'native' && backend !== 'wasm') {
-      throw new AssimpError('INVALID_OPTIONS', 'Invalid backend; expected auto, native, or wasm.');
-    }
-    let runtime: NativeRuntime | undefined = await loadRuntime(options);
-    let disposed = false;
+    validateCreateOptions(options);
+    const recycleAboveBytes = options.recycleAboveBytes ?? defaultRecycleAboveBytes;
+    const first = await loadRuntime(options);
+    const backend = first.backend;
+    // A Wasm runtime is replaced after a trap and recycled when idle and large; both reload
+    // lazily, from the cached compiled module, on the next conversion. A Wasm reload always
+    // stays on Wasm because the Node loader only falls back from native to Wasm.
+    const reloadOptions: CreateAssimpOptions = { ...options, backend };
+    let runtime: NativeRuntime | undefined = first;
+    let loading: Promise<NativeRuntime> | undefined;
+    let disposed: Promise<void> | undefined;
     let drain: Promise<void> = Promise.resolve();
-    const serialize = runtime.backend === 'wasm';
+    let active = 0;
+    const serialize = backend === 'wasm';
+
+    const acquire = (): Promise<NativeRuntime> => {
+      if (runtime !== undefined) return Promise.resolve(runtime);
+      loading ??= loadRuntime(reloadOptions).then(
+        (loaded) => {
+          loading = undefined;
+          runtime = loaded;
+          return loaded;
+        },
+        (error: unknown) => {
+          loading = undefined;
+          throw error;
+        },
+      );
+      return loading;
+    };
+
+    const discard = (): void => {
+      runtime?.dispose();
+      runtime = undefined;
+    };
+
+    const execute = async <Result>(job: (current: NativeRuntime) => Promise<Result>): Promise<Result> => {
+      active += 1;
+      let current: NativeRuntime | undefined;
+      try {
+        current = await acquire();
+        return await job(current);
+      } catch (error) {
+        const trapped = error instanceof AssimpError && error.code === 'ENGINE_FAILED';
+        if (serialize && trapped && runtime === current) discard();
+        throw error;
+      } finally {
+        active -= 1;
+        const bytes = runtime === current ? runtime?.memoryBytes?.() : undefined;
+        if (active === 0 && bytes !== undefined && bytes > recycleAboveBytes) discard();
+      }
+    };
 
     const run = <Result>(operation: () => Promise<Result>, signal: AbortSignal | undefined) => {
       const predecessor = drain;
@@ -339,7 +441,7 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
     };
 
     const convertFormats: ConvertFormatsFunction<ExportFormat> = (files, convertOptions) => {
-      if (disposed) return Promise.reject(disposedError());
+      if (disposed !== undefined) return Promise.reject(disposedError());
       // AbortSignal.reason is deliberately not constrained to Error.
       // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
       if (convertOptions.signal?.aborted) return Promise.reject(convertOptions.signal.reason);
@@ -349,7 +451,7 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
       } catch (error) {
         return Promise.reject(error instanceof Error ? error : new Error(String(error)));
       }
-      return run(() => runPreparedConversion(runtime as NativeRuntime, request), convertOptions.signal);
+      return run(() => execute((current) => runPreparedConversion(current, request)), convertOptions.signal);
     };
 
     const convert: ConvertFunction<ExportFormat> = (files, convertOptions) => {
@@ -363,69 +465,53 @@ export const createEntry = <ImportFormat extends string, ExportFormat extends Al
         targets: [target] as [ConvertTarget<ExportFormat>],
         ...(convertOptions.resolve === undefined ? {} : { resolve: convertOptions.resolve }),
         ...(convertOptions.signal === undefined ? {} : { signal: convertOptions.signal }),
+        ...(convertOptions.onProgress === undefined ? {} : { onProgress: convertOptions.onProgress }),
         ...(convertOptions.importOptions === undefined
           ? {}
           : { importOptions: convertOptions.importOptions }),
         ...(convertOptions.postProcess === undefined ? {} : { postProcess: convertOptions.postProcess }),
       };
-      return convertFormats(files, plural).then(([result]) => ({ files: result.files }));
+      return convertFormats(files, plural).then((result) => ({
+        files: result[0].files,
+        warnings: result.warnings,
+        timings: result.timings,
+        peakMemoryBytes: result.peakMemoryBytes,
+      }));
     };
 
-    const dispose = (): void => {
-      if (disposed) return;
-      disposed = true;
-      void drain.then(() => {
-        runtime?.dispose();
-        runtime = undefined;
-      });
-    };
+    // Every reload starts inside a queued job, so once the drain settles no reload is in flight.
+    const dispose = (): Promise<void> =>
+      (disposed ??= drain.then(() => {
+        discard();
+      }));
 
     const assimp: Assimp<ImportFormat, ExportFormat> = {
-      backend: runtime.backend,
-      ...(runtime.buildIdentity === undefined ? {} : { buildIdentity: runtime.buildIdentity }),
+      backend,
+      ...(first.buildIdentity === undefined ? {} : { buildIdentity: first.buildIdentity }),
       convert,
       convertFormats,
       formats,
       dispose,
-      [Symbol.dispose]: dispose,
+      [Symbol.asyncDispose]: dispose,
+      [Symbol.dispose]: () => {
+        void dispose();
+      },
     };
     Object.defineProperty(assimp, memoryBytesKey, { value: () => runtime?.memoryBytes?.() });
     return assimp;
   };
 
   let shared: Promise<Assimp<ImportFormat, ExportFormat>> | undefined;
-  let sharedJobs = 0;
   const instance = (): Promise<Assimp<ImportFormat, ExportFormat>> =>
     (shared ??= createAssimp().catch((error: unknown) => {
       shared = undefined;
       throw error;
     }));
-  // Wasm memory only grows, so after a large job the idle shared instance is
-  // dropped and the next call starts from a fresh, small heap.
-  const withShared = async <Value>(
-    signal: AbortSignal | undefined,
-    job: (assimp: Assimp<ImportFormat, ExportFormat>) => Promise<Value>,
-  ): Promise<Value> => {
-    let current: Promise<Assimp<ImportFormat, ExportFormat>> | undefined;
-    const assimp = await waitFor(() => (current = instance()), signal);
-    sharedJobs += 1;
-    try {
-      return await job(assimp);
-    } finally {
-      sharedJobs -= 1;
-      const bytes = (assimp as unknown as Record<symbol, (() => number | undefined) | undefined>)[
-        memoryBytesKey
-      ]?.();
-      if (sharedJobs === 0 && shared === current && bytes !== undefined && bytes > recycleAboveBytes) {
-        shared = undefined;
-        assimp.dispose();
-      }
-    }
-  };
+  // The shared instance recycles and replaces its Wasm runtime like any other instance.
   const convert: ConvertFunction<ExportFormat> = (files, options) =>
-    withShared(options.signal, (assimp) => assimp.convert(files, options));
+    waitFor(instance, options.signal).then((assimp) => assimp.convert(files, options));
   const convertFormats: ConvertFormatsFunction<ExportFormat> = (files, options) =>
-    withShared(options.signal, (assimp) => assimp.convertFormats(files, options));
+    waitFor(instance, options.signal).then((assimp) => assimp.convertFormats(files, options));
 
   return { convert, convertFormats, createAssimp };
 };

@@ -8,6 +8,8 @@ import {
   prepareConversion,
   ResolutionContext,
   runPreparedConversion,
+  engineFailure,
+  HostOutput,
   unsignedWasmI32,
   type NativeRuntime,
   type PreparedConversion,
@@ -21,6 +23,7 @@ import {
   type ConvertResult,
 } from './index.js';
 
+const NativeArrayBuffer = ArrayBuffer;
 const fixture = (name: string): Uint8Array =>
   new Uint8Array(readFileSync(new URL(`../tests/fixtures/${name}`, import.meta.url)));
 const model = (name: string): Uint8Array =>
@@ -53,7 +56,7 @@ describe('convert and convertFormats', () => {
       },
     );
     expect(results.map(({ format }) => format)).toEqual(['glb', 'stl', 'stl']);
-    expect(results.map(({ files }) => files[0]?.name)).toEqual(['result.glb', 'result.stl', 'result.stl']);
+    expect(results.map(({ files }) => files[0]?.name)).toEqual(['cube.glb', 'cube.stl', 'cube.stl']);
     expect(results[1].files[0]?.bytes).not.toEqual(results[2].files[0]?.bytes);
   });
 
@@ -61,7 +64,7 @@ describe('convert and convertFormats', () => {
     const singular = await convert({ name: 'cube.obj', bytes: cube }, { to: 'gltf' });
     const [plural] = await convertFormats({ name: 'cube.obj', bytes: cube }, { targets: [{ to: 'gltf' }] });
     expect(plural.files).toEqual(singular.files);
-    expect(plural.files.map(({ name }) => name)).toEqual(['result.gltf', 'result.bin']);
+    expect(plural.files.map(({ name }) => name)).toEqual(['cube.gltf', 'cube.bin']);
   });
 
   it('passes all provided source and sidecar files', async () => {
@@ -70,7 +73,7 @@ describe('convert and convertFormats', () => {
       { name: 'cube_usemtl.mtl', bytes: model('OBJ/cube_usemtl.mtl') },
     ];
     const result = await convert(files, { to: 'glb' });
-    expect(primary(result).name).toBe('result.glb');
+    expect(primary(result).name).toBe('cube_usemtl.glb');
   });
 
   it('resolves a sidecar asynchronously without prefetch and calls once per exact name', async () => {
@@ -86,7 +89,7 @@ describe('convert and convertFormats', () => {
         },
       },
     );
-    expect(primary(result).name).toBe('result.glb');
+    expect(primary(result).name).toBe('cube_usemtl.glb');
     expect(asked.filter((name) => name === 'cube_usemtl.mtl')).toHaveLength(1);
   });
 
@@ -137,8 +140,8 @@ describe('convert and convertFormats', () => {
         { to: 'ply', exportOptions: { binary: true } },
       ],
     });
-    expect(withMaterials.files.map(({ name }) => name)).toContain('result.mtl');
-    expect(withoutMaterials.files.map(({ name }) => name)).toEqual(['result.obj']);
+    expect(withMaterials.files.map(({ name }) => name)).toContain('cube_usemtl.mtl');
+    expect(withoutMaterials.files.map(({ name }) => name)).toEqual(['cube_usemtl.obj']);
     expect(text(asciiPly.files[0]?.bytes ?? new Uint8Array())).toContain('format ascii');
     expect(text(binaryPly.files[0]?.bytes.subarray(0, 80) ?? new Uint8Array())).toContain(
       'format binary_little_endian',
@@ -156,7 +159,7 @@ describe('convert and convertFormats', () => {
       { name: 'cube.obj', bytes: cube },
       { to: 'glb', postProcess: [...defaultPostProcess, 'optimizeMeshes'] },
     );
-    expect(primary(result).name).toBe('result.glb');
+    expect(primary(result).name).toBe('cube.glb');
   });
 });
 
@@ -192,7 +195,7 @@ describe('validation and atomic errors', () => {
     expect(error.code).toBe('IMPORT_FAILED');
     const versionTwo = model('glTF2/BoxTextured-glTF-Binary/BoxTextured.glb');
     expect(primary(await convert({ name: 'modern.glb', bytes: versionTwo }, { to: 'glb' })).name).toBe(
-      'result.glb',
+      'modern.glb',
     );
   });
 
@@ -544,7 +547,9 @@ describe('resolver and staged-plan internals', () => {
     );
 
   const runtime = (
-    overrides: Partial<Pick<NativeRuntime, 'destroyPlan' | 'preparePlan' | 'takePlanResult'>> & {
+    overrides: Partial<
+      Pick<NativeRuntime, 'backend' | 'destroyPlan' | 'peakMemoryBytes' | 'preparePlan' | 'takePlanResult'>
+    > & {
       runPlan: NativeRuntime['runPlan'];
     },
   ) => {
@@ -558,6 +563,7 @@ describe('resolver and staged-plan internals', () => {
       destroyPlan: (handle) => destroyed.push(handle as number),
       cancelPlan: (handle) => cancelled.push(handle as number),
       dispose: () => undefined,
+      peakMemoryBytes: () => 42,
       ...nativeOverrides,
       runPlan,
     };
@@ -620,21 +626,122 @@ describe('resolver and staged-plan internals', () => {
     expect(destroyed).toEqual([7]);
   });
 
-  it('preserves a run rejection and still destroys its plan', async () => {
-    const cause = new Error('runtime failed');
+  it('wraps a run rejection as ENGINE_FAILED and leaves the trapped plan alone', async () => {
+    const cause = new Error('unreachable executed');
     const { destroyed, value } = runtime({
       runPlan: async () => Promise.reject(cause),
     });
-    await expect(runPreparedConversion(value, request())).rejects.toBe(cause);
+    const error = await failure(runPreparedConversion(value, request()));
+    expect(error).toMatchObject({ code: 'ENGINE_FAILED', cause });
+    expect(error.message).toBe(
+      'The wasm engine failed: unreachable executed. The Wasm runtime was discarded; the next conversion starts a fresh one.',
+    );
+    expect(destroyed).toEqual([]);
+  });
+
+  it('wraps throws from plan preparation and result handover, but keeps typed errors', async () => {
+    const typed = new AssimpError('INVALID_OPTIONS', 'nested');
+    const prepareTyped = runtime({
+      preparePlan: () => {
+        throw typed;
+      },
+      runPlan: async () => 1,
+    });
+    await expect(runPreparedConversion(prepareTyped.value, request())).rejects.toBe(typed);
+    const prepareRaw = runtime({
+      backend: 'native',
+      preparePlan: () => {
+        throw 'bad_alloc';
+      },
+      runPlan: async () => 1,
+    });
+    const prepared = await failure(runPreparedConversion(prepareRaw.value, request()));
+    expect(prepared).toMatchObject({
+      code: 'ENGINE_FAILED',
+      cause: 'bad_alloc',
+      message: 'The native engine failed: bad_alloc.',
+    });
+    const take = runtime({
+      runPlan: async () => 1,
+      takePlanResult: () => {
+        throw new RangeError('table index is out of bounds');
+      },
+    });
+    await expect(runPreparedConversion(take.value, request())).rejects.toMatchObject({
+      code: 'ENGINE_FAILED',
+    });
+    expect(take.destroyed).toEqual([]);
+    expect(engineFailure('wasm', typed)).toBe(typed);
+  });
+
+  it('rejects replay without new resolver work as INTERNAL and destroys the plan', async () => {
+    const { destroyed, value } = runtime({ runPlan: async () => -1 });
+    const error = await failure(runPreparedConversion(value, request()));
+    expect(error.code).toBe('INTERNAL');
+    expect(error.message).toContain('replay without new resolver work');
     expect(destroyed).toEqual([7]);
   });
 
-  it('rejects replay without new resolver work and always destroys the plan', async () => {
-    const { destroyed, value } = runtime({ runPlan: async () => -1 });
-    await expect(runPreparedConversion(value, request())).rejects.toThrow(
-      'PENDING without new resolver work',
-    );
+  it('reports an engine-side stop without a signal abort as ABORTED', async () => {
+    const { destroyed, value } = runtime({ runPlan: async () => 3 });
+    await expect(runPreparedConversion(value, request())).rejects.toMatchObject({ code: 'ABORTED' });
     expect(destroyed).toEqual([7]);
+  });
+
+  it.each([
+    [
+      { code: 'LIMIT_EXCEEDED', message: '' },
+      'wasm',
+      "The conversion ran out of memory while importing 'cube.obj'. A Wasm instance is limited to 4 GiB; split the input, request fewer post-processing steps, or use the native backend on Node.js.",
+    ],
+    [
+      { code: 'LIMIT_EXCEEDED', message: 'std::bad_alloc', formatIndex: 0, format: 'glb' },
+      'native',
+      'The conversion ran out of memory while exporting glb (std::bad_alloc). Free memory on the host or split the input.',
+    ],
+    [
+      { code: 'IMPORT_FAILED', message: '' },
+      'wasm',
+      "assimp could not import 'cube.obj' and gave no reason.",
+    ],
+    [
+      { code: 'EXPORT_FAILED', message: '', formatIndex: 0, format: 'glb' },
+      'wasm',
+      "assimp's glb exporter failed and gave no reason.",
+    ],
+    [
+      { code: 'RESOLVE_FAILED', message: '' },
+      'wasm',
+      'The conversion failed with RESOLVE_FAILED and no message.',
+    ],
+    [{ code: 'IMPORT_FAILED', message: 'bad header' }, 'wasm', 'bad header'],
+  ] as const)('writes a useful message for engine failure %#', async (context, backend, message) => {
+    const { value } = runtime({
+      backend,
+      runPlan: async () => 0,
+      takePlanResult: () => ({ ok: false, formats: [], ...context }),
+    });
+    await expect(runPreparedConversion(value, request())).rejects.toMatchObject({
+      code: context.code,
+      message,
+    });
+  });
+
+  it('maps an unknown engine failure code to INTERNAL with its context', async () => {
+    const { value } = runtime({
+      runPlan: async () => 0,
+      takePlanResult: () => ({
+        ok: false,
+        code: 'MYSTERY' as 'INTERNAL',
+        message: 'what',
+        formatIndex: 0,
+        format: 'glb',
+        formats: [],
+      }),
+    });
+    const error = await failure(runPreparedConversion(value, request()));
+    expect(error).toMatchObject({ code: 'INTERNAL', formatIndex: 0, format: 'glb' });
+    expect(error.message).toContain("'MYSTERY' (what)");
   });
 
   it('maps a resolver rejection that settles between replay attempts', async () => {
@@ -728,5 +835,366 @@ describe('instance route parity', () => {
     }
     expect(asked[0]).toEqual(asked[1]);
     expect(asked[0]?.filter((name) => name === 'cube_usemtl.mtl')).toHaveLength(1);
+  });
+});
+
+describe('streamed output, progress, and the conversion report', () => {
+  const memory = new WebAssembly.Memory({ initial: 1 });
+  const words = (offset: number, values: readonly number[], signed = false): number => {
+    (signed
+      ? new Int32Array(memory.buffer, offset, values.length)
+      : new Uint32Array(memory.buffer, offset, values.length)
+    ).set(values);
+    return offset;
+  };
+  const writeChunk = (
+    context: ResolutionContext,
+    file: number,
+    { offset, bytes }: { readonly offset: number; readonly bytes: readonly number[] },
+  ): number => {
+    new Uint8Array(memory.buffer, 1024, bytes.length).set(bytes);
+    return context.dispatch({
+      operation: 5,
+      first: words(0, [file, 1024, bytes.length, offset]),
+      second: 0,
+      memory,
+      suspending: false,
+    }) as number;
+  };
+  const reportProgress = (context: ResolutionContext, values: readonly number[]): unknown =>
+    context.dispatch({ operation: 6, first: words(64, values, true), second: 0, memory, suspending: false });
+
+  const request = (onProgress?: (progress: unknown) => void) =>
+    prepareConversion(
+      { name: 'models/chair.obj', bytes: cube },
+      {
+        targets: [{ to: 'glb' }, { to: 'stl' }] as const,
+        ...(onProgress === undefined ? {} : { onProgress }),
+      },
+      new Set(['glb', 'stl']),
+    );
+
+  it('names outputs after the entry stem with the canonical extension', () => {
+    const name = (entry: string, to = 'step'): string | undefined =>
+      validatePlanOptions({ targets: [{ to }] }, new Set([to]), entry).targets[0]?.outputName;
+    expect(name('chair.obj')).toBe('chair.step');
+    expect(name('dir/sub\\part.v2.STEP', 'glb')).toBe('part.v2.glb');
+    expect(name('noext')).toBe('noext.step');
+    expect(name('.hidden')).toBe('.hidden.step');
+    expect(name('dir/')).toBe('result.step');
+    expect(validatePlanOptions({ targets: [{ to: 'glb' }] }, new Set(['glb'])).targets[0]?.outputName).toBe(
+      'result.glb',
+    );
+  });
+
+  it('rejects empty and repeated input names and a non-function progress listener', () => {
+    const options = { targets: [{ to: 'glb' }] } as const;
+    const invalid = (files: readonly AssimpFile[], extra: object = {}): AssimpError => {
+      try {
+        prepareConversion(files, { ...options, ...extra }, new Set(['glb']));
+      } catch (error) {
+        return error as AssimpError;
+      }
+      throw new Error('expected a validation failure');
+    };
+    const empty = invalid([{ name: '', bytes: cube }]);
+    expect(empty).toMatchObject({ code: 'INVALID_OPTIONS' });
+    expect(empty.message).toContain('files[0].name: expected a non-empty name');
+    const repeated = invalid([
+      { name: 'a.obj', bytes: cube },
+      { name: 'a.mtl', bytes: cube },
+      { name: 'a.obj', bytes: cube },
+    ]);
+    expect(repeated).toMatchObject({ code: 'INVALID_OPTIONS' });
+    expect(repeated.message).toContain("files[2].name: 'a.obj' repeats an earlier file");
+    const listener = invalid([{ name: 'a.obj', bytes: cube }], { onProgress: 'yes' });
+    expect(listener).toMatchObject({
+      code: 'INVALID_OPTIONS',
+      message: expect.stringContaining('onProgress'),
+    });
+  });
+
+  it('assembles streamed chunks in place, patches earlier bytes, and releases them on handover', () => {
+    const context = new ResolutionContext(undefined);
+    expect(writeChunk(context, 1, { offset: 0, bytes: [1, 2, 3] })).toBe(0);
+    expect(writeChunk(context, 1, { offset: 3, bytes: [4, 5] })).toBe(0);
+    expect(writeChunk(context, 1, { offset: 1, bytes: [9] })).toBe(0);
+    expect(writeChunk(context, 2, { offset: 0, bytes: [7] })).toBe(0);
+    const first = context.takeOutput(1, 6);
+    expect([...first]).toEqual([1, 9, 3, 4, 5, 0]);
+    expect(first.buffer.byteLength).toBe(6);
+    expect([...context.takeOutput(1, 2)]).toEqual([0, 0]);
+    context.resetOutputs();
+    expect([...context.takeOutput(2, 1)]).toEqual([0]);
+    expect(writeChunk(context, 3, { offset: 0, bytes: [1] })).toBe(0);
+    context.dispose();
+    expect([...context.takeOutput(3, 0)]).toEqual([]);
+    expect(context.getOutputFailure()).toBeUndefined();
+  });
+
+  it('grows a resizable output past its reservation without copying the finished bytes', () => {
+    const output = new HostOutput(4);
+    output.write(0, new Uint8Array([1, 2, 3, 4]));
+    output.write(4, new Uint8Array([5, 6, 7, 8, 9]));
+    const bytes = output.take(9, true);
+    expect([...bytes]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(bytes.buffer.resizable).toBe(true);
+    expect(bytes.buffer.maxByteLength).toBe(4 * 1024 * 1024 * 1024);
+    expect(new HostOutput(16).take(3, true).byteLength).toBe(3);
+  });
+
+  it('transfers a finished resizable output to a fixed-length buffer by default', () => {
+    const output = new HostOutput(4);
+    output.write(0, new Uint8Array([1, 2, 3]));
+    const bytes = output.take(5);
+    expect([...bytes]).toEqual([1, 2, 3, 0, 0]);
+    expect(bytes.buffer.resizable).toBe(false);
+    expect(bytes.buffer.byteLength).toBe(5);
+    expect(new TextDecoder().decode(bytes.subarray(0, 3))).toBe('\u0001\u0002\u0003');
+  });
+
+  it.each([
+    ['ignores maxByteLength', (length: number) => new NativeArrayBuffer(length)],
+    [
+      'rejects maxByteLength',
+      (length: number, options?: object) => {
+        if (options !== undefined) throw new TypeError('resizable buffers are unsupported');
+        return new NativeArrayBuffer(length);
+      },
+    ],
+  ])('falls back to geometric growth when the host %s', (_label, construct) => {
+    vi.stubGlobal('ArrayBuffer', function (length: number, options?: object) {
+      return construct(length, options);
+    });
+    try {
+      const output = new HostOutput();
+      output.write(0, new Uint8Array([1, 2]));
+      output.write(2, new Uint8Array([3]));
+      output.write(3, new Uint8Array([4]));
+      const exact = output.take(4);
+      expect([...exact]).toEqual([1, 2, 3, 4]);
+      expect(exact.buffer.resizable).toBe(false);
+      const sliced = new HostOutput();
+      sliced.write(0, new Uint8Array([1, 2]));
+      sliced.write(2, new Uint8Array([3]));
+      const copy = sliced.take(3);
+      expect([...copy]).toEqual([1, 2, 3]);
+      expect(copy.buffer.byteLength).toBe(3);
+      expect([...new HostOutput().take(2)]).toEqual([0, 0]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('reports an output the host cannot hold as LIMIT_EXCEEDED', async () => {
+    const tooFar = 4 * 1024 * 1024 * 1024 + 1;
+    const value: NativeRuntime = {
+      backend: 'wasm',
+      preparePlan: () => 1,
+      runPlan: async (_handle, context) => {
+        expect(context.writeOutput(1, tooFar, new Uint8Array([1]))).toBe(-1);
+        expect(context.writeOutput(1, tooFar + 1, new Uint8Array([1]))).toBe(-1);
+        return 1;
+      },
+      cancelPlan: () => undefined,
+      takePlanResult: () => ({ ok: true, code: '', message: '', formats: [] }),
+      destroyPlan: () => undefined,
+      dispose: () => undefined,
+      peakMemoryBytes: () => 0,
+    };
+    const error = await failure(runPreparedConversion(value, request()));
+    expect(error.code).toBe('LIMIT_EXCEEDED');
+    expect(error.message).toContain('could not hold the converted output');
+    expect(error.cause).toBeInstanceOf(RangeError);
+  });
+
+  it('delivers progress by phase, swallows listener errors, and stops after disposal', () => {
+    const reports: unknown[] = [];
+    const context = new ResolutionContext(undefined, undefined, {
+      onProgress: (progress) => {
+        reports.push(progress);
+        if (progress.phase === 'postProcess') throw new Error('listener bug');
+      },
+      formats: ['glb', 'stl'],
+    });
+    expect(context.reportsProgress()).toBe(true);
+    expect(reportProgress(context, [1, 5, 10, -1])).toBe(0);
+    reportProgress(context, [2, 3, 30, -1]);
+    reportProgress(context, [3, 4, 4, 1]);
+    context.dispose();
+    reportProgress(context, [1, 10, 10, -1]);
+    expect(reports).toEqual([
+      { phase: 'import', step: 5, total: 10 },
+      { phase: 'postProcess', step: 3, total: 30 },
+      { phase: 'export', step: 4, total: 4, formatIndex: 1, format: 'stl' },
+    ]);
+    const silent = new ResolutionContext(undefined);
+    expect(silent.reportsProgress()).toBe(false);
+    reportProgress(silent, [1, 0, 1, -1]);
+    silent.dispose();
+  });
+
+  it('returns streamed and native bytes with warnings, timings, and the memory high-water mark', async () => {
+    const reports: unknown[] = [];
+    const value: NativeRuntime = {
+      backend: 'wasm',
+      preparePlan: (_entry, _files, options) => {
+        expect(options.progress).toBe(true);
+        expect(options.targets.map(({ outputName }) => outputName)).toEqual(['chair.glb', 'chair.stl']);
+        return 1;
+      },
+      runPlan: async (_handle, context) => {
+        writeChunk(context, 1, { offset: 0, bytes: [0x67, 0x6c] });
+        reportProgress(context, [3, 1, 4, 0]);
+        return 1;
+      },
+      cancelPlan: () => undefined,
+      takePlanResult: () => ({
+        ok: true,
+        code: '',
+        message: '',
+        formats: [
+          { format: 'glb', files: [{ name: 'chair.glb', hostFile: 1, size: 2 }] },
+          { format: 'stl', files: [{ name: 'chair.stl', bytes: new Uint8Array([5]) }] },
+        ],
+        warnings: [
+          {
+            error: false,
+            phase: 1,
+            formatIndex: -1,
+            message: 'OBJ: no name for material library specified.',
+          },
+          { error: true, phase: 2, formatIndex: -1, message: 'degenerate face' },
+          { error: false, phase: 3, formatIndex: 1, message: 'binary STL' },
+        ],
+        timings: { import: 1.5, postProcess: 0.25, export: 2 },
+      }),
+      destroyPlan: () => undefined,
+      dispose: () => undefined,
+      peakMemoryBytes: () => 65_536,
+    };
+    const result = await runPreparedConversion(
+      value,
+      request((progress) => reports.push(progress)),
+    );
+    expect(result.map(({ files }) => files.map(({ name, bytes }) => [name, [...bytes]]))).toEqual([
+      [['chair.glb', [0x67, 0x6c]]],
+      [['chair.stl', [5]]],
+    ]);
+    expect(result.warnings).toEqual([
+      { severity: 'warning', phase: 'import', message: 'OBJ: no name for material library specified.' },
+      { severity: 'error', phase: 'postProcess', message: 'degenerate face' },
+      { severity: 'warning', phase: 'export', message: 'binary STL', formatIndex: 1, format: 'stl' },
+    ]);
+    expect(Object.keys(result.warnings[0] ?? {})).not.toContain('formatIndex');
+    expect(result.timings).toEqual({ import: 1.5, postProcess: 0.25, export: 2, total: expect.any(Number) });
+    expect(result.timings.total).toBeGreaterThanOrEqual(0);
+    expect(result.peakMemoryBytes).toBe(65_536);
+    expect(reports).toEqual([{ phase: 'export', step: 1, total: 4, formatIndex: 0, format: 'glb' }]);
+  });
+
+  it('leaves unset error context absent rather than undefined', () => {
+    const bare = new AssimpError('INTERNAL', 'x');
+    expect(Object.keys(bare).toSorted()).toEqual(['code', 'name']);
+    expect('formatIndex' in bare).toBe(false);
+    expect('cause' in bare).toBe(false);
+    const full = new AssimpError('EXPORT_FAILED', 'y', {
+      formatIndex: 0,
+      format: 'glb',
+      fileName: 'a',
+      cause: 1,
+    });
+    expect(full).toMatchObject({ formatIndex: 0, format: 'glb', fileName: 'a', cause: 1 });
+  });
+});
+
+describe('engine diagnostics and resource limits on the real Wasm runtime', () => {
+  const header = (vertices: number, padding = 0): Uint8Array => {
+    const text = `ply\nformat ascii 1.0\nelement vertex ${vertices}\nproperty float x\nproperty float y\nproperty float z\nend_header\n0 0 0\n`;
+    const encoded = new TextEncoder().encode(text);
+    const bytes = new Uint8Array(encoded.length + padding);
+    bytes.set(encoded);
+    bytes.fill(0x20, encoded.length);
+    return bytes;
+  };
+
+  it('reports an allocation failure as LIMIT_EXCEEDED and keeps the instance working', async () => {
+    await using assimp = await createAssimp({ recycleAboveBytes: Number.POSITIVE_INFINITY });
+    // 357 million float3 vertices need ~4.28 GB: below the 32-bit size limit, above what Wasm can grow to.
+    const error = await failure(
+      assimp.convert({ name: 'huge.ply', bytes: header(357_000_000) }, { to: 'stl' }),
+    );
+    expect(error.code).toBe('LIMIT_EXCEEDED');
+    expect(error.message).toContain("importing 'huge.ply'");
+    expect(error.message).toContain('4 GiB');
+    expect('formatIndex' in error).toBe(false);
+    const after = await assimp.convert({ name: 'cube.obj', bytes: cube }, { to: 'stl' });
+    expect(after.files.map(({ name }) => name)).toEqual(['cube.stl']);
+  });
+
+  it('keeps linear memory flat across repeated failing conversions', async () => {
+    await using assimp = await createAssimp({ recycleAboveBytes: Number.POSITIVE_INFINITY });
+    const memoryBytes = Reflect.get(assimp, Symbol.for('libassimp.memoryBytes')) as () => number;
+    const broken = new Uint8Array(4 * 1024 * 1024).fill(0x78);
+    broken.set(new TextEncoder().encode('ply\nformat ascii 1.0\nelement vertex x\n'));
+    const fail = async (): Promise<void> => {
+      await failure(assimp.convert({ name: 'broken.ply', bytes: broken }, { to: 'stl' }));
+      await failure(
+        assimp.convert({ name: 'huge.ply', bytes: header(357_000_000, 1024 * 1024) }, { to: 'stl' }),
+      );
+      await failure(
+        assimp.convert(
+          { name: 'cube_usemtl.obj', bytes: model('OBJ/cube_usemtl.obj') },
+          { to: 'glb', resolve: async () => Promise.reject(new Error('offline')) },
+        ),
+      );
+    };
+    for (let index = 0; index < 3; index += 1) await fail();
+    const settled = memoryBytes();
+    // Each round stages 5 MiB of input; a per-call leak would grow memory by at least that much.
+    for (let index = 0; index < 30; index += 1) await fail();
+    expect(memoryBytes()).toBe(settled);
+  });
+
+  it('collects assimp warnings with a cap and a count of the rest', async () => {
+    const source = `${'mtllib\n'.repeat(70)}v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n`;
+    const result = await convert(
+      { name: 'noisy.obj', bytes: new TextEncoder().encode(source) },
+      { to: 'ply' },
+    );
+    expect(result.files.map(({ name }) => name)).toEqual(['noisy.ply']);
+    expect(result.warnings).toHaveLength(65);
+    expect(result.warnings[0]).toEqual({
+      severity: 'warning',
+      phase: 'import',
+      message: expect.stringContaining('no name for material library'),
+    });
+    const omitted = /^(\d+) more assimp messages were omitted\.$/u.exec(
+      result.warnings.at(-1)?.message ?? '',
+    );
+    expect(Number(omitted?.[1])).toBeGreaterThanOrEqual(6);
+  });
+
+  it('reports progress, timings, and peak memory for a real conversion', async () => {
+    const reports: { phase: string; step: number; total: number; formatIndex?: number }[] = [];
+    const result = await convertFormats(
+      { name: 'cube.obj', bytes: cube },
+      { targets: [{ to: 'glb' }, { to: 'stl' }], onProgress: (progress) => reports.push(progress) },
+    );
+    expect(result.map(({ files }) => files[0]?.name)).toEqual(['cube.glb', 'cube.stl']);
+    expect(reports[0]).toMatchObject({ phase: 'import', step: 0 });
+    expect(reports.some(({ phase }) => phase === 'postProcess')).toBe(true);
+    expect(reports.filter(({ phase }) => phase === 'export').map(({ formatIndex }) => formatIndex)).toContain(
+      1,
+    );
+    expect(reports.at(-1)).toMatchObject({ phase: 'export', formatIndex: 1, format: 'stl' });
+    for (const { step, total } of reports) expect(step).toBeLessThanOrEqual(total);
+    expect(Array.isArray(result.warnings)).toBe(true);
+    for (const value of Object.values(result.timings)) expect(value).toBeGreaterThanOrEqual(0);
+    expect(result.timings.total).toBeGreaterThanOrEqual(result.timings.import);
+    expect(result.peakMemoryBytes).toBeGreaterThan(0);
+    expect(result.peakMemoryBytes % 65_536).toBe(0);
+    const bytes = result[0].files[0]?.bytes;
+    expect(bytes?.byteLength).toBe(bytes?.buffer.byteLength);
   });
 });
