@@ -25,10 +25,6 @@ export type PostProcessDescriptor = Readonly<{
 }>;
 
 export type ImportOptions = {
-  /** Meters represented by one 3DS source unit. Default: 1. */
-  readonly '3dsUnitScaleToMeters'?: number;
-  /** The 3DS source up axis. Default: "z". */
-  readonly '3dsUpAxis'?: 'x' | 'y' | 'z';
   /** Meters represented by one 3MF source unit. Default: null. */
   readonly '3mfUnitScaleToMeters'?: number;
   /** The 3MF source up axis. Default: "z". */
@@ -290,23 +286,10 @@ export type ImportOptions = {
   readonly usdUnitScaleToMeters?: number;
   /** The USD source up axis. Default: "y". */
   readonly usdUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one X3D source unit. Default: 1. */
-  readonly x3dUnitScaleToMeters?: number;
-  /** The X3D source up axis. Default: "y". */
-  readonly x3dUpAxis?: 'x' | 'y' | 'z';
   /** Meters represented by one XGL source unit. Default: 1. */
   readonly xglUnitScaleToMeters?: number;
   /** The XGL source up axis. Default: "y". */
   readonly xglUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one X source unit. Default: 1. */
-  readonly xUnitScaleToMeters?: number;
-  /** The X source up axis. Default: "y". */
-  readonly xUpAxis?: 'x' | 'y' | 'z';
-};
-
-type Format3dsExportOptions = {
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false. Default: false. */
-  readonly pointClouds?: boolean;
 };
 
 type Format3mfExportOptions = {
@@ -462,20 +445,7 @@ type FormatUsdzExportOptions = {
   readonly pointClouds?: boolean;
 };
 
-type FormatXExportOptions = {
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false. Default: false. */
-  readonly pointClouds?: boolean;
-  /** Specifies the xfile use double for real values of float Property type: Bool. Default value: false. Default: false. */
-  readonly use64Bit?: boolean;
-};
-
-type FormatX3dExportOptions = {
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false. Default: false. */
-  readonly pointClouds?: boolean;
-};
-
 export type ExportOptionsByFormat = {
-  readonly '3ds': Format3dsExportOptions;
   readonly '3mf': Format3mfExportOptions;
   readonly assjson: FormatAssjsonExportOptions;
   readonly dae: FormatDaeExportOptions;
@@ -489,8 +459,6 @@ export type ExportOptionsByFormat = {
   readonly usda: FormatUsdaExportOptions;
   readonly usdc: FormatUsdcExportOptions;
   readonly usdz: FormatUsdzExportOptions;
-  readonly x: FormatXExportOptions;
-  readonly x3d: FormatX3dExportOptions;
 };
 
 export type AllExportFormat = keyof ExportOptionsByFormat;
@@ -562,11 +530,6 @@ export const importFormats = [
     description: 'USD Object Importer',
   },
   {
-    id: 'x',
-    extension: 'x',
-    description: 'Direct3D XFile Importer',
-  },
-  {
     id: 'obj',
     extension: 'obj',
     description: 'Wavefront Object Importer',
@@ -575,16 +538,6 @@ export const importFormats = [
     id: 'amf',
     extension: 'amf',
     description: 'Additive manufacturing file format(AMF) Importer',
-  },
-  {
-    id: '3ds',
-    extension: '3ds',
-    description: 'Discreet 3DS Importer',
-  },
-  {
-    id: 'prj',
-    extension: 'prj',
-    description: 'Discreet 3DS Importer',
   },
   {
     id: 'md3',
@@ -857,26 +810,6 @@ export const importFormats = [
     description: '3mf Importer',
   },
   {
-    id: 'wrl',
-    extension: 'wrl',
-    description: 'VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer',
-  },
-  {
-    id: 'x3d',
-    extension: 'x3d',
-    description: 'VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer',
-  },
-  {
-    id: 'x3db',
-    extension: 'x3db',
-    description: 'VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer',
-  },
-  {
-    id: 'x3dv',
-    extension: 'x3dv',
-    description: 'VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer',
-  },
-  {
     id: 'pmx',
     extension: 'pmx',
     description: 'MMD Importer',
@@ -888,19 +821,6 @@ export const importFormats = [
   },
 ] as const;
 export const exportFormats = [
-  {
-    id: '3ds',
-    extension: '3ds',
-    description: 'Autodesk 3DS (legacy)',
-    exportOptions: {
-      pointClouds: {
-        kind: 'boolean',
-        default: false,
-        description:
-          'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      },
-    },
-  },
   {
     id: '3mf',
     extension: '3mf',
@@ -1332,38 +1252,6 @@ export const exportFormats = [
       },
     },
   },
-  {
-    id: 'x',
-    extension: 'x',
-    description: 'DirectX X file',
-    exportOptions: {
-      pointClouds: {
-        kind: 'boolean',
-        default: false,
-        description:
-          'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      },
-      use64Bit: {
-        kind: 'boolean',
-        default: false,
-        description:
-          'Specifies the xfile use double for real values of float Property type: Bool. Default value: false.',
-      },
-    },
-  },
-  {
-    id: 'x3d',
-    extension: 'x3d',
-    description: 'Extensible 3D',
-    exportOptions: {
-      pointClouds: {
-        kind: 'boolean',
-        default: false,
-        description:
-          'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      },
-    },
-  },
 ] as const;
 
 export type CompiledImportFormat =
@@ -1371,11 +1259,8 @@ export type CompiledImportFormat =
   | 'usda'
   | 'usdc'
   | 'usdz'
-  | 'x'
   | 'obj'
   | 'amf'
-  | '3ds'
-  | 'prj'
   | 'md3'
   | 'md2'
   | 'ply'
@@ -1430,10 +1315,6 @@ export type CompiledImportFormat =
   | 'glb'
   | 'vrm'
   | '3mf'
-  | 'wrl'
-  | 'x3d'
-  | 'x3db'
-  | 'x3dv'
   | 'pmx'
   | 'iqm';
 
@@ -1461,18 +1342,6 @@ const createConversionEdges = <ImportFormat extends string, ExportFormat extends
 export const conversionEdges = createConversionEdges(importFormats, exportFormats);
 
 const importOptionDescriptors = {
-  '3dsUnitScaleToMeters': {
-    kind: 'number',
-    default: 1,
-    minimum: 0,
-    description: 'Meters represented by one 3DS source unit.',
-  },
-  '3dsUpAxis': {
-    kind: 'string',
-    default: 'z',
-    values: ['x', 'y', 'z'],
-    description: 'The 3DS source up axis.',
-  },
   '3mfUnitScaleToMeters': {
     kind: 'number',
     default: null,
@@ -2197,18 +2066,6 @@ const importOptionDescriptors = {
     values: ['x', 'y', 'z'],
     description: 'The USD source up axis.',
   },
-  x3dUnitScaleToMeters: {
-    kind: 'number',
-    default: 1,
-    minimum: 0,
-    description: 'Meters represented by one X3D source unit.',
-  },
-  x3dUpAxis: {
-    kind: 'string',
-    default: 'y',
-    values: ['x', 'y', 'z'],
-    description: 'The X3D source up axis.',
-  },
   xglUnitScaleToMeters: {
     kind: 'number',
     default: 1,
@@ -2220,18 +2077,6 @@ const importOptionDescriptors = {
     default: 'y',
     values: ['x', 'y', 'z'],
     description: 'The XGL source up axis.',
-  },
-  xUnitScaleToMeters: {
-    kind: 'number',
-    default: 1,
-    minimum: 0,
-    description: 'Meters represented by one X source unit.',
-  },
-  xUpAxis: {
-    kind: 'string',
-    default: 'y',
-    values: ['x', 'y', 'z'],
-    description: 'The X source up axis.',
   },
 } as const;
 const postProcessDescriptors = {
@@ -2397,37 +2242,6 @@ const postProcessDescriptors = {
 
 /** Native maps consumed only by the handwritten validator and bridge. @internal */
 export const internalImportOptionDescriptors = {
-  '3dsUnitScaleToMeters': {
-    publicName: '3dsUnitScaleToMeters',
-    nativeName: 'IMPORT_3DS_UNIT_SCALE_TO_METERS',
-    kind: 'number',
-    nativeKind: 'number',
-    default: 1,
-    minimum: 0,
-    owners: ['3DS'],
-    formats: [],
-    phases: ['import'],
-    description: 'Meters represented by one 3DS source unit.',
-    source: 'assimp/include/assimp/config.h.in',
-  },
-  '3dsUpAxis': {
-    publicName: '3dsUpAxis',
-    nativeName: 'IMPORT_3DS_UP_AXIS',
-    kind: 'string',
-    nativeKind: 'integer',
-    default: 'z',
-    values: ['x', 'y', 'z'],
-    nativeValues: {
-      x: 0,
-      y: 1,
-      z: 2,
-    },
-    owners: ['3DS'],
-    formats: [],
-    phases: ['import'],
-    description: 'The 3DS source up axis.',
-    source: 'assimp/include/assimp/config.h.in',
-  },
   '3mfUnitScaleToMeters': {
     publicName: '3mfUnitScaleToMeters',
     nativeName: 'IMPORT_3MF_UNIT_SCALE_TO_METERS',
@@ -3711,7 +3525,6 @@ export const internalImportOptionDescriptors = {
     default: false,
     owners: ['Common', 'PostProcessing'],
     formats: [
-      '3ds',
       '3mf',
       'assjson',
       'dae',
@@ -3725,8 +3538,6 @@ export const internalImportOptionDescriptors = {
       'usda',
       'usdc',
       'usdz',
-      'x',
-      'x3d',
     ],
     phases: ['export', 'import'],
     description:
@@ -4123,37 +3934,6 @@ export const internalImportOptionDescriptors = {
     description: 'The USD source up axis.',
     source: 'assimp/include/assimp/config.h.in',
   },
-  x3dUnitScaleToMeters: {
-    publicName: 'x3dUnitScaleToMeters',
-    nativeName: 'IMPORT_X3D_UNIT_SCALE_TO_METERS',
-    kind: 'number',
-    nativeKind: 'number',
-    default: 1,
-    minimum: 0,
-    owners: ['X3D'],
-    formats: [],
-    phases: ['import'],
-    description: 'Meters represented by one X3D source unit.',
-    source: 'assimp/include/assimp/config.h.in',
-  },
-  x3dUpAxis: {
-    publicName: 'x3dUpAxis',
-    nativeName: 'IMPORT_X3D_UP_AXIS',
-    kind: 'string',
-    nativeKind: 'integer',
-    default: 'y',
-    values: ['x', 'y', 'z'],
-    nativeValues: {
-      x: 0,
-      y: 1,
-      z: 2,
-    },
-    owners: ['X3D'],
-    formats: [],
-    phases: ['import'],
-    description: 'The X3D source up axis.',
-    source: 'assimp/include/assimp/config.h.in',
-  },
   xglUnitScaleToMeters: {
     publicName: 'xglUnitScaleToMeters',
     nativeName: 'IMPORT_XGL_UNIT_SCALE_TO_METERS',
@@ -4185,72 +3965,9 @@ export const internalImportOptionDescriptors = {
     description: 'The XGL source up axis.',
     source: 'assimp/include/assimp/config.h.in',
   },
-  xUnitScaleToMeters: {
-    publicName: 'xUnitScaleToMeters',
-    nativeName: 'IMPORT_X_UNIT_SCALE_TO_METERS',
-    kind: 'number',
-    nativeKind: 'number',
-    default: 1,
-    minimum: 0,
-    owners: ['X'],
-    formats: [],
-    phases: ['import'],
-    description: 'Meters represented by one X source unit.',
-    source: 'assimp/include/assimp/config.h.in',
-  },
-  xUpAxis: {
-    publicName: 'xUpAxis',
-    nativeName: 'IMPORT_X_UP_AXIS',
-    kind: 'string',
-    nativeKind: 'integer',
-    default: 'y',
-    values: ['x', 'y', 'z'],
-    nativeValues: {
-      x: 0,
-      y: 1,
-      z: 2,
-    },
-    owners: ['X'],
-    formats: [],
-    phases: ['import'],
-    description: 'The X source up axis.',
-    source: 'assimp/include/assimp/config.h.in',
-  },
 } as const;
 /** @internal */
 export const internalExportOptionDescriptors = {
-  '3ds': {
-    pointClouds: {
-      publicName: 'pointClouds',
-      nativeName: 'EXPORT_POINT_CLOUDS',
-      kind: 'boolean',
-      nativeKind: 'boolean',
-      default: false,
-      owners: ['Common', 'PostProcessing'],
-      formats: [
-        '3ds',
-        '3mf',
-        'assjson',
-        'dae',
-        'fbx',
-        'glb',
-        'gltf',
-        'obj',
-        'ply',
-        'step',
-        'stl',
-        'usda',
-        'usdc',
-        'usdz',
-        'x',
-        'x3d',
-      ],
-      phases: ['export', 'import'],
-      description:
-        'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:667',
-    },
-  },
   '3mf': {
     application: {
       publicName: 'application',
@@ -4286,7 +4003,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4300,8 +4016,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -4362,7 +4076,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4376,8 +4089,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -4407,7 +4118,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4421,8 +4131,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -4463,7 +4171,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4477,8 +4184,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -4546,7 +4251,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4560,8 +4264,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -4654,7 +4356,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4668,8 +4369,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -4748,7 +4447,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4762,8 +4460,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -4792,7 +4488,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4806,8 +4501,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -4824,7 +4517,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4838,8 +4530,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -4868,7 +4558,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4882,8 +4571,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -4968,7 +4655,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -4982,8 +4668,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -5081,7 +4765,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -5095,8 +4778,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -5220,7 +4901,6 @@ export const internalExportOptionDescriptors = {
       default: false,
       owners: ['Common', 'PostProcessing'],
       formats: [
-        '3ds',
         '3mf',
         'assjson',
         'dae',
@@ -5234,85 +4914,6 @@ export const internalExportOptionDescriptors = {
         'usda',
         'usdc',
         'usdz',
-        'x',
-        'x3d',
-      ],
-      phases: ['export', 'import'],
-      description:
-        'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:667',
-    },
-  },
-  x: {
-    pointClouds: {
-      publicName: 'pointClouds',
-      nativeName: 'EXPORT_POINT_CLOUDS',
-      kind: 'boolean',
-      nativeKind: 'boolean',
-      default: false,
-      owners: ['Common', 'PostProcessing'],
-      formats: [
-        '3ds',
-        '3mf',
-        'assjson',
-        'dae',
-        'fbx',
-        'glb',
-        'gltf',
-        'obj',
-        'ply',
-        'step',
-        'stl',
-        'usda',
-        'usdc',
-        'usdz',
-        'x',
-        'x3d',
-      ],
-      phases: ['export', 'import'],
-      description:
-        'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false.',
-      source: 'assimp/code/Common/Exporter.cpp:667',
-    },
-    use64Bit: {
-      publicName: 'use64Bit',
-      nativeName: 'EXPORT_XFILE_64BIT',
-      kind: 'boolean',
-      nativeKind: 'boolean',
-      default: false,
-      owners: ['X'],
-      formats: ['x'],
-      phases: ['export'],
-      description:
-        'Specifies the xfile use double for real values of float Property type: Bool. Default value: false.',
-      source: 'assimp/code/AssetLib/X/XFileExporter.cpp:175',
-    },
-  },
-  x3d: {
-    pointClouds: {
-      publicName: 'pointClouds',
-      nativeName: 'EXPORT_POINT_CLOUDS',
-      kind: 'boolean',
-      nativeKind: 'boolean',
-      default: false,
-      owners: ['Common', 'PostProcessing'],
-      formats: [
-        '3ds',
-        '3mf',
-        'assjson',
-        'dae',
-        'fbx',
-        'glb',
-        'gltf',
-        'obj',
-        'ply',
-        'step',
-        'stl',
-        'usda',
-        'usdc',
-        'usdz',
-        'x',
-        'x3d',
       ],
       phases: ['export', 'import'],
       description:
@@ -5581,12 +5182,6 @@ export const internalPostProcessDescriptors = {
 /** @internal */
 export const internalCanonicalExportRoutes = [
   {
-    id: '3ds',
-    extension: '3ds',
-    description: 'Autodesk 3DS (legacy)',
-    nativeId: '3ds',
-  },
-  {
     id: '3mf',
     extension: '3mf',
     description: '3D Manufacturing Format',
@@ -5731,18 +5326,6 @@ export const internalCanonicalExportRoutes = [
     extension: 'usdz',
     description: 'Universal Scene Description ZIP container',
     nativeId: 'usdz',
-  },
-  {
-    id: 'x',
-    extension: 'x',
-    description: 'DirectX X file',
-    nativeId: 'x',
-  },
-  {
-    id: 'x3d',
-    extension: 'x3d',
-    description: 'Extensible 3D',
-    nativeId: 'x3d',
   },
 ] as const;
 

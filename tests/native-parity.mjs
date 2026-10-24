@@ -52,23 +52,14 @@ const comparable = ({ files }) =>
 assert.deepEqual(comparable(nativeResult), comparable(wasmResult), 'native/Wasm bytes differ');
 for (const backend of [nativeAssimp, wasmAssimp]) {
   await assert.rejects(backend.convert({ name: 'bad.obj', bytes: new Uint8Array([0]) }, { to: 'glb' }));
+  // X3D was removed from the build in 0.4: both backends refuse it the same way.
   await assert.rejects(
     backend.convert(
-      {
-        name: 'HelloWorld.x3db',
-        bytes: new Uint8Array(
-          readFileSync(new URL('../assimp/test/models/X3DB/HelloWorld.x3db', import.meta.url)),
-        ),
-      },
+      { name: 'empty.x3d', bytes: new TextEncoder().encode('<X3D><Scene/></X3D>') },
       { to: 'assjson' },
     ),
-    { code: 'IMPORT_FAILED', message: 'X3D: no scene graph was parsed.' },
+    { code: 'IMPORT_FAILED' },
   );
-  const empty = await backend.convert(
-    { name: 'empty.x3d', bytes: new TextEncoder().encode('<X3D><Scene/></X3D>') },
-    { to: 'assjson' },
-  );
-  assert.equal(JSON.parse(new TextDecoder().decode(empty.files[0].bytes)).meshes?.length ?? 0, 0);
 }
 // Hostile nesting is rejected, not a stack overflow, on both backends; a
 // chain exactly at the cap converts with identical bytes.

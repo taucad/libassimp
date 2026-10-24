@@ -1,8 +1,8 @@
 {
-  "engineSha": "fc954944e9991dade344300af9c21ec9838ce457",
-  "sourceSha256": "76fb76cede5e7790a07090dc0c7f3e01a27af2961025e769e103f37d0647cc08",
+  "engineSha": "67589a4139fc7e45ace94242113279da2279bc20",
+  "sourceSha256": "d75825cfaaf81974603822cd91ee1fde4af65df7c04db3b392d7b063d20251c3",
   "sourceSha256ByPath": {
-    "assimp-builds.json": "80194988321739a036709113fc0c32d536b2f654d9cb726968dbc5488d3c8c21",
+    "assimp-builds.json": "61abd1548835946f7dfc90253b4ae13b86a9fa7de1729bc26b2431c1ea904047",
     "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "6ec19c20ac7c3c0e60979dd8caf760f9f206c166599081623975041438bb9a48",
     "assimp/code/AssetLib/AC/ACLoader.cpp": "874aeda14e635ec6d3ad2c0ae47add63f1095693bb088adb6c8db4317494c551",
     "assimp/code/AssetLib/ASE/ASELoader.cpp": "5aa84544383844ed0abc2e2f040e9857076b0f64321f70ad88bba2b291831d76",
@@ -37,7 +37,6 @@
     "assimp/code/AssetLib/Unreal/UnrealLoader.cpp": "2651b54ccdb63cf50742a31106b4261d55ce91fd5806bf0e52d52d33eaa74c4a",
     "assimp/code/AssetLib/USD/USDLoader.cpp": "2f8e575f8b7497646d9814b20d8827eb0eb34eba70006b1938ede099e6665d68",
     "assimp/code/AssetLib/USD/USDZExporter.cpp": "3f39f1df4d48ff6b621654e09a4b2d2f6c1f872d2f8a6199c5e8bb5551258f77",
-    "assimp/code/AssetLib/X/XFileExporter.cpp": "730178631df48132ac12e0c1d68fab8f2f7b8ef949e0155cad66335674afd260",
     "assimp/code/Common/BaseImporter.cpp": "06cf5aff3ae118578a583180e41794d102792315c3d7644fccf5e89bb3646065",
     "assimp/code/Common/Exporter.cpp": "7220faee7970fd5df2763665562c034c45ff051a3af03391ae82d9fab27c5d7e",
     "assimp/code/Common/Importer.cpp": "e697611dcc8e10a28c4249602ba40c42b4dad64b864ce926627011a38c80fb66",
@@ -100,7 +99,6 @@
     "assimp/code/AssetLib/Unreal/UnrealLoader.cpp",
     "assimp/code/AssetLib/USD/USDLoader.cpp",
     "assimp/code/AssetLib/USD/USDZExporter.cpp",
-    "assimp/code/AssetLib/X/XFileExporter.cpp",
     "assimp/code/Common/BaseImporter.cpp",
     "assimp/code/Common/Exporter.cpp",
     "assimp/code/Common/Importer.cpp",
@@ -150,11 +148,6 @@
         "description": "USD Object Importer"
       },
       {
-        "id": "x",
-        "extension": "x",
-        "description": "Direct3D XFile Importer"
-      },
-      {
         "id": "obj",
         "extension": "obj",
         "description": "Wavefront Object Importer"
@@ -163,16 +156,6 @@
         "id": "amf",
         "extension": "amf",
         "description": "Additive manufacturing file format(AMF) Importer"
-      },
-      {
-        "id": "3ds",
-        "extension": "3ds",
-        "description": "Discreet 3DS Importer"
-      },
-      {
-        "id": "prj",
-        "extension": "prj",
-        "description": "Discreet 3DS Importer"
       },
       {
         "id": "md3",
@@ -445,26 +428,6 @@
         "description": "3mf Importer"
       },
       {
-        "id": "wrl",
-        "extension": "wrl",
-        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-      },
-      {
-        "id": "x3d",
-        "extension": "x3d",
-        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-      },
-      {
-        "id": "x3db",
-        "extension": "x3db",
-        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-      },
-      {
-        "id": "x3dv",
-        "extension": "x3dv",
-        "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-      },
-      {
         "id": "pmx",
         "extension": "pmx",
         "description": "MMD Importer"
@@ -642,12 +605,12 @@
     },
     {
       "nativeName": "EXPORT_XFILE_64BIT",
-      "phases": ["export"],
-      "kinds": ["boolean"],
-      "defaults": [false],
-      "owners": ["X"],
+      "phases": [],
+      "kinds": [],
+      "defaults": [],
+      "owners": [],
       "symbols": ["AI_CONFIG_EXPORT_XFILE_64BIT"],
-      "sources": ["assimp/code/AssetLib/X/XFileExporter.cpp:175"]
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "extras",
