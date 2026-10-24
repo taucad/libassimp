@@ -12,7 +12,7 @@
 //   node tests/adversarial-parity.mjs                  every case, both backends
 //   LIBASSIMP_ADVERSARIAL_FILTER=zip-bomb node ...     only ids containing the text
 //   LIBASSIMP_ADVERSARIAL_BACKENDS=wasm node ...       one backend (no parity check)
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -50,6 +50,26 @@ const describeError = async (error, entry) => {
 // bomb, peaked at 3.1 GiB on both backends locally (generator included);
 // 5 GiB keeps 1.9 GiB of headroom and still fits the 7 GB macOS runners.
 const RSS_LIMIT_BYTES = 5 * 1024 ** 3;
+
+// The watchdog samples, and on the Linux runner a garbage MDL still outgrew the
+// machine between samples and took the runner down. On Linux the kernel
+// enforces the same limit instead: RLIMIT_DATA counts the private writable
+// memory both backends allocate (V8's PROT_NONE reservations are not counted),
+// so an oversized allocation fails inside the worker, which is the OS memory
+// limit SECURITY.md tells native users to set.
+const hasPrlimit = (() => {
+  if (process.platform !== 'linux') return false;
+  try {
+    execFileSync('prlimit', ['--version'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+const workerCommand = (args) =>
+  hasPrlimit
+    ? ['prlimit', [`--data=${RSS_LIMIT_BYTES}`, '--', process.execPath, ...args]]
+    : [process.execPath, args];
 
 const worker = async (backend, start) => {
   let current = start;
@@ -93,9 +113,8 @@ const runBackend = (backend) =>
     const results = Array.from({ length: selected.length });
     const launch = (start) => {
       if (start >= selected.length) return resolve(results);
-      const child = spawn(process.execPath, [self, '--worker', backend, String(start)], {
-        stdio: ['ignore', 'pipe', 'inherit'],
-      });
+      const args = [self, '--worker', backend, String(start)];
+      const child = spawn(...workerCommand(args), { stdio: ['ignore', 'pipe', 'inherit'] });
       let current = start;
       let timer;
       let buffer = '';
