@@ -318,5 +318,8 @@ app.whenReady().then(() => {
   }
   process.stdout.write(`clean ${process.env['LIBASSIMP_RUNTIME'] ?? 'node'} smoke passed for ${suffix}\n`);
 } finally {
-  rmSync(work, { force: true, recursive: true });
+  // Windows holds electron.exe open for a moment after Electron exits (its
+  // crashpad handler outlives the main process), so retry instead of failing
+  // a smoke that already passed.
+  rmSync(work, { force: true, maxRetries: 10, recursive: true, retryDelay: 500 });
 }
