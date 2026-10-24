@@ -87,4 +87,4 @@ for (const [name, descriptor] of Object.entries(assimpCapabilities.export['3mf']
 }
 ```
 
-The serializable registry supplies descriptions, kinds, defaults, ranges, enum values, and applicability. It contains public camelCase names only; native Assimp keys and raw escape bags are private.
+The serializable registry supplies kinds, defaults, ranges, enum values, and applicability. For labels and help text, load `assimpCapabilities` from `libassimp/capabilities`, which adds each `description`. It contains public camelCase names only; native Assimp keys and raw escape bags are private.

@@ -3,10 +3,11 @@ import path from 'node:path';
 // Initial public package contract from the blueprint's Target Package Manifest.
 // Change the list and ceiling together in the causing pull request.
 // Origin: the generated capability registry and validator split measured in the
-// native-routed candidate; 27 exact files, with no spare allowance.
+// native-routed candidate; 27 exact files, with no spare allowance. The lazy
+// `libassimp/capabilities` subpath and its generated descriptions add 3.
 // Origin: PR-2 (runtime streaming and diagnostics) adds the Node-only
-// `createDirectoryResolver` module and its declarations; 29 exact files.
-const PACKAGE_FILE_COUNT_CEILING = 29;
+// `createDirectoryResolver` module and its declarations; 32 exact files.
+const PACKAGE_FILE_COUNT_CEILING = 32;
 
 export const PACKAGE_FILES = [
   'BREAKING_CHANGES.md',
@@ -17,6 +18,8 @@ export const PACKAGE_FILES = [
   'dist/assimp-error.d.mts',
   'dist/assimp-error.mjs',
   'dist/assimp-options.mjs',
+  'dist/capabilities.d.mts',
+  'dist/capabilities.mjs',
   'dist/cjs-error.cjs',
   'dist/cjs-error.d.cts',
   'dist/convert.d.mts',
@@ -27,6 +30,7 @@ export const PACKAGE_FILES = [
   'dist/directory-resolver.mjs',
   'dist/generated/assimp-capabilities.d.mts',
   'dist/generated/assimp-capabilities.mjs',
+  'dist/generated/assimp-capability-descriptions.mjs',
   'dist/index.d.mts',
   'dist/index.mjs',
   'dist/index.node.d.mts',

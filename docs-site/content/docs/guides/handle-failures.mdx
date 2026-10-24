@@ -26,7 +26,7 @@ const remedy = (error: AssimpError): string => {
 console.log(remedy(new AssimpError('NO_FILES', 'convert needs at least one input file.')));
 ```
 
-`INVALID_OPTIONS` is raised before Wasm for unknown/inapplicable fields, wrong kinds, bounds, duplicate steps, conflicts, and empty or repeated input names. `RESOLVE_FAILED` preserves the exact requested `fileName` and the thrown/rejected value as `cause`.
+`INVALID_OPTIONS` is raised before any engine work for unknown/inapplicable fields, wrong kinds, bounds, duplicate steps, conflicts, and empty or repeated input names. `RESOLVE_FAILED` preserves the exact requested `fileName` and the thrown/rejected value as `cause`.
 
 Plural target failures carry zero-based `formatIndex` and canonical `format`; context that does not apply is absent, so `'formatIndex' in error` is a reliable test. Results are atomic: if a later exporter fails, no earlier output is returned.
 

@@ -51,7 +51,7 @@ console.log(files[0].name);
 
 `createDirectoryResolver(root)` reads only inside `root`: absolute names, `..` escapes, and symbolic links that leave `root` resolve as missing. Other I/O errors, such as `EACCES`, reject and surface as `RESOLVE_FAILED`.
 
-The consumer callback is invoked once per exact requested name within a conversion. JSPI hosts suspend inside parsing; other hosts transparently replay staged parsing from the settled per-call cache. The public behavior is identical.
+The consumer callback is invoked once per exact requested name within a conversion. The native backend and JSPI hosts suspend inside parsing; other Wasm hosts transparently replay staged parsing from the settled per-call cache. The public behavior is identical.
 
 ## Browser-picked files
 

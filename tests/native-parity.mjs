@@ -9,6 +9,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  HOSTILE_NODE_DEPTH,
+  MAX_NODE_DEPTH,
+  adversarialFixtures,
+  deepGltf,
+} from './generate-adversarial-fixtures.mjs';
 import { readScalePointCount, writeScaleFixture } from './generate-scale-fixture.mjs';
 
 const glbPointCount = (bytes) => {
@@ -55,6 +61,28 @@ for (const backend of [nativeAssimp, wasmAssimp]) {
     { code: 'IMPORT_FAILED' },
   );
 }
+// Hostile nesting is rejected, not a stack overflow, on both backends; a
+// chain exactly at the cap converts with identical bytes.
+{
+  const atCap = { name: 'deep.gltf', bytes: deepGltf(MAX_NODE_DEPTH) };
+  const [nativeDeep, wasmDeep] = await Promise.all([
+    nativeAssimp.convert(atCap, { to: 'glb' }),
+    wasmAssimp.convert(atCap, { to: 'glb' }),
+  ]);
+  assert.deepEqual(
+    comparable(nativeDeep),
+    comparable(wasmDeep),
+    'native/Wasm bytes differ at the nesting cap',
+  );
+  for (const backend of [nativeAssimp, wasmAssimp]) {
+    for (const [name, bytes] of Object.entries(adversarialFixtures(HOSTILE_NODE_DEPTH))) {
+      await assert.rejects(backend.convert({ name, bytes }, { to: 'glb' }), { code: 'IMPORT_FAILED' }, name);
+    }
+    assert.deepEqual(comparable(await backend.convert(...request)), comparable(nativeResult));
+  }
+  process.stdout.write('hostile nesting rejects on native and Wasm, and the cap converts identically\n');
+}
+
 const instance = await native.createAssimp({ backend: 'native' });
 instance.dispose();
 await assert.rejects(instance.convert(...request), /disposed/iu);

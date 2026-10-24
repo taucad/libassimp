@@ -53,6 +53,7 @@ describe('documentation fences', () => {
           // The Node entry is the browser entry plus createDirectoryResolver, so one map covers both.
           paths: {
             libassimp: [join(root, 'dist/index.node.d.mts')],
+            'libassimp/capabilities': [join(root, 'dist/capabilities.d.mts')],
           },
         },
         include: ['*.ts'],

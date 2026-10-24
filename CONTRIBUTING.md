@@ -4,10 +4,14 @@
 2. Install with `pnpm install --frozen-lockfile`.
 3. Add tests that assert the changed public behavior.
 4. Run `pnpm nx run libassimp:quality`. It expects the `assimp` submodule
-   checked out, because the format matrix reads the engine's fixture corpus,
-   and `src/wasm/` populated: build it with `pnpm run build:wasm`, or download
-   the `wasm` artifact from a CI run. The tests read `dist/`, so
-   the `test` target builds first.
+   checked out (`git submodule update --init assimp`), because the format
+   matrix reads the engine's fixture corpus, and `src/wasm/` populated. Without
+   Docker, `pnpm run fetch:wasm` downloads the `wasm` artifact of the latest
+   green `main` CI run (`-- --run <id>` picks another run, such as your pull
+   request's). It needs `GH_TOKEN`, `GITHUB_TOKEN` or a signed-in `gh`, and
+   warns when the artifact's engine commit differs from your submodule. With
+   Docker, `pnpm run build:wasm` builds it. The tests read `dist/`, so the
+   `test` target builds first.
 5. Add a Version Plan with `pnpm nx release plan` when package behavior or
    shipped artifacts change. Pending plans feed an automated release pull
    request; a maintainer merges it to publish.
@@ -18,7 +22,13 @@
 8. Re-record `tests/determinism.json` with
    `LIBASSIMP_RECORD_DETERMINISM=1 pnpm exec vitest run tests/format-matrix.test.mjs`
    when an engine or exporter change alters output bytes on purpose, and say in
-   the pull request which formats moved and why.
+   the pull request which formats moved and why. Wasm records; CI's smoke job
+   runs the same suite on each native target with
+   `pnpm exec vitest run --config vitest.native.config.ts` (after
+   `pnpm run build` and copying the target's addon into `dist/native/`) and
+   requires the same fingerprints. A native difference is fixed at its source;
+   only an engine-side cause may become a `PARITY_EXCEPTIONS` entry, with its
+   reason and platforms.
 9. Move `bench/baselines.json` only in the pull request that causes the move.
    Download the `native-wasm-benchmark` artifact from that pull request's CI
    run and record its three USD reports with

@@ -23,7 +23,7 @@
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -31,6 +31,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const evidencePath = `${root}scripts/assimp-capability-evidence.json`;
 const overridesPath = `${root}scripts/assimp-capability-overrides.json`;
 const outputPath = `${root}src/generated/assimp-capabilities.ts`;
+const descriptionsPath = `${root}src/generated/assimp-capability-descriptions.ts`;
 const matrixPath = `${root}docs-site/content/docs/format-matrix.json`;
 const buildDirectory = `${root}build/wasm`;
 const containerRoot = '/src';
@@ -82,8 +83,21 @@ const doxygenDescriptions = (path, symbolPattern) => {
   return descriptions;
 };
 
+// `kind` and `default` carry the type and default as data, and the JSDoc appends
+// `Default: …` once. Assimp's prose repeats both, sometimes wrongly (one option
+// says "The default value is true" over a false default), so it is dropped.
+const withoutRestatedDefaults = (description) =>
+  description
+    .replace(/,\s*its default value is \d+\./gu, '.')
+    .replace(/\s*\bThe default value is (?:true|false|\d+|AI_[A-Z0-9_]+)(?:\s*\(S?[01]\))?\.?(?=\s|$)/gu, '')
+    .replace(/\s*\bProperty type:\s*[A-Za-z0-9]+\.?(?=\s|$)/gu, '')
+    .replace(/\s*\bDefault value:.*$/u, '')
+    .replace(/\s\*(?=\s|$)/gu, '')
+    .trim()
+    .replace(/(?<=[^.!?:)])$/u, '.');
+
 const conciseDescription = (description) => {
-  const words = description
+  const words = withoutRestatedDefaults(description)
     .replace(/\bjust\b/giu, 'only')
     .replace(/\bused to\b/giu, 'used for')
     .split(/\s+/u);
@@ -784,25 +798,42 @@ const renderGenerated = (evidence, overrides) => {
     .map((format) => `  readonly ${quote(format)}: ${exportOptionsTypeName(format)};`)
     .join('\n');
   const routes = overrides.formats.order.map((id) => ({ id, ...overrides.formats.routes[id] }));
+  // The root entry carries what validation and dynamic UIs need at runtime.
+  // Prose lives in assimp-capability-descriptions.ts behind the lazy
+  // `libassimp/capabilities` subpath, and provenance stays in the evidence.
+  const validatorFields = new Set([
+    'nativeName',
+    'kind',
+    'nativeKind',
+    'default',
+    'minimum',
+    'maximum',
+    'values',
+    'nativeValues',
+    'applyDefault',
+  ]);
+  const internalDescriptor = (descriptor) =>
+    Object.fromEntries(Object.entries(descriptor).filter(([name]) => validatorFields.has(name)));
   const internalDescriptorsByFormat = Object.fromEntries(
     overrides.formats.order.map((format) => [
       format,
-      Object.fromEntries(exportOptions[format].map((descriptor) => [descriptor.publicName, descriptor])),
+      Object.fromEntries(
+        exportOptions[format].map((descriptor) => [descriptor.publicName, internalDescriptor(descriptor)]),
+      ),
     ]),
   );
-  const internalDescriptorFields = new Set([
-    'publicName',
-    'nativeName',
-    'nativeKind',
-    'nativeValues',
-    'applyDefault',
-    'owners',
-    'formats',
-    'phases',
-    'source',
+  const publicDescriptorFields = new Set([
+    'kind',
+    'default',
+    'defaultDescription',
+    'minimum',
+    'maximum',
+    'values',
   ]);
   const publicDescriptor = (descriptor) =>
-    Object.fromEntries(Object.entries(descriptor).filter(([name]) => !internalDescriptorFields.has(name)));
+    Object.fromEntries(Object.entries(descriptor).filter(([name]) => publicDescriptorFields.has(name)));
+  const descriptionsOf = (descriptors) =>
+    Object.fromEntries(descriptors.map((descriptor) => [descriptor.publicName, descriptor.description]));
   const publicDescriptorsByFormat = Object.fromEntries(
     overrides.formats.order.map((format) => [
       format,
@@ -818,22 +849,44 @@ const renderGenerated = (evidence, overrides) => {
     exportOptions: publicDescriptorsByFormat[id],
   }));
   const internalImportDescriptors = Object.fromEntries(
-    importOptions.map((descriptor) => [descriptor.publicName, descriptor]),
+    importOptions.map((descriptor) => [descriptor.publicName, internalDescriptor(descriptor)]),
   );
   const importDescriptors = Object.fromEntries(
     importOptions.map((descriptor) => [descriptor.publicName, publicDescriptor(descriptor)]),
   );
   const internalStepDescriptors = Object.fromEntries(
-    steps.map(({ publicName: name, symbol, value, description, conflicts = [] }) => [
-      name,
-      { symbol, value, description, conflicts, source: 'assimp/include/assimp/postprocess.h' },
-    ]),
+    steps.map(({ publicName: name, value, conflicts = [] }) => [name, { value, conflicts }]),
   );
   const stepDescriptors = Object.fromEntries(
-    steps.map(({ publicName: name, description, conflicts = [] }) => [name, { description, conflicts }]),
+    steps.map(({ publicName: name, conflicts = [] }) => [name, { conflicts }]),
   );
+  const internalRoutes = routes.map(({ id, extension, nativeId, routes: choices }) => ({
+    id,
+    extension,
+    nativeId,
+    ...(choices === undefined ? {} : { routes: choices }),
+  }));
+  const descriptions = `/* This file is generated by scripts/generate-assimp-capabilities.mjs. Do not edit. */
 
-  return `/* This file is generated by scripts/generate-assimp-capabilities.mjs. Do not edit. */
+/** Import option prose, keyed by public name. @internal */
+export const importOptionDescriptions = ${JSON.stringify(descriptionsOf(importOptions), undefined, 2)} as const;
+/** Export option prose per canonical target, keyed by public name. @internal */
+export const exportOptionDescriptions = ${JSON.stringify(
+    Object.fromEntries(
+      overrides.formats.order.map((format) => [format, descriptionsOf(exportOptions[format])]),
+    ),
+    undefined,
+    2,
+  )} as const;
+/** Post-process step prose, keyed by public name. @internal */
+export const postProcessDescriptions = ${JSON.stringify(
+    Object.fromEntries(steps.map(({ publicName: name, description }) => [name, description])),
+    undefined,
+    2,
+  )} as const;
+`;
+
+  const capabilities = `/* This file is generated by scripts/generate-assimp-capabilities.mjs. Do not edit. */
 
 /** A canonical import or export format. @public */
 export type FormatInfo<Format extends string = string> = {
@@ -842,7 +895,10 @@ export type FormatInfo<Format extends string = string> = {
   readonly description: string;
 };
 
-/** Serializable option metadata used by validation and dynamic UIs. @public */
+/**
+ * Serializable option metadata used by validation and dynamic UIs. The prose
+ * \`description\` is in \`libassimp/capabilities\`. @public
+ */
 export type OptionDescriptor = Readonly<{
   kind: 'boolean' | 'integer' | 'number' | 'string' | 'matrix';
   default: boolean | number | string | readonly number[] | null;
@@ -850,12 +906,10 @@ export type OptionDescriptor = Readonly<{
   minimum?: number;
   maximum?: number;
   values?: readonly (boolean | number | string)[];
-  description: string;
 }>;
 
 /** Serializable metadata for one named post-process step. @public */
 export type PostProcessDescriptor = Readonly<{
-  description: string;
   conflicts: readonly string[];
 }>;
 
@@ -913,7 +967,7 @@ export const internalExportOptionDescriptors = ${JSON.stringify(internalDescript
 /** @internal */
 export const internalPostProcessDescriptors = ${JSON.stringify(internalStepDescriptors, undefined, 2)} as const;
 /** @internal */
-export const internalCanonicalExportRoutes = ${JSON.stringify(routes, undefined, 2)} as const;
+export const internalCanonicalExportRoutes = ${JSON.stringify(internalRoutes, undefined, 2)} as const;
 
 const keyed = <const Values extends readonly FormatInfo[]>(values: Values) =>
   Object.fromEntries(values.map((value) => [value.id, value])) as {
@@ -927,23 +981,32 @@ export const assimpCapabilities = {
   postProcess: postProcessDescriptors,
 } as const;
 `;
+  return { capabilities, descriptions };
 };
 
 const generate = (check) => {
   const evidence = readJson(evidencePath);
   const overrides = readJson(overridesPath);
   validateEvidence(evidence, overrides);
-  const generated = formatTypescript(renderGenerated(evidence, overrides));
+  const rendered = renderGenerated(evidence, overrides);
+  const outputs = [
+    [outputPath, formatTypescript(rendered.capabilities)],
+    [descriptionsPath, formatTypescript(rendered.descriptions)],
+  ];
   if (check) {
-    const current = normalizeSourceText(readFileSync(outputPath, 'utf8'));
-    if (current !== generated)
-      throw new Error(`${sourceName(outputPath)} is stale; run pnpm generate:capabilities.`);
-    console.log(`${sourceName(outputPath)} is current (${sha256(generated)}).`);
+    for (const [path, generated] of outputs) {
+      const current = existsSync(path) ? normalizeSourceText(readFileSync(path, 'utf8')) : '';
+      if (current !== generated)
+        throw new Error(`${sourceName(path)} is stale; run pnpm generate:capabilities.`);
+      console.log(`${sourceName(path)} is current (${sha256(generated)}).`);
+    }
     return;
   }
   mkdirSync(new URL('../src/generated/', import.meta.url), { recursive: true });
-  writeFileSync(outputPath, generated);
-  console.log(`wrote ${sourceName(outputPath)} (${sha256(generated)})`);
+  for (const [path, generated] of outputs) {
+    writeFileSync(path, generated);
+    console.log(`wrote ${sourceName(path)} (${sha256(generated)})`);
+  }
 };
 
 const isMain = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
