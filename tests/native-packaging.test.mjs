@@ -240,9 +240,9 @@ describe('native binary inspection', () => {
       'libm.so.6',
       'libpthread.so.0',
       'librt.so.1',
-      'libstdc++.so.6',
     ];
     assert.doesNotThrow(() => checkElfDependencies(dependencies));
+    assert.throws(() => checkElfDependencies([...dependencies, 'libstdc++.so.6']), assert.AssertionError);
     assert.throws(() => checkElfDependencies([...dependencies, 'libassimp.so.7']), assert.AssertionError);
     assert.throws(() => checkElfDependencies(['/tmp/libpthread.so.0']), assert.AssertionError);
   });
