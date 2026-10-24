@@ -649,7 +649,7 @@ jobs:
 
   benchmark:
     if: github.event_name == 'pull_request'
-    needs: assemble
+    needs: [assemble, bench-base]
     runs-on: ubuntu-24.04
     env:
       # Origin: seven local macOS arm64 runs measured 44.836-50.650 ms conversion
@@ -722,6 +722,17 @@ jobs:
         with:
           path: src/wasm/libassimp.*
           key: wasm-${{ hashFiles('.bench-base/emsdk-image.txt', '.bench-base/assimp-builds.json', '.bench-base/CMakeLists.txt', '.bench-base/CMakePresets.json', '.bench-base/src/cpp/**', '.bench-base/.gitmodules', '.bench-base/scripts/build-wasm.mjs') }}-${{ steps.base-checkout.outputs.engine }}
+      # bench-base built the base revision's own pair for the format matrix, so a
+      # cache miss still measures main's engine rather than the PR's.
+      - name: Download the base revision's Wasm from bench-base
+        id: bench-base-wasm
+        if: steps.base-checkout.outcome == 'success' && steps.base-wasm.outputs.cache-hit != 'true'
+        continue-on-error: true # Falls back to the PR binary, and the report says so.
+        uses: ./.github/actions/download-verified-artifact
+        with:
+          name: bench-base-wasm
+          path: /tmp/bench-base-wasm
+          expect: libassimp.js libassimp.wasm
       - name: Build main's facade on the same runner
         id: base
         if: steps.base-checkout.outcome == 'success'
@@ -729,11 +740,15 @@ jobs:
         shell: bash
         env:
           BASE_WASM_HIT: ${{ steps.base-wasm.outputs.cache-hit }}
+          BENCH_BASE_WASM: ${{ steps.bench-base-wasm.outcome }}
         run: |
           base_directory='${{ steps.base-checkout.outputs.directory }}'
           mkdir -p "$base_directory/src/wasm"
           if [[ "$BASE_WASM_HIT" == true ]]; then
             cp src/wasm/libassimp.* "$base_directory/src/wasm/"
+            echo "wasm=main" >> "$GITHUB_OUTPUT"
+          elif [[ "$BENCH_BASE_WASM" == success ]]; then
+            cp /tmp/bench-base-wasm/libassimp.js /tmp/bench-base-wasm/libassimp.wasm "$base_directory/src/wasm/"
             echo "wasm=main" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::main's Wasm cache entry is gone; comparing the facades over the PR binary"
