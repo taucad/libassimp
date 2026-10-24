@@ -10,7 +10,7 @@
         {
           "package": {
             "name": "assimp",
-            "commit": "0b4eac5ac52f3062e614aba9755ced389f6e172c"
+            "commit": "6e6225df55cad73e74982bf17e86cdc70e97398e"
           }
         },
         {
@@ -40,7 +40,7 @@
         {
           "package": {
             "name": "lightusd",
-            "commit": "5d59802d182bc77b6178b9acf447bc2d1e6a0658"
+            "commit": "04e5bde20eeb811f8f38b7d5e2644ae912d98503"
           }
         },
         {
