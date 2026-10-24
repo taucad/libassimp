@@ -378,6 +378,9 @@ const KNOWN_FAILURES = {
   // Native reports LIMIT_EXCEEDED on win32, where only the watchdog enforces
   // the memory limit; Wasm reports IMPORT_FAILED (CI run 40084716727).
   'garbage/earth.q3o': ['engine-input-hardening'],
+  // Native reports LIMIT_EXCEEDED and Wasm IMPORT_FAILED on linux-x64
+  // (CI run 40086645028).
+  'count/collada-float-array': ['engine-input-hardening'],
 };
 
 const BASE_CASES = [
