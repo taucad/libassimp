@@ -1,0 +1,49 @@
+---
+title: Upgrade to 0.4
+description: Strip removed option keys from saved settings and expect new USD output.
+---
+
+0.4 is a breaking minor. [BREAKING_CHANGES.md](https://github.com/taucad/libassimp/blob/main/BREAKING_CHANGES.md) lists every change; two need action from apps that save conversion settings.
+
+## Strip removed option keys
+
+The USD targets lost `materialX`, `subdivision`, `volumes` and `optimizeForMobile`. Runtime validation rejects unknown keys with `INVALID_OPTIONS`, and so does a strict schema built from `assimpCapabilities`, so settings saved under 0.3 fail until the removed keys are dropped. Filter saved options through the installed registry before validating them:
+
+```typescript
+import { assimpCapabilities, type ExportFormat } from 'libassimp';
+
+type Saved = Readonly<Record<string, unknown>>;
+
+/** Keep only the export options this libassimp still accepts for `format`. */
+export const stripRemovedExportOptions = (format: ExportFormat, saved: Saved): Record<string, unknown> => {
+  const known: object = assimpCapabilities.export[format].exportOptions;
+  return Object.fromEntries(Object.entries(saved).filter(([key]) => Object.hasOwn(known, key)));
+};
+
+/** The same for import options. */
+export const stripRemovedImportOptions = (saved: Saved): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(saved).filter(([key]) => Object.hasOwn(assimpCapabilities.importOptions, key)),
+  );
+
+console.log(stripRemovedExportOptions('usdz', { materialX: true, lights: true }));
+```
+
+Run this once where settings are loaded, then write them back, and keep strict validation for new input. With zod, a reader can also parse saved data with `z.object(shape)`, which strips unknown keys, and new input with `z.strictObject(shape)`.
+
+## Expect different USD output
+
+USD exports no longer flip UVs and author `metersPerUnit` on the stage instead of scaling geometry. Code that compensated for the old flip or scale should stop, and cached USD outputs or golden files need regenerating.
+
+## Load descriptions from the subpath
+
+The root `assimpCapabilities` no longer carries option and post-process descriptions. Forms that show them as help text import the described registry lazily:
+
+```typescript
+import type { DescribedCapabilities } from 'libassimp/capabilities';
+
+const describedRegistry = async (): Promise<DescribedCapabilities> =>
+  (await import('libassimp/capabilities')).assimpCapabilities;
+
+console.log((await describedRegistry()).importOptions.globalScaleFactorKey.description);
+```
