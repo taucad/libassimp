@@ -89,6 +89,7 @@
     "docs:build": "pnpm --filter libassimp-docs build",
     "docs:source": "pnpm --filter libassimp-docs generate:source",
     "docs:test": "pnpm --filter libassimp-docs test",
+    "fetch:wasm": "node scripts/fetch-wasm.mjs",
     "format:check": "oxfmt --check .",
     "generate:capabilities": "node scripts/generate-assimp-capabilities.mjs",
     "lint": "pnpm run docs:source && oxlint --deny-warnings --type-aware && eslint .",
