@@ -192,7 +192,8 @@ if (dependencyResolver.routes.jspi !== null) {
 }
 
 const report = {
-  name: 'helical-gear-glb-to-glb-v1',
+  // v2: 0.4 keeps the gear's shared vertices indexed in GLB output, so its bytes changed.
+  name: 'helical-gear-glb-to-glb-v2',
   iterations,
   medianMs: median(conversions),
   initMs: median(initializations),
