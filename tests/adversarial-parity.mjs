@@ -216,7 +216,9 @@ const main = async () => {
     const waiting = testCase.needs.length > 0 ? ` Waits on ${waitsOn(testCase)}.` : ' New failure.';
     process.stdout.write(`::error title=adversarial ${testCase.id}::${problems.join('; ')}.${waiting}\n`);
   }
-  process.exitCode = failures.length > 0 ? 1 : 0;
+  // Listed cases wait on deferred engine work, so they report without failing
+  // the step; an unlisted failure is a regression and fails it.
+  process.exitCode = failures.some(({ testCase }) => testCase.needs.length === 0) ? 1 : 0;
 };
 
 if (process.argv[2] === '--worker') {

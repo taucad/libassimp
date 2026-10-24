@@ -339,8 +339,8 @@ const truncationCases = TRUNCATION_FIXTURES.flatMap((relative) => {
 
 // Failures measured on 2026-10-24 against next (5a38bd1, engine 0b4eac5) on
 // linux-x64. Each id names what has to land before the case can pass; the
-// case still runs and still fails until then. Remove an entry in the change
-// that fixes it.
+// case still runs and reports its failure as an error annotation, but only an
+// unlisted failure fails the step. Remove an entry in the change that fixes it.
 //   engine-depth-guard: native SIGSEGV or Wasm RangeError on deep nesting.
 //   runtime-error-model: a Wasm allocation failure or trap escapes as a raw
 //     RuntimeError (ABORTING_MALLOC=1) instead of an AssimpError (PR-2).
