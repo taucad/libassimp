@@ -26,6 +26,9 @@ docker run --rm --volume "$root:/src" --workdir /src \
   --env CCACHE_DIR=/src/.ccache --env CCACHE_BASEDIR=/src --env CCACHE_NOHASHDIR=true \
   --env CCACHE_COMPILERCHECK=content --env CCACHE_MAXSIZE=1G \
   "$image" bash -lc '
+    # The login profile can put ccache masquerade links first on PATH; with an
+    # explicit launcher those recurse, so the build sees only real compilers.
+    PATH="$(printf %s "$PATH" | tr : "\n" | grep -v ccache | paste -sd :)"
     launcher=""
     if yum install -y -q ccache >/dev/null 2>&1 ||
       { yum install -y -q epel-release >/dev/null 2>&1 && yum install -y -q ccache >/dev/null 2>&1; }; then

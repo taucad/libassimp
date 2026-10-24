@@ -117,6 +117,9 @@ const presets = {
         CMAKE_BUILD_TYPE: 'Release',
         CMAKE_C_COMPILER_LAUNCHER: '',
         CMAKE_CXX_COMPILER_LAUNCHER: '',
+        // MSVC Release: assimp otherwise adds /Zi, whose PDB nothing ships and
+        // which makes every C++ object uncacheable for ccache.
+        ASSIMP_INSTALL_PDB: 'OFF',
         ...sharedCacheVariables,
         ...buildCacheVariables('wasm'),
       },

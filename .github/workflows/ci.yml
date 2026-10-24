@@ -292,10 +292,10 @@ jobs:
           path: .ccache
           key: ccache-v1-${{ matrix.suffix }}-${{ steps.addon.outputs.engine }}
           restore-keys: ccache-v1-${{ matrix.suffix }}-
-      # node-addon.test.mjs reads the generated capability module; nothing in
-      # this job needs the Wasm pair.
+      # The native tests read the generated capability module and the NAPI-RS
+      # loader; nothing in this job needs the Wasm pair.
       - if: steps.addon-cache.outputs.cache-hit != 'true'
-        run: pnpm run check:capabilities && pnpm exec tsdown
+        run: pnpm run check:capabilities && pnpm exec tsdown && node scripts/write-native-loaders.mjs
       - name: Resolve the cmake-js Node inputs
         if: steps.addon-cache.outputs.cache-hit != 'true'
         shell: bash
@@ -380,7 +380,7 @@ jobs:
           path: .ccache
           key: ccache-v1-${{ matrix.gate }}-${{ steps.engine.outputs.sha }}
           restore-keys: ccache-v1-${{ matrix.gate }}-
-      - run: pnpm run check:capabilities && pnpm exec tsdown
+      - run: pnpm run check:capabilities && pnpm exec tsdown && node scripts/write-native-loaders.mjs
       - name: Resolve the cmake-js Node inputs
         run: |
           {
@@ -564,7 +564,7 @@ jobs:
       - name: Record the Playwright version
         id: playwright
         shell: bash
-        run: echo "version=$(node -p "require('playwright-core/package.json').version")" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: |
@@ -833,7 +833,8 @@ jobs:
 
   publish:
     if: needs.preflight.outputs.npm-publish == 'true'
-    needs: [preflight, assemble, smoke, browser, security]
+    # native-gates runs beside the release build, so publishing waits for it here.
+    needs: [preflight, assemble, native-gates, smoke, browser, security]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
