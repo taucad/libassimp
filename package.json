@@ -145,6 +145,6 @@
   },
   "packageManager": "pnpm@11.11.0",
   "assimp": {
-    "commit": "db9083b8a345822e96402574f764dc7df4899ea2"
+    "commit": "fc954944e9991dade344300af9c21ec9838ce457"
   }
 }

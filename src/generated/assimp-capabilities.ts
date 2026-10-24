@@ -4262,7 +4262,7 @@ export const internalExportOptionDescriptors = {
       formats: ['3mf'],
       phases: ['export'],
       description: '3MF_EXPORT_APPLICATION',
-      source: 'assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:531',
+      source: 'assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:538',
     },
     decimalPrecision: {
       publicName: 'decimalPrecision',
@@ -4276,7 +4276,7 @@ export const internalExportOptionDescriptors = {
       formats: ['3mf'],
       phases: ['export'],
       description: '3MF_EXPORT_DECIMAL_PRECISION',
-      source: 'assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:849',
+      source: 'assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:856',
     },
     pointClouds: {
       publicName: 'pointClouds',
@@ -4319,7 +4319,7 @@ export const internalExportOptionDescriptors = {
       phases: ['export'],
       description:
         'Whether every mesh must be manifold and oriented, as 3MF Core requires for model objects. When false, a mesh that is not is written as an object of type other instead of failing the export.',
-      source: 'assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:528',
+      source: 'assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:535',
     },
     unit: {
       publicName: 'unit',
@@ -4332,7 +4332,7 @@ export const internalExportOptionDescriptors = {
       formats: ['3mf'],
       phases: ['export'],
       description: '3MF_EXPORT_UNIT',
-      source: 'assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:483',
+      source: 'assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:490',
     },
     upAxis: {
       publicName: 'upAxis',
@@ -4350,7 +4350,7 @@ export const internalExportOptionDescriptors = {
       formats: ['3mf'],
       phases: ['export'],
       description: '3MF_EXPORT_UPAXIS',
-      source: 'assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:497',
+      source: 'assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:504',
     },
   },
   assjson: {

@@ -126,7 +126,8 @@ const pin = (id, bytes) => {
   const hash = fnv64(bytes);
   observed[id] = hash;
   if (recording) return;
-  expect(hash, `${id} output bytes changed; re-record deliberately`).toBe(recorded[id]);
+  // Soft, so one run reports every moved fingerprint, not only the first.
+  expect.soft(hash, `${id} output bytes changed; re-record deliberately`).toBe(recorded[id]);
 };
 
 /** Read `3D/3dmodel.model` out of a 3MF, which is a ZIP of local file entries. */
@@ -422,10 +423,9 @@ describe('export properties', () => {
       name: 'plane.obj',
       bytes: new TextEncoder().encode('v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3\nf 1 3 4\n'),
     };
-    await expect(assimp.convert(plane, { to: '3mf' })).rejects.toMatchObject({
-      code: 'EXPORT_FAILED',
-      message: expect.stringContaining('not manifold'),
-    });
+    const strict = assimp.convert(plane, { to: '3mf' });
+    await expect(strict).rejects.toMatchObject({ code: 'EXPORT_FAILED' });
+    await expect(strict).rejects.toThrow('3MF_EXPORT_REQUIRE_MANIFOLD');
     const { files } = await assimp.convert(plane, { to: '3mf', exportOptions: { requireManifold: false } });
     const xml = modelXml(files[0].bytes);
     expect(xml).toMatch(/<object\b[^>]*\btype="other"/u);

@@ -1,9 +1,9 @@
 {
-  "engineSha": "db9083b8a345822e96402574f764dc7df4899ea2",
-  "sourceSha256": "f920ae4d03e364e91cc41d453a5af39c9134a0831fdf631834cffc211e45b32e",
+  "engineSha": "fc954944e9991dade344300af9c21ec9838ce457",
+  "sourceSha256": "76fb76cede5e7790a07090dc0c7f3e01a27af2961025e769e103f37d0647cc08",
   "sourceSha256ByPath": {
     "assimp-builds.json": "80194988321739a036709113fc0c32d536b2f654d9cb726968dbc5488d3c8c21",
-    "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "8d21747552dad43c29eb85eb28da3e383c7f7bb8e0c24525ba9768e35ca34232",
+    "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp": "6ec19c20ac7c3c0e60979dd8caf760f9f206c166599081623975041438bb9a48",
     "assimp/code/AssetLib/AC/ACLoader.cpp": "874aeda14e635ec6d3ad2c0ae47add63f1095693bb088adb6c8db4317494c551",
     "assimp/code/AssetLib/ASE/ASELoader.cpp": "5aa84544383844ed0abc2e2f040e9857076b0f64321f70ad88bba2b291831d76",
     "assimp/code/AssetLib/Assjson/json_exporter.cpp": "e47157907788f547028789d4263cd52452f9f57912e3fe55f0be0b00558f5852",
@@ -484,7 +484,7 @@
       "defaults": [""],
       "owners": ["3MF"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:531"]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:538"]
     },
     {
       "nativeName": "3MF_EXPORT_DECIMAL_PRECISION",
@@ -493,7 +493,7 @@
       "defaults": [9],
       "owners": ["3MF"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:849"]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:856"]
     },
     {
       "nativeName": "3MF_EXPORT_REQUIRE_MANIFOLD",
@@ -502,7 +502,7 @@
       "defaults": [true],
       "owners": ["3MF"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:528"]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:535"]
     },
     {
       "nativeName": "3MF_EXPORT_UNIT",
@@ -511,7 +511,7 @@
       "defaults": ["millimeter"],
       "owners": ["3MF"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:483"]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:490"]
     },
     {
       "nativeName": "3MF_EXPORT_UPAXIS",
@@ -520,7 +520,7 @@
       "defaults": [2],
       "owners": ["3MF"],
       "symbols": [],
-      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:497"]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:504"]
     },
     {
       "nativeName": "AI_CONFIG_ANDROID_JNI_ASSIMP_MANAGER_SUPPORT",
