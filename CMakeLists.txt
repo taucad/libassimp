@@ -271,8 +271,10 @@ if(LIBASSIMP_NATIVE_ADDON)
   add_library(libassimp-native MODULE src/cpp/node-addon.cpp ${CMAKE_JS_SRC})
   target_include_directories(libassimp-native PRIVATE ${CMAKE_JS_INC} "${NODE_ADDON_API_DIR}")
   target_link_libraries(libassimp-native PRIVATE libassimp-core Threads::Threads ${CMAKE_JS_LIB})
-  # mimalloc serves the addon's C++ allocations: large conversions run 10-13%
-  # faster than on glibc malloc (S6 spike, byte-identical output). libstdc++
+  # mimalloc serves the addon's C++ allocations: large conversions run 8-14%
+  # faster than on glibc malloc for 2-4% more peak RSS (S6 spike,
+  # byte-identical output). The 2.x line from 2.2 holds about 50% more peak
+  # RSS than 3.x on the USD baselines, so stay on 3.x. libstdc++
   # is linked statically with it, because a shared libstdc++ allocates some
   # objects (stringstream buffers, for one) with its own operator new that the
   # addon would then free through mimalloc. Linux only until macOS and Windows
@@ -286,7 +288,7 @@ if(LIBASSIMP_NATIVE_ADDON)
     FetchContent_Declare(
       mimalloc
       GIT_REPOSITORY "https://github.com/microsoft/mimalloc"
-      GIT_TAG 02d5f7ce61f9e6a928a9d69840431838582d492e # v2.5.2
+      GIT_TAG e874dbe8d7f248561dd9a65d2e07a204b93af067 # v3.1.6
       EXCLUDE_FROM_ALL
     )
     FetchContent_MakeAvailable(mimalloc)

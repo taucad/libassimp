@@ -52,7 +52,7 @@
         {
           "package": {
             "name": "mimalloc",
-            "commit": "02d5f7ce61f9e6a928a9d69840431838582d492e"
+            "commit": "e874dbe8d7f248561dd9a65d2e07a204b93af067"
           }
         },
         {
