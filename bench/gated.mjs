@@ -69,17 +69,23 @@ try {
       Promise.all(
         batchTargets.map(async ({ to, exportOptions }) => ({
           format: to,
-          ...(await batchAssimp.convert(
-            { name: 'helical-gear.glb', bytes },
-            exportOptions === undefined ? { to } : { to, exportOptions },
-          )),
+          files: (
+            await batchAssimp.convert(
+              { name: 'helical-gear.glb', bytes },
+              exportOptions === undefined ? { to } : { to, exportOptions },
+            )
+          ).files,
         })),
       ),
     );
     const [pluralDuration, plural] = await time(() =>
       batchAssimp.convertFormats({ name: 'helical-gear.glb', bytes }, { targets: batchTargets }),
     );
-    assert.deepEqual(plural, singular);
+    // Results also carry timings and peak memory, which are measurements, not output.
+    assert.deepEqual(
+      plural.map(({ format, files }) => ({ format, files })),
+      singular,
+    );
     singularDurations.push(singularDuration);
     pluralDurations.push(pluralDuration);
     pluralOutputs = plural;

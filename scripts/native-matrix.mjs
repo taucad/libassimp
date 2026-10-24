@@ -24,6 +24,8 @@ export const nativeMatrices = (packageJson = new URL('../package.json', import.m
   const smoke = packages.flatMap(({ os, suffix }) => [
     ...NODE_VERSIONS.map((node) => {
       const scale = os === 'linux' && node === '26';
+      // The scale lane proves native goes past Wasm32's 4 GiB. Origin: PR-2 frees the
+      // entry after import, so a 640 MiB PLY peaked at 3.89 GiB; 768 MiB restores the margin.
       return {
         lane: `node-${node}`,
         minScaleRssBytes: scale ? '4294967296' : '0',
@@ -31,7 +33,7 @@ export const nativeMatrices = (packageJson = new URL('../package.json', import.m
         os: RUNNER[os],
         runtime: 'node',
         scale: scale ? '1' : '0',
-        scaleBytes: scale ? '671088640' : '',
+        scaleBytes: scale ? '805306368' : '',
         suffix,
       };
     }),
