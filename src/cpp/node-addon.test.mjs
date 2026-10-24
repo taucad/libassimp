@@ -28,8 +28,6 @@ if (!addon._coverageStats) {
     'buildIdentity',
     'cancelPlan',
     'destroyPlan',
-    'exportFormats',
-    'importFormats',
     'napiVersion',
     'packageVersion',
     'preparePlan',
@@ -52,27 +50,30 @@ const { internalCanonicalExportRoutes } = await import('../../dist/generated/ass
 assert.equal(addon.napiVersion, 8);
 assert.equal(addon.buildIdentity, `${process.platform}-${process.arch}-napi8`);
 assert.equal(addon.packageVersion, packageManifest.version);
-const importFormats = addon.importFormats();
-const exportFormats = addon.exportFormats();
-assert(importFormats.some(({ id }) => id === 'obj'));
-assert(exportFormats.some(({ id }) => id === 'glb2'));
-assert.deepEqual(
-  importFormats.map(({ id }) => id).toSorted(),
-  capabilityEvidence.formats.import.map(({ id }) => id).toSorted(),
-  'native importer inventory differs from the generated capability evidence',
-);
-const expectedExportIds = new Set();
-for (const route of internalCanonicalExportRoutes) {
-  expectedExportIds.add(route.nativeId);
-  for (const choices of Object.values(route.routes ?? {})) {
-    for (const nativeId of Object.values(choices)) expectedExportIds.add(nativeId);
+// The shipped addon carries no format inventory (the generated capabilities are the public one);
+// coverage builds expose the engine's to prove the two agree.
+if (addon._coverageFormats) {
+  const { import: importFormats, export: exportFormats } = addon._coverageFormats();
+  assert(importFormats.some(({ id }) => id === 'obj'));
+  assert(exportFormats.some(({ id }) => id === 'glb2'));
+  assert.deepEqual(
+    importFormats.map(({ id }) => id).toSorted(),
+    capabilityEvidence.formats.import.map(({ id }) => id).toSorted(),
+    'native importer inventory differs from the generated capability evidence',
+  );
+  const expectedExportIds = new Set();
+  for (const route of internalCanonicalExportRoutes) {
+    expectedExportIds.add(route.nativeId);
+    for (const choices of Object.values(route.routes ?? {})) {
+      for (const nativeId of Object.values(choices)) expectedExportIds.add(nativeId);
+    }
   }
+  assert.deepEqual(
+    exportFormats.map(({ id }) => id).toSorted(),
+    [...expectedExportIds].toSorted((left, right) => left.localeCompare(right)),
+    'native exporter inventory differs from the generated capability routes',
+  );
 }
-assert.deepEqual(
-  exportFormats.map(({ id }) => id).toSorted(),
-  [...expectedExportIds].toSorted((left, right) => left.localeCompare(right)),
-  'native exporter inventory differs from the generated capability routes',
-);
 
 const models = new URL('../../assimp/test/models/', import.meta.url);
 const options = (format = 'glb', nativeId = 'glb2') => ({
@@ -175,10 +176,18 @@ const runChild = async (source, environment = {}, nodeArguments = []) => {
   const first = addon.takePlanResult(plan);
   assert(first.ok);
   assert.equal(first.formats[0].files[0].name, 'result.glb');
-  assert.equal(Object.getPrototypeOf(first.formats[0].files[0].bytes), Uint8Array.prototype);
-  const expected = first.formats[0].files[0].bytes[0];
-  first.formats[0].files[0].bytes[0] ^= 0xff;
-  assert.equal(addon.takePlanResult(plan).formats[0].files[0].bytes[0], expected);
+  const output = first.formats[0].files[0].bytes;
+  assert.equal(Object.getPrototypeOf(output), Uint8Array.prototype);
+  // The engine's bytes move to JavaScript once, without a copy, as an exact-length buffer.
+  assert.equal(output.byteOffset, 0);
+  assert.equal(output.buffer.byteLength, output.byteLength);
+  assert.equal(Buffer.from(output.subarray(0, 4)).toString('latin1'), 'glTF');
+  assert(Array.isArray(first.warnings));
+  assert.deepEqual(Object.keys(first.timings).toSorted(), ['export', 'import', 'postProcess']);
+  for (const value of Object.values(first.timings)) assert(Number.isFinite(value) && value >= 0);
+  assert.throws(() => addon.takePlanResult(plan), /already taken/);
+  assert.equal(await run(plan), 1);
+  assert.equal(addon.takePlanResult(plan).formats[0].files[0].bytes.byteLength, output.byteLength);
   addon.destroyPlan(plan);
   addon.destroyPlan(plan);
   assert.throws(() => addon.takePlanResult(plan), /destroyed/);
@@ -413,7 +422,58 @@ assert.throws(() => addon.cancelPlan({}), /opaque conversion plan/);
   const plan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], options());
   assert.throws(() => addon.runPlan(plan), /resolveRequest must be a function/);
   assert.throws(() => addon.runPlan(plan, {}), /resolveRequest must be a function/);
+  assert.throws(() => addon.runPlan(plan, missingResolver, {}), /onProgress must be a function/);
   addon.destroyPlan(plan);
+}
+
+{
+  const box = await input('OBJ/box.obj');
+  const noisy = new TextEncoder().encode(`${'mtllib\n'.repeat(70)}v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n`);
+  const progressRun = async (onProgress, entry = box) => {
+    const plan = addon.preparePlan(entry.entry, [{ name: entry.entry, bytes: entry.bytes }], {
+      importProperties: [],
+      postProcess: TRIANGULATE,
+      targets: [
+        { format: 'glb', nativeId: 'glb2', properties: [], outputName: 'box.glb' },
+        { format: 'stl', nativeId: 'stl', properties: [] },
+      ],
+    });
+    assert.equal(await addon.runPlan(plan, missingResolver, onProgress), 1);
+    const result = addon.takePlanResult(plan);
+    addon.destroyPlan(plan);
+    return result;
+  };
+  const reports = [];
+  const named = await progressRun((report) => reports.push(report));
+  assert.deepEqual(
+    named.formats.map(({ files }) => files[0].name),
+    ['box.glb', 'result.stl'],
+  );
+  assert.deepEqual(Object.keys(reports[0]).toSorted(), ['formatIndex', 'phase', 'step', 'total']);
+  assert.deepEqual(reports[0], { phase: IMPORTING, step: 0, total: box.bytes.byteLength, formatIndex: -1 });
+  assert(reports.some(({ phase }) => phase === POSTPROCESSING));
+  assert.deepEqual(reports.at(-1), { phase: EXPORTING, step: 4, total: 4, formatIndex: 1 });
+  let thrown = 0;
+  assert(
+    (
+      await progressRun(() => {
+        thrown += 1;
+        throw new Error('listener bug');
+      })
+    ).ok,
+  );
+  assert(thrown > 0);
+  assert((await progressRun(undefined)).ok);
+  const warned = await progressRun(undefined, { entry: 'noisy.obj', bytes: noisy });
+  assert.equal(warned.warnings.length, 65);
+  assert.deepEqual(Object.keys(warned.warnings[0]).toSorted(), ['error', 'formatIndex', 'message', 'phase']);
+  assert.deepEqual(warned.warnings[0], {
+    error: false,
+    phase: IMPORTING,
+    formatIndex: -1,
+    message: 'OBJ: no name for material library specified.',
+  });
+  assert.match(warned.warnings.at(-1).message, /^\d+ more assimp messages were omitted\.$/);
 }
 if (addon._coverageWrongPlan) {
   const wrong = addon._coverageWrongPlan();

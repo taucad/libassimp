@@ -1133,7 +1133,7 @@ export const exportFormats = [
   },
   {
     id: 'step',
-    extension: 'stp',
+    extension: 'step',
     description: 'ISO 10303 STEP',
     exportOptions: {
       pointClouds: {
@@ -5666,7 +5666,7 @@ export const internalCanonicalExportRoutes = [
   },
   {
     id: 'step',
-    extension: 'stp',
+    extension: 'step',
     description: 'ISO 10303 STEP',
     nativeId: 'stp',
   },

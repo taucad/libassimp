@@ -36,6 +36,7 @@ const wasmRuntime = (): NativeRuntime => ({
   takePlanResult: () => ({ ok: true, code: '', message: '', formats: [] }),
   destroyPlan: () => undefined,
   dispose: () => undefined,
+  peakMemoryBytes: () => 0,
 });
 
 afterEach(() => {
@@ -73,9 +74,14 @@ describe('native addon adapter', () => {
 
     expect(runtime.backend).toBe('native');
     expect(runtime.buildIdentity).toBe(`${process.platform}-${process.arch}-napi8`);
-    expect(runtime.preparePlan('cube.obj', [], { importProperties: [], postProcess: 0, targets: [] })).toBe(
-      handle,
-    );
+    expect(
+      runtime.preparePlan('cube.obj', [], {
+        importProperties: [],
+        postProcess: 0,
+        targets: [],
+        progress: false,
+      }),
+    ).toBe(handle);
     await expect(runtime.runPlan(handle, new ResolutionContext(undefined))).resolves.toBe(1);
     expect(runtime.takePlanResult(handle)).toEqual({ ok: true, code: '', message: '', formats: [] });
     runtime.destroyPlan(handle);
@@ -84,6 +90,36 @@ describe('native addon adapter', () => {
     expect(runPlan).toHaveBeenCalledWith(handle, expect.any(Function));
     expect(cancelPlan).toHaveBeenCalledWith(handle);
     expect(destroyPlan).toHaveBeenCalledWith(handle);
+    expect(runtime.peakMemoryBytes()).toBe(process.resourceUsage().maxRSS * 1024);
+    expect(runtime.peakMemoryBytes()).toBeGreaterThan(0);
+  });
+
+  it('forwards engine progress only when the call has a listener', async () => {
+    const runPlan = vi.fn(
+      async (
+        _handle: unknown,
+        _resolveRequest: unknown,
+        onProgress?: (report: { phase: number; step: number; total: number; formatIndex: number }) => void,
+      ) => {
+        onProgress?.({ phase: 1, step: 0, total: 10, formatIndex: -1 });
+        onProgress?.({ phase: 3, step: 4, total: 4, formatIndex: 0 });
+        return 1;
+      },
+    );
+    const runtime = adaptNativeAddon(addon({ runPlan }));
+    const reports: unknown[] = [];
+    const listening = new ResolutionContext(undefined, undefined, {
+      onProgress: (progress) => reports.push(progress),
+      formats: ['glb'],
+    });
+    await runtime.runPlan({}, listening);
+    expect(runPlan.mock.calls[0]).toHaveLength(3);
+    expect(reports).toEqual([
+      { phase: 'import', step: 0, total: 10 },
+      { phase: 'export', step: 4, total: 4, formatIndex: 0, format: 'glb' },
+    ]);
+    await runtime.runPlan({}, new ResolutionContext(undefined));
+    expect(runPlan.mock.calls[1]).toHaveLength(2);
   });
 
   it('settles found and missing sidecars through one native run', async () => {
@@ -114,7 +150,8 @@ describe('native addon adapter', () => {
       new Set(['glb']),
     );
 
-    await expect(runPreparedConversion(runtime, request)).resolves.toEqual([{ format: 'glb', files: [] }]);
+    const result = await runPreparedConversion(runtime, request);
+    expect([...result]).toEqual([{ format: 'glb', files: [] }]);
     expect(runPlan).toHaveBeenCalledOnce();
     expect(settlements).toEqual([[FOUND, new Uint8Array([2])], [MISSING]]);
     const late = vi.fn();
@@ -275,6 +312,7 @@ describe('native addon adapter', () => {
     expect(runPlan).toHaveBeenCalledOnce();
     const nestedError = await (nested as Promise<unknown>).catch((error: unknown) => error);
     expect(nestedError).toMatchObject({
+      code: 'INVALID_OPTIONS',
       message: expect.stringMatching(/native resolver.*backend: 'wasm'/u),
     });
     await expect(outer).resolves.toMatchObject({
@@ -334,6 +372,7 @@ describe('native addon adapter', () => {
       importProperties: [],
       postProcess: 0,
       targets: [],
+      progress: false,
     });
     runtime.destroyPlan(unrelated);
     expect(preparePlan).toHaveBeenCalledTimes(2);
@@ -422,7 +461,7 @@ describe('Node backend selection', () => {
       async () => Promise.reject(cause),
     );
     await expect(loader({ backend: 'native' })).rejects.toMatchObject({
-      code: 'IMPORT_FAILED',
+      code: 'BACKEND_UNAVAILABLE',
       cause,
     });
   });

@@ -19,6 +19,7 @@
 #include <fstream>
 #include <future>
 #include <limits>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -27,9 +28,25 @@
 #include <assimp/postprocess.h>
 #include <assimp/cexport.h>
 #include <assimp/importerdesc.h>
+#include <assimp/DefaultLogger.hpp>
+#include <assimp/Logger.hpp>
 #include <gtest/gtest.h>
 
+#ifdef __linux__
+#include <sys/resource.h>
+#include <unistd.h>
+#endif
+
 #include "libassimp.hpp"
+
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define LIBASSIMP_HAS_ASAN 1
+#endif
+#endif
+#ifndef LIBASSIMP_HAS_ASAN
+#define LIBASSIMP_HAS_ASAN 0
+#endif
 
 namespace {
 
@@ -578,6 +595,167 @@ TEST(PlanTest, ReplaysASecondExportWithFreshOutputsAfterPending) {
 }
 #endif
 
+struct HostFiles {
+  std::map<std::uint32_t, libassimp::Bytes> files;
+  int failAt = -1;
+  int calls = 0;
+
+  libassimp::OutputSink sink() {
+    return [this](std::uint32_t file, std::size_t offset, const std::uint8_t *data, std::size_t size) {
+      if (calls++ == failAt)
+        return false;
+      libassimp::Bytes &bytes = files[file];
+      if (bytes.size() < offset + size)
+        bytes.resize(offset + size);
+      std::memcpy(bytes.data() + offset, data, size);
+      return true;
+    };
+  }
+};
+
+libassimp::Bytes noisyObj(int materialLibraries) {
+  std::string source;
+  for (int index = 0; index < materialLibraries; ++index)
+    source += "mtllib\n";
+  source += "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
+  return textBytes(source);
+}
+
+TEST(PlanTest, NamesOutputsStreamsThemAndReleasesTheEntry) {
+  HostFiles host;
+  libassimp::Plan plan(
+      "chair.obj",
+      {{"chair.obj", textBytes("mtllib chair.mtl\nv 0 0 0\nv 1 0 0\nv 0 1 0\nusemtl wood\nf 1 2 3\n")},
+       {"chair.mtl", textBytes("newmtl wood\nKd 1 0 0\n")}},
+      {}, kPostProcess, {{"obj", "obj", {}, "chair.obj"}, {"stl", "stl", {}}}, {});
+  plan.setReleaseEntryAfterImport(true);
+  plan.setOutputSink(host.sink());
+  ASSERT_EQ(plan.run(), libassimp::PlanStatus::Completed) << plan.result().message;
+  const auto &formats = plan.result().formats;
+  ASSERT_EQ(formats.size(), 2u);
+  ASSERT_EQ(formats[0].files.size(), 2u);
+  EXPECT_EQ(formats[0].files[0].name, "chair.obj");
+  EXPECT_EQ(formats[0].files[1].name, "chair.mtl");
+  EXPECT_EQ(formats[1].files[0].name, "result.stl");
+  for (const auto &format : formats) {
+    for (const libassimp::NamedBytes &file : format.files) {
+      EXPECT_TRUE(file.bytes.empty());
+      ASSERT_NE(file.hostFile, 0u);
+      EXPECT_EQ(host.files[file.hostFile].size(), file.size) << file.name;
+    }
+  }
+  const libassimp::Bytes &mtl = host.files[formats[0].files[1].hostFile];
+  EXPECT_NE(std::string(mtl.begin(), mtl.end()).find("newmtl"), std::string::npos);
+  EXPECT_GE(plan.result().timings.import, 0.0);
+  EXPECT_GE(plan.result().timings.postProcess, 0.0);
+  EXPECT_GE(plan.result().timings.exportAll, 0.0);
+}
+
+TEST(PlanTest, ReportsProgressThrottledBetweenPhaseBoundaries) {
+  struct Report {
+    libassimp::ProgressPhase phase;
+    int step;
+    int total;
+    int formatIndex;
+  };
+  const auto collect = [](std::chrono::milliseconds interval, unsigned int postProcess) {
+    std::vector<Report> reports;
+    Input input = loadInput("OBJ/box.obj");
+    libassimp::Plan plan(input.entry, std::move(input.files), {}, postProcess,
+                         {{"glb", "glb2", {}}, {"stl", "stl", {}}}, {});
+    plan.setProgressSink(
+        [&](libassimp::ProgressPhase phase, int step, int total, int formatIndex) {
+          reports.push_back({phase, step, total, formatIndex});
+        },
+        interval);
+    EXPECT_EQ(plan.run(), libassimp::PlanStatus::Completed) << plan.result().message;
+    if (postProcess == 0)
+      EXPECT_EQ(plan.result().timings.postProcess, 0.0);
+    return reports;
+  };
+  const std::vector<Report> every = collect(std::chrono::milliseconds(0), kPostProcess);
+  const std::vector<Report> throttled = collect(std::chrono::hours(1), kPostProcess);
+  ASSERT_FALSE(every.empty());
+  EXPECT_LT(throttled.size(), every.size());
+  EXPECT_EQ(every.front().phase, libassimp::ProgressPhase::Importing);
+  EXPECT_EQ(every.front().formatIndex, -1);
+  EXPECT_TRUE(std::any_of(every.begin(), every.end(), [](const Report &report) {
+    return report.phase == libassimp::ProgressPhase::PostProcessing;
+  }));
+  EXPECT_EQ(every.back().phase, libassimp::ProgressPhase::Exporting);
+  EXPECT_EQ(every.back().formatIndex, 1);
+  EXPECT_EQ(every.back().step, every.back().total);
+  for (const Report &report : throttled)
+    EXPECT_TRUE(report.step <= 0 || report.step >= report.total);
+  const std::vector<Report> bare = collect(std::chrono::milliseconds(0), 0);
+  EXPECT_FALSE(std::any_of(bare.begin(), bare.end(), [](const Report &report) {
+    return report.phase == libassimp::ProgressPhase::PostProcessing;
+  }));
+}
+
+TEST(PlanTest, CollectsWarningsUpToTheCapAndCountsTheRest) {
+  libassimp::Plan few("few.obj", {{"few.obj", noisyObj(2)}}, {}, kPostProcess, {{"stl", "stl", {}}}, {});
+  ASSERT_EQ(few.run(), libassimp::PlanStatus::Completed) << few.result().message;
+  ASSERT_GE(few.result().warnings.size(), 2u);
+  EXPECT_FALSE(few.result().warnings[0].error);
+  EXPECT_EQ(few.result().warnings[0].phase, libassimp::ProgressPhase::Importing);
+  EXPECT_EQ(few.result().warnings[0].formatIndex, -1);
+  EXPECT_NE(few.result().warnings[0].message.find("material library"), std::string::npos);
+
+  libassimp::Plan many("many.obj", {{"many.obj", noisyObj(70)}}, {}, kPostProcess, {{"stl", "stl", {}}}, {});
+  ASSERT_EQ(many.run(), libassimp::PlanStatus::Completed) << many.result().message;
+  const auto &warnings = many.result().warnings;
+  ASSERT_EQ(warnings.size(), libassimp::kMaxWarnings + 1);
+  EXPECT_NE(warnings.back().message.find("more assimp messages were omitted."), std::string::npos);
+
+  // Outside a run the installed logger drops everything and never accepts streams.
+  Assimp::Logger *logger = Assimp::DefaultLogger::get();
+  EXPECT_FALSE(logger->attachStream(nullptr, 0));
+  EXPECT_FALSE(logger->detachStream(nullptr, 0));
+  logger->setLogSeverity(Assimp::Logger::VERBOSE);
+  logger->verboseDebug("verbose");
+  logger->setLogSeverity(Assimp::Logger::NORMAL);
+  logger->debug("debug");
+  logger->info("info");
+  logger->warn("warning outside a run");
+  logger->error("error outside a run");
+  libassimp::Plan quiet("quiet.obj", {{"quiet.obj", noisyObj(0)}}, {}, kPostProcess, {{"stl", "stl", {}}}, {});
+  ASSERT_EQ(quiet.run(), libassimp::PlanStatus::Completed) << quiet.result().message;
+  for (const libassimp::Warning &warning : quiet.result().warnings)
+    EXPECT_EQ(warning.message.find("outside a run"), std::string::npos);
+}
+
+#if defined(__linux__) && !defined(__SANITIZE_ADDRESS__) && !LIBASSIMP_HAS_ASAN
+TEST(PlanTest, ReportsAnAllocationFailureAsLimitExceededAndRecovers) {
+  // Four billion float3 vertices need 48 GB; an address-space limit makes the allocation fail
+  // promptly instead of depending on the runner's overcommit policy.
+  rlimit previous{};
+  ASSERT_EQ(getrlimit(RLIMIT_AS, &previous), 0);
+  long pages = 0;
+  {
+    std::ifstream statm("/proc/self/statm");
+    statm >> pages;
+  }
+  rlimit limited = previous;
+  limited.rlim_cur = static_cast<rlim_t>(pages) * static_cast<rlim_t>(sysconf(_SC_PAGESIZE)) +
+                     (rlim_t(4) << 30);
+  ASSERT_EQ(setrlimit(RLIMIT_AS, &limited), 0);
+  libassimp::Plan plan(
+      "huge.ply",
+      {{"huge.ply", textBytes("ply\nformat ascii 1.0\nelement vertex 4000000000\nproperty float x\n"
+                              "property float y\nproperty float z\nend_header\n0 0 0\n")}},
+      {}, kPostProcess, {{"stl", "stl", {}}}, {});
+  const libassimp::PlanStatus status = plan.run();
+  ASSERT_EQ(setrlimit(RLIMIT_AS, &previous), 0);
+  EXPECT_EQ(status, libassimp::PlanStatus::Failed);
+  EXPECT_EQ(plan.result().code, "LIMIT_EXCEEDED") << plan.result().message;
+  EXPECT_EQ(plan.result().formatIndex, -1);
+
+  libassimp::Plan after = makePlan("OBJ/box.obj", {{"stl", "stl", {}}});
+  EXPECT_EQ(after.run(), libassimp::PlanStatus::Completed) << after.result().message;
+}
+#endif
+
 TEST(PlanTest, RejectsAnEmptyTargetList) {
   libassimp::Plan plan = makePlan("OBJ/box.obj", {});
   EXPECT_EQ(plan.run(), libassimp::PlanStatus::Failed);
@@ -637,7 +815,89 @@ TEST(MemoryIOTest, SupportsLookupOutputAndSeek) {
   stream.Flush();
   EXPECT_TRUE(files.wrote("output.bin"));
   EXPECT_FALSE(files.wrote("missing.bin"));
-  EXPECT_EQ(files.outputs().front().bytes, (libassimp::Bytes{4, 4, 6}));
+  ASSERT_EQ(files.outputs().size(), 1u);
+  EXPECT_EQ(files.outputs().front().name(), "output.bin");
+  const std::vector<libassimp::NamedBytes> taken = files.takeOutputs("output.bin");
+  ASSERT_EQ(taken.size(), 1u);
+  EXPECT_EQ(taken[0].bytes, (libassimp::Bytes{4, 4, 6}));
+  EXPECT_EQ(taken[0].size, 3u);
+  EXPECT_EQ(taken[0].hostFile, 0u);
+  EXPECT_TRUE(files.outputs().empty());
+}
+
+TEST(MemoryIOTest, ReturnsSidecarsWhenThePrimaryWasNeverWritten) {
+  std::deque<libassimp::NamedBytes> inputs;
+  libassimp::MemoryFiles files(inputs, {});
+  const std::uint8_t byte = 9;
+  libassimp::MemoryWriteStream(files.output("sidecar.bin")).Write(&byte, 1, 1);
+  const std::vector<libassimp::NamedBytes> taken = files.takeOutputs("primary.bin");
+  ASSERT_EQ(taken.size(), 1u);
+  EXPECT_EQ(taken[0].name, "sidecar.bin");
+  EXPECT_EQ(taken[0].bytes, (libassimp::Bytes{9}));
+}
+
+TEST(MemoryIOTest, StreamsCompleteChunksAndWritesThroughAfterTheyLeave) {
+  constexpr std::size_t kChunk = libassimp::OutputFile::kChunk;
+  HostFiles host;
+  const libassimp::OutputSink sink = host.sink();
+  std::uint32_t nextHostFile = 7;
+  std::deque<libassimp::NamedBytes> inputs;
+  libassimp::MemoryFiles files(inputs, {}, &sink, &nextHostFile);
+  libassimp::MemoryWriteStream stream(files.output("big.bin"));
+  libassimp::MemoryWriteStream(files.output("small.bin")).Write("ab", 1, 2);
+  EXPECT_EQ(nextHostFile, 9u);
+  const libassimp::Bytes first(kChunk + 10, 1);
+  EXPECT_EQ(stream.Write(first.data(), 1, first.size()), first.size());
+  EXPECT_EQ(host.files[7].size(), kChunk);
+  EXPECT_EQ(stream.Seek(4, aiOrigin_SET), AI_SUCCESS);
+  const std::uint8_t patch[] = {5, 6};
+  EXPECT_EQ(stream.Write(patch, 1, 2), 2u);
+  EXPECT_EQ(host.files[7][4], 5);
+  EXPECT_EQ(stream.Seek(kChunk * 2 + 3, aiOrigin_SET), AI_SUCCESS);
+
+  const std::vector<libassimp::NamedBytes> taken = files.takeOutputs("big.bin");
+  ASSERT_EQ(taken.size(), 2u);
+  EXPECT_EQ(taken[0].name, "big.bin");
+  EXPECT_EQ(taken[0].hostFile, 7u);
+  EXPECT_EQ(taken[0].size, kChunk * 2 + 3);
+  EXPECT_TRUE(taken[0].bytes.empty());
+  ASSERT_EQ(host.files[7].size(), kChunk * 2 + 3);
+  EXPECT_EQ(host.files[7][5], 6);
+  EXPECT_EQ(host.files[7][kChunk + 9], 1);
+  EXPECT_EQ(host.files[7][kChunk + 10], 0);
+  EXPECT_EQ(taken[1].hostFile, 8u);
+  EXPECT_EQ(host.files[8], (libassimp::Bytes{'a', 'b'}));
+}
+
+TEST(MemoryIOTest, ReportsAHostThatCannotTakeAChunk) {
+  constexpr std::size_t kChunk = libassimp::OutputFile::kChunk;
+  const libassimp::Bytes data(kChunk, 3);
+  for (const int failAt : {0, 1}) {
+    HostFiles host;
+    host.failAt = failAt;
+    const libassimp::OutputSink sink = host.sink();
+    std::uint32_t nextHostFile = 1;
+    std::deque<libassimp::NamedBytes> inputs;
+    libassimp::MemoryFiles files(inputs, {}, &sink, &nextHostFile);
+    libassimp::MemoryWriteStream stream(files.output("out.bin"));
+    if (failAt == 0) {
+      // The chunk is complete, so handing it over fails inside Write.
+      EXPECT_EQ(stream.Write(data.data(), 1, data.size()), 0u);
+    } else {
+      // The chunk leaves, then a write back into it cannot reach the host.
+      EXPECT_EQ(stream.Write(data.data(), 1, data.size()), data.size());
+      EXPECT_EQ(stream.Seek(0, aiOrigin_SET), AI_SUCCESS);
+      EXPECT_EQ(stream.Write(data.data(), 1, 1), 0u);
+    }
+  }
+  HostFiles host;
+  host.failAt = 0;
+  const libassimp::OutputSink sink = host.sink();
+  std::uint32_t nextHostFile = 1;
+  std::deque<libassimp::NamedBytes> inputs;
+  libassimp::MemoryFiles files(inputs, {}, &sink, &nextHostFile);
+  libassimp::MemoryWriteStream(files.output("tail.bin")).Write("x", 1, 1);
+  EXPECT_THROW(files.takeOutputs("tail.bin"), std::runtime_error);
 }
 
 TEST(MemoryIOTest, ResolvesAnAmbiguousBasenameInsteadOfChoosingOne) {

@@ -12,14 +12,16 @@ const countWords = (source: string): number => source.split(/\s+/u).filter(Boole
 // paying for it here; a new page needs a row before it can ship. Measured
 // 2026-08-23; each page carries its measured count plus a little slack.
 const pageCeilings: Readonly<Record<string, number>> = {
-  'api.mdx': 620,
+  // Diagnostics, progress, and lifecycle options (+60) are paid for by the
+  // resolver guide, which now uses createDirectoryResolver (-60).
+  'api.mdx': 680,
   'guides/convert-a-model.mdx': 440,
   'guides/convert-to-multiple-formats.mdx': 260,
   'guides/apple-quick-look.mdx': 460,
   // Live 3MF controls document four authored properties in the runnable request.
   'guides/export-properties.mdx': 430,
   'guides/handle-failures.mdx': 490,
-  'guides/resolve-sidecar-files.mdx': 460,
+  'guides/resolve-sidecar-files.mdx': 400,
   'guides/use-in-the-browser.mdx': 470,
   // The end-to-end page now carries the conversion it explains.
   'how-it-works.mdx': 690,

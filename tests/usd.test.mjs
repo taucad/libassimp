@@ -138,7 +138,7 @@ describe('USD sidecars', () => {
     const part = (await assimp.convert(load('glTF2/BoxTextured-glTF-Binary/BoxTextured.glb'), { to: 'usdc' }))
       .files;
     const sidecars = new Map(
-      part.map(({ name, bytes }) => [name === 'result.usdc' ? 'part.usdc' : name, bytes]),
+      part.map(({ name, bytes }) => [name === 'BoxTextured.usdc' ? 'part.usdc' : name, bytes]),
     );
     const root = {
       name: 'root.usda',

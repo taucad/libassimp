@@ -114,7 +114,7 @@ const formatConvertDemo = (node: MdxJsxElement): string | undefined => {
 const formatMatrix = (kind: 'import' | 'export'): string => {
   if (kind === 'export') {
     return matrix.export
-      .map(({ id, extension, description }) => `- \`${id}\`: \`result.${extension}\` — ${description}`)
+      .map(({ id, extension, description }) => `- \`${id}\`: \`<stem>.${extension}\` — ${description}`)
       .join('\n');
   }
 

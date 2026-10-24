@@ -5,10 +5,11 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import packageMetadata from '../package.json' with { type: 'json' };
 import { AssimpError } from './assimp-error.js';
 import type { CreateAssimpOptions, RuntimeLoader } from './create-assimp.js';
-import type { NativeRuntime, ResolutionContext, ResolutionResult } from './convert.js';
+import type { EngineProgress, NativeRuntime, ResolutionContext, ResolutionResult } from './convert.js';
 
 type NativeSettlement = (status: 0 | 1 | 2 | 3, bytes?: Uint8Array) => void;
 type NativeResolveRequest = (name: string, settle: NativeSettlement) => void;
+type NativeProgress = (report: EngineProgress) => void;
 
 const nativeStatus: Readonly<Record<ResolutionResult['status'], 0 | 1 | 2 | 3>> = {
   missing: 0,
@@ -25,7 +26,11 @@ export type NativeAddon = Readonly<{
   napiVersion: number;
   packageVersion: string;
   preparePlan: NativeRuntime['preparePlan'];
-  runPlan: (handle: unknown, resolveRequest: NativeResolveRequest) => Promise<number>;
+  runPlan: (
+    handle: unknown,
+    resolveRequest: NativeResolveRequest,
+    onProgress?: NativeProgress,
+  ) => Promise<number>;
   cancelPlan: NativeRuntime['cancelPlan'];
   takePlanResult: NativeRuntime['takePlanResult'];
   destroyPlan: NativeRuntime['destroyPlan'];
@@ -66,14 +71,15 @@ export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
     buildIdentity: addon.buildIdentity,
     preparePlan: (...arguments_) => {
       if (nativeResolver.getStore()?.active === true) {
-        throw new Error(
+        throw new AssimpError(
+          'INVALID_OPTIONS',
           "libassimp native conversion cannot start from a native resolver because the process-wide native executor is waiting for that resolver; use an instance with { backend: 'wasm' } for independent nested conversion.",
         );
       }
       return addon.preparePlan(...arguments_);
     },
-    runPlan: (handle, context: ResolutionContext) =>
-      addon.runPlan(handle, (name, settle) => {
+    runPlan: (handle, context: ResolutionContext) => {
+      const resolveRequest: NativeResolveRequest = (name, settle) => {
         const deliver = (result: ResolutionResult | undefined): void => {
           result = context.currentResult(result);
           if (result === undefined) return;
@@ -90,17 +96,24 @@ export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
         };
         if (result instanceof Promise) void result.then(complete);
         else complete(result);
-      }),
+      };
+      return context.reportsProgress()
+        ? addon.runPlan(handle, resolveRequest, (report) => {
+            context.reportProgress(report);
+          })
+        : addon.runPlan(handle, resolveRequest);
+    },
     cancelPlan: addon.cancelPlan,
     takePlanResult: addon.takePlanResult,
     destroyPlan: addon.destroyPlan,
     dispose: () => undefined,
+    peakMemoryBytes: () => process.resourceUsage().maxRSS * 1024,
   };
 };
 
 const unavailable = (cause: unknown): AssimpError =>
   new AssimpError(
-    'IMPORT_FAILED',
+    'BACKEND_UNAVAILABLE',
     `backend: native unavailable on ${process.platform}-${process.arch}; reinstall libassimp and its matching optional dependency.`,
     { cause },
   );

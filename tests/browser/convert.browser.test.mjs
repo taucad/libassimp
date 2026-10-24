@@ -118,7 +118,7 @@ beforeAll(async () => {
 
 test('loads default entry artifacts and round-trips geometry in the browser', async () => {
   const { files: gltf } = await convert({ name: 'cube.obj', bytes: cube }, { to: 'glb' });
-  expect(gltf.map(({ name }) => name)).toEqual(['result.glb']);
+  expect(gltf.map(({ name }) => name)).toEqual(['cube.glb']);
   expect(new TextDecoder().decode(gltf[0].bytes.subarray(0, 4))).toBe('glTF');
 
   const { files: stl } = await convert({ name: 'model.glb', bytes: gltf[0].bytes }, { to: 'stl' });
@@ -374,7 +374,7 @@ test('preserves export textures and exact same-artifact resolution across Wasm r
     'engineflare1.jpg',
   ]);
   expect(normal.textured.members).toEqual([
-    'result.usdc',
+    'spider.usdc',
     'textures/SpiderTex.jpg',
     'textures/wal67ar_small.jpg',
     'textures/drkwood2.jpg',

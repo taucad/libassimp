@@ -258,7 +258,7 @@
         }
       },
       "step": {
-        "extension": "stp",
+        "extension": "step",
         "description": "ISO 10303 STEP",
         "nativeId": "stp"
       },
