@@ -40,8 +40,8 @@ console.log((await loadHelp()).export.stl.exportOptions.binary.description);
 
 The entry finds its glue and Wasm next to itself through `new URL('./wasm/…', import.meta.url)`. CI installs the packed tarball into Vite (build and dev), webpack 5, Next.js with Turbopack, esbuild and a CDN-style static origin, and converts a model in Chromium in each:
 
-- **Vite build, webpack 5, Next.js:** no configuration. They emit both files as assets.
-- **Vite dev server:** add `optimizeDeps: { exclude: ['libassimp'] }`. Pre-bundling moves the entry into `node_modules/.vite/deps`, where the relative Wasm URL no longer resolves.
+- **Vite 8 (build and dev server), webpack 5, Next.js:** no configuration. They emit both files as assets.
+- **An older Vite dev server** that pre-bundles libassimp and then cannot fetch `libassimp.wasm`: add `optimizeDeps: { exclude: ['libassimp'] }`.
 - **esbuild and other bundlers that leave `import.meta.url` alone:** copy `node_modules/libassimp/dist/wasm/` to a `wasm/` directory next to the bundle, or pass `wasmUrl`.
 - **CDN without a bundler:** import `https://cdn.jsdelivr.net/npm/libassimp@<version>/dist/index.mjs`. Avoid `/+esm`: it rebundles the entry and breaks the relative URLs.
 
