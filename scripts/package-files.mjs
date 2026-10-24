@@ -4,7 +4,9 @@ import path from 'node:path';
 // Change the list and ceiling together in the causing pull request.
 // Origin: the generated capability registry and validator split measured in the
 // native-routed candidate; 27 exact files, with no spare allowance.
-const PACKAGE_FILE_COUNT_CEILING = 27;
+// Origin: PR-2 (runtime streaming and diagnostics) adds the Node-only
+// `createDirectoryResolver` module and its declarations; 29 exact files.
+const PACKAGE_FILE_COUNT_CEILING = 29;
 
 export const PACKAGE_FILES = [
   'BREAKING_CHANGES.md',
@@ -21,6 +23,8 @@ export const PACKAGE_FILES = [
   'dist/convert.mjs',
   'dist/create-assimp.d.mts',
   'dist/create-assimp.mjs',
+  'dist/directory-resolver.d.mts',
+  'dist/directory-resolver.mjs',
   'dist/generated/assimp-capabilities.d.mts',
   'dist/generated/assimp-capabilities.mjs',
   'dist/index.d.mts',
