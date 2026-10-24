@@ -1,0 +1,120 @@
+# SPIKE (temporary, never merged): native allocator benchmark on macOS and Windows.
+name: s6 allocator spike
+on:
+  push:
+    branches: [claude/s6-spike-macwin]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    name: build (${{ matrix.os }} ${{ matrix.alloc }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, alloc: system }
+          - { os: macos-15, alloc: minew }
+          - { os: macos-15, alloc: mizone }
+          - { os: macos-15, alloc: mizone-new }
+          - { os: windows-2022, alloc: system }
+          - { os: windows-2022, alloc: minew }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '11.0'
+      LIBASSIMP_SPIKE_ALLOC: ${{ matrix.alloc }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '26'
+      - if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      - run: pnpm run check:capabilities && pnpm exec tsdown && node scripts/write-native-loaders.mjs
+      - name: Resolve the cmake-js Node inputs
+        shell: bash
+        run: |
+          {
+            echo "CMAKE_JS_INC=$(pnpm exec cmake-js print-cmakejs-include | tail -n 1)"
+            echo "CMAKE_JS_LIB=$(pnpm exec cmake-js print-cmakejs-lib | tail -n 1)"
+            echo "CMAKE_JS_SRC=$(pnpm exec cmake-js print-cmakejs-src | tail -n 1)"
+            echo "CMAKE_JS_OUTPUT_DIR=$GITHUB_WORKSPACE/native-output"
+          } >> "$GITHUB_ENV"
+      - name: Build the addon
+        shell: bash
+        # The export and host checks run last; report them without losing the addon.
+        run: pnpm run build:native || echo "::warning::build:native failed for ${{ matrix.alloc }} (see log)"
+      - name: Stage the addon
+        shell: bash
+        run: |
+          mkdir -p addons/${{ matrix.alloc }}
+          find native-output -name libassimp.node -exec cp {} addons/${{ matrix.alloc }}/libassimp.node \;
+          ls -l addons/${{ matrix.alloc }}
+      - name: Addon tests (informational)
+        continue-on-error: true
+        shell: bash
+        run: LIBASSIMP_NATIVE_ADDON="$GITHUB_WORKSPACE/addons/${{ matrix.alloc }}/libassimp.node" node src/cpp/node-addon.test.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: addon-${{ matrix.os }}-${{ matrix.alloc }}
+          path: addons
+          retention-days: 3
+
+  bench:
+    name: bench (${{ matrix.os }})
+    needs: build
+    if: ${{ !cancelled() }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, variants: system minew mizone mizone-new }
+          - { os: windows-2022, variants: system minew }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '26'
+      - run: pnpm run check:capabilities && pnpm exec tsdown && node scripts/write-native-loaders.mjs
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: addon-${{ matrix.os }}-*
+          path: addons
+          merge-multiple: true
+      - name: Generate models
+        shell: bash
+        run: |
+          ls -lR addons
+          mkdir -p models
+          node spike/gen-models.mjs models 64 256 1024
+          cp bench/fixtures/helical-gear.glb models/gear.glb
+          cp assimp/test/models/glTF2/DamagedHelmet.glb models/helmet.glb
+          for f in grid64 grid256 grid1024 helmet; do
+            NAPI_RS_NATIVE_LIBRARY_PATH="$PWD/addons/system/libassimp.node" node spike/run.mjs "$PWD/dist" native "models/$f.glb" usdz "models/$f.usdz"
+          done
+          ls -l models
+      - name: Interleaved matrix
+        shell: bash
+        run: node spike/drive.mjs 5 ${{ matrix.variants }}
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          node spike/summary.mjs ${{ matrix.variants }} | tee summary.txt
+          { echo '```'; cat summary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: results-${{ matrix.os }}
+          path: |
+            results
+            summary.txt

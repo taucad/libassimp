@@ -277,6 +277,34 @@ if(LIBASSIMP_NATIVE_ADDON)
   # objects (stringstream buffers, for one) with its own operator new that the
   # addon would then free through mimalloc. Linux only until macOS and Windows
   # are measured; instrumented builds keep the system allocator for their tools.
+  # SPIKE: LIBASSIMP_SPIKE_ALLOC selects the allocator on macOS and Windows.
+  #   system | minew (new/delete -> mimalloc) | mizone (malloc zone) | mizone-new (both)
+  set(LIBASSIMP_SPIKE_ALLOC "$ENV{LIBASSIMP_SPIKE_ALLOC}")
+  message(STATUS "SPIKE allocator: '${LIBASSIMP_SPIKE_ALLOC}'")
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" AND LIBASSIMP_SPIKE_ALLOC MATCHES "^(minew|mizone|mizone-new)$")
+    include(FetchContent)
+    set(MI_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    set(MI_BUILD_OBJECT OFF CACHE BOOL "" FORCE)
+    set(MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    if(LIBASSIMP_SPIKE_ALLOC MATCHES "^mizone")
+      set(MI_OVERRIDE ON CACHE BOOL "" FORCE)
+      set(MI_OSX_ZONE ON CACHE BOOL "" FORCE)
+      set(MI_OSX_INTERPOSE OFF CACHE BOOL "" FORCE)
+    else()
+      set(MI_OVERRIDE OFF CACHE BOOL "" FORCE)
+    endif()
+    FetchContent_Declare(
+      mimalloc
+      GIT_REPOSITORY "https://github.com/microsoft/mimalloc"
+      GIT_TAG 02d5f7ce61f9e6a928a9d69840431838582d492e # v2.5.2
+      EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(mimalloc)
+    if(LIBASSIMP_SPIKE_ALLOC MATCHES "new$")
+      target_sources(libassimp-native PRIVATE src/cpp/mimalloc-new-delete.cpp)
+    endif()
+    target_link_libraries(libassimp-native PRIVATE mimalloc-static)
+  endif()
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT (LIBASSIMP_CPP_COVERAGE OR LIBASSIMP_FUZZ OR LIBASSIMP_SANITIZERS))
     include(FetchContent)
     set(MI_BUILD_SHARED OFF CACHE BOOL "" FORCE)
