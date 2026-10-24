@@ -300,6 +300,8 @@ type Format3mfExportOptions = {
   readonly decimalPrecision?: number;
   /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
   readonly pointClouds?: boolean;
+  /** Whether every mesh must be manifold and oriented, as 3MF Core requires for model objects. When false, a mesh that is not is written as an object of type other instead of failing the export. Default: true. */
+  readonly requireManifold?: boolean;
   /** 3MF_EXPORT_UNIT. Default: "millimeter". */
   readonly unit?: 'micron' | 'millimeter' | 'centimeter' | 'inch' | 'foot' | 'meter';
   /** 3MF_EXPORT_UPAXIS. Default: "z". */
@@ -838,6 +840,10 @@ export const exportFormats = [
       pointClouds: {
         kind: 'boolean',
         default: false,
+      },
+      requireManifold: {
+        kind: 'boolean',
+        default: true,
       },
       unit: {
         kind: 'string',
@@ -2802,6 +2808,12 @@ export const internalExportOptionDescriptors = {
       kind: 'boolean',
       nativeKind: 'boolean',
       default: false,
+    },
+    requireManifold: {
+      nativeName: '3MF_EXPORT_REQUIRE_MANIFOLD',
+      kind: 'boolean',
+      nativeKind: 'boolean',
+      default: true,
     },
     unit: {
       nativeName: '3MF_EXPORT_UNIT',
