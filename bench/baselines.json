@@ -13,14 +13,14 @@
   },
   "platforms": {
     "linux-x64": {
-      "origin": "First linux-x64 record: five bench/usd.mjs reports from the CI ubuntu-24.04 benchmark job across two runners (runs 39971755141 and 39981019323, same Wasm and addon) on the LightUSD engine, assimp 0b4eac5ac; the ratio limit is 25% because the best-of-run usdz-grid-to-glb/wasm ratio differed by 15.5% between the two runners (Node v26.12.1)",
+      "origin": "Re-recorded for the 0.4 size pass from three bench/usd.mjs reports in CI run 40062195635 (ubuntu-24.04, engine 6e6225df5, LightUSD 04e5bde); outputs are byte-identical to the previous record. Wasm memory for usda-grid-to-usdz, usda-grid-to-usdc and usdc-grid-to-glb rose one heap step (186.1 to 223.4 MiB, 386.1 to 463.3 MiB): mimalloc grows the heap in 16-32 MiB segments and Emscripten in 20% steps, and the largest heap request moved past one segment boundary (170.0 to 202.0 MiB for usda-grid-to-usdz). Native peak RSS is unchanged and usdz-grid-to-glb, which reads the same USDC, kept 386.1 MiB, so this is allocation layout, not an extra copy. The previous record came from runs 39971755141 and 39981019323 on assimp 0b4eac5ac; the ratio limit stays 25% for the runner spread measured there (Node v26.12.1)",
       "workloads": {
         "usda-grid-to-usdz": {
           "wasm": {
-            "ratio": 6.8156,
-            "medianMs": 291.819,
-            "memoryBytes": 195166208,
-            "maxRssBytes": 972775424,
+            "ratio": 6.6381,
+            "medianMs": 275.836,
+            "memoryBytes": 234094592,
+            "maxRssBytes": 977432576,
             "outputs": [
               {
                 "name": "result.usdz",
@@ -30,9 +30,9 @@
             ]
           },
           "native": {
-            "ratio": 5.4663,
-            "medianMs": 251.408,
-            "maxRssBytes": 589848576,
+            "ratio": 5.3718,
+            "medianMs": 232.242,
+            "maxRssBytes": 567754752,
             "outputs": [
               {
                 "name": "result.usdz",
@@ -44,10 +44,10 @@
         },
         "usda-grid-to-usdc": {
           "wasm": {
-            "ratio": 6.4333,
-            "medianMs": 294.536,
-            "memoryBytes": 195166208,
-            "maxRssBytes": 942321664,
+            "ratio": 6.5969,
+            "medianMs": 261.614,
+            "memoryBytes": 234094592,
+            "maxRssBytes": 976281600,
             "outputs": [
               {
                 "name": "result.usdc",
@@ -57,9 +57,9 @@
             ]
           },
           "native": {
-            "ratio": 4.9798,
-            "medianMs": 239.6,
-            "maxRssBytes": 590610432,
+            "ratio": 5.2155,
+            "medianMs": 224.828,
+            "maxRssBytes": 583184384,
             "outputs": [
               {
                 "name": "result.usdc",
@@ -71,10 +71,10 @@
         },
         "usdc-grid-to-glb": {
           "wasm": {
-            "ratio": 3.9081,
-            "medianMs": 167.77,
-            "memoryBytes": 404815872,
-            "maxRssBytes": 979263488,
+            "ratio": 4.0958,
+            "medianMs": 162.943,
+            "memoryBytes": 485556224,
+            "maxRssBytes": 944029696,
             "outputs": [
               {
                 "name": "result.glb",
@@ -84,9 +84,9 @@
             ]
           },
           "native": {
-            "ratio": 3.9322,
-            "medianMs": 195.05,
-            "maxRssBytes": 682356736,
+            "ratio": 4.0254,
+            "medianMs": 175.358,
+            "maxRssBytes": 676573184,
             "outputs": [
               {
                 "name": "result.glb",
@@ -98,10 +98,10 @@
         },
         "usdz-grid-to-glb": {
           "wasm": {
-            "ratio": 4.0077,
-            "medianMs": 175.571,
-            "memoryBytes": 404815872,
-            "maxRssBytes": 930209792,
+            "ratio": 3.8343,
+            "medianMs": 156.962,
+            "memoryBytes": 404619264,
+            "maxRssBytes": 945369088,
             "outputs": [
               {
                 "name": "result.glb",
@@ -111,9 +111,9 @@
             ]
           },
           "native": {
-            "ratio": 3.7643,
-            "medianMs": 185.673,
-            "maxRssBytes": 689692672,
+            "ratio": 3.9706,
+            "medianMs": 176.39,
+            "maxRssBytes": 653062144,
             "outputs": [
               {
                 "name": "result.glb",
@@ -125,10 +125,10 @@
         },
         "glb-gear-to-usdz": {
           "wasm": {
-            "ratio": 1.1375,
-            "medianMs": 50.234,
-            "memoryBytes": 76480512,
-            "maxRssBytes": 507555840,
+            "ratio": 1.2117,
+            "medianMs": 47.891,
+            "memoryBytes": 76414976,
+            "maxRssBytes": 501174272,
             "outputs": [
               {
                 "name": "result.usdz",
@@ -138,9 +138,9 @@
             ]
           },
           "native": {
-            "ratio": 1.0138,
-            "medianMs": 48.052,
-            "maxRssBytes": 219877376,
+            "ratio": 0.9659,
+            "medianMs": 42.934,
+            "maxRssBytes": 220188672,
             "outputs": [
               {
                 "name": "result.usdz",
@@ -152,10 +152,10 @@
         },
         "usda-sidecars-to-usdz": {
           "wasm": {
-            "ratio": 0.0687,
-            "medianMs": 3.017,
-            "memoryBytes": 76480512,
-            "maxRssBytes": 361537536,
+            "ratio": 0.0593,
+            "medianMs": 2.389,
+            "memoryBytes": 76414976,
+            "maxRssBytes": 363290624,
             "outputs": [
               {
                 "name": "result.usdz",
@@ -165,9 +165,9 @@
             ]
           },
           "native": {
-            "ratio": 0.0489,
-            "medianMs": 2.328,
-            "maxRssBytes": 219926528,
+            "ratio": 0.0498,
+            "medianMs": 2.206,
+            "maxRssBytes": 219516928,
             "outputs": [
               {
                 "name": "result.usdz",

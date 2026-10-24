@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { conversionEdges, exportFormats, importFormats } from './generated/assimp-capabilities.js';
 
 export const canonicalExports = [
-  '3ds',
   '3mf',
   'assjson',
   'dae',
@@ -17,20 +16,18 @@ export const canonicalExports = [
   'usda',
   'usdc',
   'usdz',
-  'x',
-  'x3d',
 ] as const;
 
 const cross = (imports: readonly { readonly id: string }[], exports: readonly { readonly id: string }[]) =>
   imports.flatMap(({ id: from }) => exports.flatMap(({ id: to }) => (from === to ? [] : [{ from, to }])));
 
 describe('generated format catalogs', () => {
-  it('publishes the exact canonical 15 export roots', () => {
+  it('publishes the exact canonical 13 export roots', () => {
     expect(exportFormats.map(({ id }) => id)).toEqual(canonicalExports);
   });
 
-  it('publishes the exact compiled 69 import roots', () => {
-    expect(importFormats).toHaveLength(69);
+  it('publishes the exact compiled 62 import roots', () => {
+    expect(importFormats).toHaveLength(62);
   });
 
   it('publishes exactly the non-identity import/export cross-product', () => {

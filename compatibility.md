@@ -35,4 +35,4 @@ A native resolver must not await another native conversion: both need the same e
 
 Native address space is not limited to Wasm32's 4 GiB, but file-format limits still apply. USDZ uses classic ZIP: layouts requiring ZIP64 are rejected before payload copying rather than silently truncating sizes or offsets. Larger native memory capacity does not imply unlimited output size for every format.
 
-The compiled importer catalog lists recognized extensions, not support for every encoding. Assimp recognizes `x3db` but has no binary X3D decoder. Native and Wasm reject binary X3D with `IMPORT_FAILED`; an empty result is not a successful decode. XML X3D remains supported, including a valid empty scene.
+The compiled importer catalog lists recognized extensions, not support for every encoding. X, X3D (including VRML) and 3DS are not compiled in; files in those formats are rejected with `IMPORT_FAILED`.
