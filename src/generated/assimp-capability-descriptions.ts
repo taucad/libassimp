@@ -2,8 +2,6 @@
 
 /** Import option prose, keyed by public name. @internal */
 export const importOptionDescriptions = {
-  '3dsUnitScaleToMeters': 'Meters represented by one 3DS source unit.',
-  '3dsUpAxis': 'The 3DS source up axis.',
   '3mfUnitScaleToMeters': 'Meters represented by one 3MF source unit.',
   '3mfUpAxis': 'The 3MF source up axis.',
   acUnitScaleToMeters: 'Meters represented by one AC source unit.',
@@ -184,19 +182,11 @@ export const importOptionDescriptions = {
   stlUpAxis: 'The STL source up axis.',
   usdUnitScaleToMeters: 'Meters represented by one USD source unit.',
   usdUpAxis: 'The USD source up axis.',
-  x3dUnitScaleToMeters: 'Meters represented by one X3D source unit.',
-  x3dUpAxis: 'The X3D source up axis.',
   xglUnitScaleToMeters: 'Meters represented by one XGL source unit.',
   xglUpAxis: 'The XGL source up axis.',
-  xUnitScaleToMeters: 'Meters represented by one X source unit.',
-  xUpAxis: 'The X source up axis.',
 } as const;
 /** Export option prose per canonical target, keyed by public name. @internal */
 export const exportOptionDescriptions = {
-  '3ds': {
-    pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
-  },
   '3mf': {
     application: '3MF_EXPORT_APPLICATION.',
     decimalPrecision: '3MF_EXPORT_DECIMAL_PRECISION.',
@@ -309,15 +299,6 @@ export const exportOptionDescriptions = {
       'USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten).',
     physicsJoints:
       'USDZ exporter: keep UsdPhysics joint prims. ARKit allows no joint prim types, so USDZ packages export joint nodes as plain Xforms unless this is set. USDA and USDC always keep them.',
-    pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
-  },
-  x: {
-    pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
-    use64Bit: 'Specifies the xfile use double for real values of float.',
-  },
-  x3d: {
     pointClouds:
       'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
   },

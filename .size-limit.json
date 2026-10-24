@@ -7,7 +7,7 @@
   {
     "name": "generated capability registry",
     "path": "dist/generated/assimp-capabilities.mjs",
-    "limit": "7 kB"
+    "limit": "6.5 kB"
   },
   {
     "name": "instance factory",

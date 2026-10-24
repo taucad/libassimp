@@ -6,6 +6,7 @@ Before 1.0, a minor version may break the API. Each section lists what breaks in
 
 - USD export options follow the LightUSD exporter: `materialX`, `subdivision`, `volumes` and `optimizeForMobile` are gone, and passing one rejects with `INVALID_OPTIONS` (the exporter writes UsdPreviewSurface materials, never subdivides, and always applies the ARKit profile to USDZ). New: `animationIndex`, `maxFileSizeMb` and `maxMemoryMb` on every USD target, `compressFloatArrays` on `usdc` and `usdz`, and `lights` and `physicsJoints` on `usdz`. A new `usdc` target writes binary USD.
 - USD exports keep UVs unflipped and author `metersPerUnit` instead of baking unit scale into geometry, so USD output bytes, texture coordinates and transforms differ from 0.3.
+- Removed DirectX X, X3D (with VRML `wrl`/`x3dv`) and Autodesk 3DS import and export to cut the Wasm size. The `x`, `x3d` and `3ds` export targets are gone, and files in these formats now reject with `IMPORT_FAILED`. ASE import is unaffected.
 - The root entry's `assimpCapabilities` no longer carries prose: `OptionDescriptor` and `PostProcessDescriptor` lose `description`. Import `assimpCapabilities` from `libassimp/capabilities` for the same registry with descriptions.
 
 Saved options that contain a removed key fail strict validation. The [0.4 upgrade guide](https://libassimp.xyz/docs/guides/upgrade-to-0-4) shows how to strip them.

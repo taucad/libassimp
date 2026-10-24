@@ -21,11 +21,6 @@
       "description": "USD Object Importer"
     },
     {
-      "id": "x",
-      "extension": "x",
-      "description": "Direct3D XFile Importer"
-    },
-    {
       "id": "obj",
       "extension": "obj",
       "description": "Wavefront Object Importer"
@@ -34,16 +29,6 @@
       "id": "amf",
       "extension": "amf",
       "description": "Additive manufacturing file format(AMF) Importer"
-    },
-    {
-      "id": "3ds",
-      "extension": "3ds",
-      "description": "Discreet 3DS Importer"
-    },
-    {
-      "id": "prj",
-      "extension": "prj",
-      "description": "Discreet 3DS Importer"
     },
     {
       "id": "md3",
@@ -316,26 +301,6 @@
       "description": "3mf Importer"
     },
     {
-      "id": "wrl",
-      "extension": "wrl",
-      "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-    },
-    {
-      "id": "x3d",
-      "extension": "x3d",
-      "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-    },
-    {
-      "id": "x3db",
-      "extension": "x3db",
-      "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-    },
-    {
-      "id": "x3dv",
-      "extension": "x3dv",
-      "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-    },
-    {
       "id": "pmx",
       "extension": "pmx",
       "description": "MMD Importer"
@@ -347,17 +312,6 @@
     }
   ],
   "export": [
-    {
-      "id": "3ds",
-      "extension": "3ds",
-      "description": "Autodesk 3DS (legacy)",
-      "exportOptions": {
-        "pointClouds": {
-          "kind": "boolean",
-          "default": false
-        }
-      }
-    },
     {
       "id": "3mf",
       "extension": "3mf",
@@ -682,32 +636,6 @@
           "kind": "boolean",
           "default": false
         },
-        "pointClouds": {
-          "kind": "boolean",
-          "default": false
-        }
-      }
-    },
-    {
-      "id": "x",
-      "extension": "x",
-      "description": "DirectX X file",
-      "exportOptions": {
-        "pointClouds": {
-          "kind": "boolean",
-          "default": false
-        },
-        "use64Bit": {
-          "kind": "boolean",
-          "default": false
-        }
-      }
-    },
-    {
-      "id": "x3d",
-      "extension": "x3d",
-      "description": "Extensible 3D",
-      "exportOptions": {
         "pointClouds": {
           "kind": "boolean",
           "default": false

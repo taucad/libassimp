@@ -31,6 +31,10 @@ console.log(stripRemovedExportOptions('usdz', { materialX: true, lights: true })
 
 Run this once where settings are loaded, then write them back, and keep strict validation for new input. With zod, a reader can also parse saved data with `z.object(shape)`, which strips unknown keys, and new input with `z.strictObject(shape)`.
 
+## Drop removed formats
+
+DirectX X, X3D (with VRML) and Autodesk 3DS are no longer compiled. The `x`, `x3d` and `3ds` targets are gone from `ExportFormat`, and files in these formats reject with `IMPORT_FAILED`. Remove them from saved target lists and file pickers; `assimpCapabilities.import` and `.export` list what remains.
+
 ## Expect different USD output
 
 USD exports no longer flip UVs and author `metersPerUnit` on the stage instead of scaling geometry. Code that compensated for the old flip or scale should stop, and cached USD outputs or golden files need regenerating.

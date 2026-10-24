@@ -212,7 +212,7 @@ describe('validation and atomic errors', () => {
       { ppPtvRootTransformation: [...Array.from({ length: 15 }, () => 0), 1e300] },
       'expected 16 finite float32 numbers',
     ],
-    [{ '3dsUpAxis': 'q' }, 'expected one of x, y, z'],
+    [{ aseUpAxis: 'q' }, 'expected one of x, y, z'],
   ] as const)('validates every generated import storage shape', (importOptions, message) => {
     expect(() => validatePlanOptions({ targets: [{ to: 'glb' }], importOptions }, new Set(['glb']))).toThrow(
       message,
@@ -256,14 +256,14 @@ describe('validation and atomic errors', () => {
     const plan = validatePlanOptions(
       {
         targets: [{ to: '3mf', exportOptions: { unit: 'meter', upAxis: 'x' } }],
-        importOptions: { favourSpeed: true, '3dsUpAxis': 'x', ppPtvRootTransformation: matrix },
+        importOptions: { favourSpeed: true, aseUpAxis: 'x', ppPtvRootTransformation: matrix },
       },
       new Set(['3mf']),
     );
     expect(plan.importProperties).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: 'FAVOUR_SPEED', kind: 'integer', value: 1 }),
-        expect.objectContaining({ name: 'IMPORT_3DS_UP_AXIS', kind: 'integer', value: 0 }),
+        expect.objectContaining({ name: 'IMPORT_ASE_UP_AXIS', kind: 'integer', value: 0 }),
         expect.objectContaining({ name: 'PP_PTV_ROOT_TRANSFORMATION', kind: 'matrix', value: matrix }),
       ]),
     );
