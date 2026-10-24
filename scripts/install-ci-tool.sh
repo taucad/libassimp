@@ -17,13 +17,14 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-case "$tool" in actionlint|shellcheck|vale) ;; *) echo "ERROR: unsupported --tool: $tool" >&2; exit 2 ;; esac
+case "$tool" in actionlint|ccache|shellcheck|vale) ;; *) echo "ERROR: unsupported --tool: $tool" >&2; exit 2 ;; esac
 
 case "${LIBASSIMP_CI_TOOL_PLATFORM:-$(uname -s)-$(uname -m)}" in
   Darwin-arm64) platform=darwin-arm64 ;;
   Linux-x86_64) platform=linux-amd64 ;;
   Linux-aarch64) platform=linux-arm64 ;;
-  darwin-arm64|linux-amd64|linux-arm64) platform="${LIBASSIMP_CI_TOOL_PLATFORM}" ;;
+  MINGW64_NT-*-x86_64|MSYS_NT-*-x86_64) platform=windows-amd64 ;;
+  darwin-arm64|linux-amd64|linux-arm64|windows-amd64) platform="${LIBASSIMP_CI_TOOL_PLATFORM}" ;;
   *) echo "ERROR: unsupported CI-tool platform" >&2; exit 1 ;;
 esac
 
@@ -48,7 +49,9 @@ base_url="$(read_tool base_url)"
 filename="$(read_tool filename)"
 archive_sha="$(read_tool sha256)"
 binary_sha="$(read_tool binary_sha256)"
-binary="$destination/bin/$tool"
+executable="$tool"
+case "$platform" in windows-*) executable="$tool.exe" ;; esac
+binary="$destination/bin/$executable"
 
 sha256() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'; else shasum -a 256 "$1" | awk '{print $1}'; fi
@@ -77,8 +80,18 @@ test "$actual_archive_sha" = "$archive_sha" || {
   exit 1
 }
 
-tar -xf "$archive" -C "$extract_dir"
-source_binary="$(find "$extract_dir" -type f -name "$tool" -print -quit)"
+case "$filename" in
+  *.zip)
+    # Git for Windows ships unzip; Windows' own bsdtar is the fallback.
+    if command -v unzip >/dev/null 2>&1; then
+      unzip -q "$archive" -d "$extract_dir"
+    else
+      "$SYSTEMROOT/System32/tar.exe" -xf "$(cygpath -w "$archive")" -C "$(cygpath -w "$extract_dir")"
+    fi
+    ;;
+  *) tar -xf "$archive" -C "$extract_dir" ;;
+esac
+source_binary="$(find "$extract_dir" -type f -name "$executable" -print -quit)"
 test -n "$source_binary"
 actual_binary_sha="$(sha256 "$source_binary")"
 test "$actual_binary_sha" = "$binary_sha" || {

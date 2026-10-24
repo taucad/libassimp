@@ -16,7 +16,13 @@ import {
 import { inspectHeader } from '../scripts/inspect-native.mjs';
 import { extractPreviewPackages } from '../scripts/extract-preview-packages.mjs';
 import { readNapiTargets } from '../scripts/lib/napi-targets.mjs';
-import { nativeMatrices, ELECTRON_VERSION, NODE_VERSION, NODE_VERSIONS } from '../scripts/native-matrix.mjs';
+import {
+  nativeMatrices,
+  ELECTRON_VERSION,
+  NODE_VERSION,
+  NODE_VERSIONS,
+  SMOKE_LANE_SLOTS,
+} from '../scripts/native-matrix.mjs';
 import { packTestTarballs } from '../scripts/pack-test-tarballs.mjs';
 import { PACKAGE_FILES } from '../scripts/package-files.mjs';
 import { waitForRegistry } from '../scripts/registry-wait.mjs';
@@ -50,12 +56,17 @@ describe('native target source', () => {
       packages.map(({ triple }) => triple),
       ['aarch64-apple-darwin', 'x86_64-unknown-linux-gnu', 'x86_64-pc-windows-msvc'],
     );
-    const { build, smoke } = nativeMatrices();
+    const { build, smoke, smokeJobs } = nativeMatrices();
     assert.deepEqual(
       build.map(({ target }) => target),
       packages.map(({ triple }) => triple),
     );
     assert.equal(smoke.length, 12);
+    assert.deepEqual(
+      smokeJobs.map(({ suffix, lanes }) => [suffix, lanes.length]),
+      packages.map(({ suffix }) => [suffix, NODE_VERSIONS.length + 1]),
+    );
+    assert(smokeJobs.every(({ lanes }) => lanes.length <= SMOKE_LANE_SLOTS));
     assert.deepEqual(
       new Set(smoke.map(({ suffix }) => suffix)),
       new Set(packages.map(({ suffix }) => suffix)),
@@ -99,6 +110,11 @@ describe('native target source', () => {
     const cmakeLines = new Set(cmake.split('\n').map((line) => line.trim()));
     const exportsCheck = readFileSync(new URL('../scripts/check-cpp-exports.mjs', import.meta.url), 'utf8');
     const smoke = readFileSync(new URL('../scripts/test-package.mjs', import.meta.url), 'utf8');
+    const smokeLane = readFileSync(
+      new URL('../.github/actions/smoke-lane/action.yml', import.meta.url),
+      'utf8',
+    );
+    const manylinux = readFileSync(new URL('../scripts/build-manylinux.sh', import.meta.url), 'utf8');
     assert(workflow.includes('fromJSON(needs.preflight.outputs.build-matrix)'));
     assert(workflow.includes('fromJSON(needs.preflight.outputs.smoke-matrix)'));
     const workflowLines = workflow.split('\n');
@@ -112,7 +128,7 @@ describe('native target source', () => {
     }
     assert(!/^\s+- target: /mu.test(workflow));
     assert(workflow.includes('pnpm exec cmake-js print-cmakejs-lib'));
-    assert(workflow.includes('run: pnpm run build:native -- --test'));
+    assert(workflow.includes('pnpm run build:native -- --test'));
     assert(!workflow.includes('pnpm run build:native -- --target'));
     assert.equal(manifest.exports['.'].import.browser.default, './dist/index.mjs');
     assert.equal(manifest.exports['.'].import.node.default, './dist/index.node.mjs');
@@ -147,11 +163,16 @@ describe('native target source', () => {
     assert(action.includes("ANNOTATE: 'false'"));
     assert(workflow.includes('ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756'));
     assert(workflow.includes('LIBASSIMP_REGISTRY_VERSION: ${{ needs.preflight.outputs.version }}'));
-    assert(workflow.includes("runner.os == 'Linux' && matrix.runtime == 'electron'"));
-    assert(workflow.includes('LIBASSIMP_SCALE_BYTES: ${{ matrix.scaleBytes }}'));
-    assert(workflow.includes('LIBASSIMP_MIN_SCALE_RSS_BYTES: ${{ matrix.minScaleRssBytes }}'));
+    assert(smokeLane.includes('LIBASSIMP_SCALE_BYTES: ${{ fromJSON(inputs.lane).scaleBytes }}'));
+    assert(
+      smokeLane.includes('LIBASSIMP_MIN_SCALE_RSS_BYTES: ${{ fromJSON(inputs.lane).minScaleRssBytes }}'),
+    );
+    for (let slot = 0; slot < SMOKE_LANE_SLOTS; ++slot) {
+      assert(workflow.includes(`lane: \${{ toJSON(matrix.lanes[${slot}]) }}`), `smoke slot ${slot}`);
+    }
+    assert(!workflow.includes(`matrix.lanes[${SMOKE_LANE_SLOTS}]`));
     assert(!workflow.includes('linux-x64-napi8'));
-    assert(workflow.includes('linux-x64-napi${LIBASSIMP_NAPI_VERSION}'));
+    assert(manylinux.includes('linux-x64-napi${LIBASSIMP_NAPI_VERSION}'));
     assert(exportsCheck.includes("['-D', '--defined-only', '-j', binary]"));
     assert(
       workflow.includes("required.push('publish', 'registry-verify', 'registry-smoke', 'registry-release')"),

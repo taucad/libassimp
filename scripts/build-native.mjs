@@ -98,6 +98,12 @@ const definitions = [
 if (process.platform === 'darwin') {
   definitions.push('-DASSIMP_BUILD_ZLIB=OFF', '-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0');
 }
+// The native preset clears the launcher so release builds never depend on a
+// cache; CI opts in with a pinned ccache.
+const launcher = process.env.LIBASSIMP_COMPILER_LAUNCHER;
+if (launcher) {
+  definitions.push(`-DCMAKE_C_COMPILER_LAUNCHER=${launcher}`, `-DCMAKE_CXX_COMPILER_LAUNCHER=${launcher}`);
+}
 if (arguments_.has('--debug') || arguments_.has('--coverage') || arguments_.has('--sanitize')) {
   definitions.push('-DCMAKE_BUILD_TYPE=Debug');
 }

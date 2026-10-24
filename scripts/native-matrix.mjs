@@ -10,6 +10,8 @@ const RUNNER = { darwin: 'macos-15', linux: 'ubuntu-24.04', win32: 'windows-2022
 export const ELECTRON_VERSION = '38.7.2';
 export const NODE_VERSION = '22.14.0';
 export const NODE_VERSIONS = [NODE_VERSION, '24', '26'];
+/** The smoke job in ci.yml has this many lane steps. */
+export const SMOKE_LANE_SLOTS = 4;
 
 export const nativeMatrices = (packageJson = new URL('../package.json', import.meta.url)) => {
   const { packages } = readNapiTargets(packageJson);
@@ -46,13 +48,25 @@ export const nativeMatrices = (packageJson = new URL('../package.json', import.m
     },
   ]);
   if (build.some(({ os }) => !os)) throw new Error('a native target has no GitHub-hosted runner');
-  return { build, smoke };
+  // One smoke job per target runs its lanes in sequence: each lane is seconds of
+  // work, and a runner per lane exhausted the organization's macOS concurrency.
+  const smokeJobs = build.map(({ os, suffix, target }) => ({
+    lanes: smoke.filter((lane) => lane.suffix === suffix),
+    os,
+    suffix,
+    target,
+  }));
+  if (smokeJobs.some(({ lanes }) => lanes.length > SMOKE_LANE_SLOTS)) {
+    throw new Error(`a smoke job has more than ${SMOKE_LANE_SLOTS} lanes; add a slot to the smoke job`);
+  }
+  return { build, smoke, smokeJobs };
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const { values } = parseArgs({ options: { kind: { default: 'build', type: 'string' } } });
-    const matrix = nativeMatrices()[values.kind];
+    const matrices = nativeMatrices();
+    const matrix = { build: matrices.build, smoke: matrices.smokeJobs }[values.kind];
     if (!matrix) throw new Error(`unknown matrix kind: ${values.kind}`);
     const output = `matrix=${JSON.stringify(matrix)}\n`;
     process.stdout.write(output);
