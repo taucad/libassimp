@@ -430,6 +430,18 @@ if (addon._coverageBlockNextExecute) {
   assert.equal(addon.takePlanResult(plan).code, 'IMPORT_FAILED');
   addon.destroyPlan(plan);
 }
+{
+  const box = await input('OBJ/box.obj');
+  const plan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], {
+    ...options(),
+    releaseEntry: false,
+  });
+  assert.equal(await run(plan), 1);
+  assert(addon.takePlanResult(plan).ok);
+  assert.equal(await run(plan), 1);
+  assert(addon.takePlanResult(plan).ok);
+  addon.destroyPlan(plan);
+}
 
 assert.throws(() => addon.preparePlan('', [], {}), /postProcess/);
 assert.throws(() => addon.preparePlan(), /expects entryName/);
