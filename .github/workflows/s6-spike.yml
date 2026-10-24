@@ -1,4 +1,5 @@
 # SPIKE (temporary, never merged): native allocator benchmark on macOS and Windows.
+# One job per OS builds every allocator variant, then runs the interleaved matrix.
 name: s6 allocator spike
 on:
   push:
@@ -6,24 +7,26 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: s6-spike
+  cancel-in-progress: true
 jobs:
-  build:
-    name: build (${{ matrix.os }} ${{ matrix.alloc }})
+  spike:
+    name: spike (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-15, alloc: system }
-          - { os: macos-15, alloc: minew }
-          - { os: macos-15, alloc: mizone }
-          - { os: macos-15, alloc: mizone-new }
-          - { os: windows-2022, alloc: system }
-          - { os: windows-2022, alloc: minew }
+          - { os: macos-15, variants: system minew mizone mizone-new }
+          - { os: windows-2022, variants: system minew }
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 300
     env:
       MACOSX_DEPLOYMENT_TARGET: '11.0'
-      LIBASSIMP_SPIKE_ALLOC: ${{ matrix.alloc }}
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 2G
+      CCACHE_NOHASHDIR: 'true'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -34,66 +37,39 @@ jobs:
           node-version: '26'
       - if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
-      - run: pnpm run check:capabilities && pnpm exec tsdown && node scripts/write-native-loaders.mjs
-      - name: Resolve the cmake-js Node inputs
+      - name: Install ccache
         shell: bash
         run: |
-          {
-            echo "CMAKE_JS_INC=$(pnpm exec cmake-js print-cmakejs-include | tail -n 1)"
-            echo "CMAKE_JS_LIB=$(pnpm exec cmake-js print-cmakejs-lib | tail -n 1)"
-            echo "CMAKE_JS_SRC=$(pnpm exec cmake-js print-cmakejs-src | tail -n 1)"
-            echo "CMAKE_JS_OUTPUT_DIR=$GITHUB_WORKSPACE/native-output"
-          } >> "$GITHUB_ENV"
-      - name: Build the addon
-        shell: bash
-        # The export and host checks run last; report them without losing the addon.
-        run: pnpm run build:native || echo "::warning::build:native failed for ${{ matrix.alloc }} (see log)"
-      - name: Stage the addon
-        shell: bash
-        run: |
-          mkdir -p addons/${{ matrix.alloc }}
-          find native-output -name libassimp.node -exec cp {} addons/${{ matrix.alloc }}/libassimp.node \;
-          ls -l addons/${{ matrix.alloc }}
-      - name: Addon tests (informational)
-        continue-on-error: true
-        shell: bash
-        run: LIBASSIMP_NATIVE_ADDON="$GITHUB_WORKSPACE/addons/${{ matrix.alloc }}/libassimp.node" node src/cpp/node-addon.test.mjs
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: addon-${{ matrix.os }}-${{ matrix.alloc }}
-          path: addons
-          retention-days: 3
-
-  bench:
-    name: bench (${{ matrix.os }})
-    needs: build
-    if: ${{ !cancelled() }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { os: macos-15, variants: system minew mizone mizone-new }
-          - { os: windows-2022, variants: system minew }
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 150
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: true
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-        with:
-          node-version: '26'
+          scripts/install-ci-tool.sh --tool ccache
+          echo "$GITHUB_WORKSPACE/.ci-tools/bin" >> "$GITHUB_PATH"
+          echo "LIBASSIMP_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
       - run: pnpm run check:capabilities && pnpm exec tsdown && node scripts/write-native-loaders.mjs
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: addon-${{ matrix.os }}-*
-          path: addons
-          merge-multiple: true
+      - name: Build every variant
+        shell: bash
+        env:
+          VARIANTS: ${{ matrix.variants }}
+        run: |
+          export CMAKE_JS_INC="$(pnpm exec cmake-js print-cmakejs-include | tail -n 1)"
+          export CMAKE_JS_LIB="$(pnpm exec cmake-js print-cmakejs-lib | tail -n 1)"
+          export CMAKE_JS_SRC="$(pnpm exec cmake-js print-cmakejs-src | tail -n 1)"
+          for v in $VARIANTS; do
+            echo "::group::build $v"
+            start=$SECONDS
+            # The export and host checks run last; report them without losing the addon.
+            LIBASSIMP_SPIKE_ALLOC=$v LIBASSIMP_NATIVE_BUILD_DIR="build/native-$v" CMAKE_JS_OUTPUT_DIR="$GITHUB_WORKSPACE/native-output-$v" \
+              pnpm run build:native || echo "::warning::build:native failed for $v (see log)"
+            mkdir -p "addons/$v"
+            find "native-output-$v" -name libassimp.node -exec cp {} "addons/$v/libassimp.node" \;
+            ls -l "addons/$v"
+            echo "build $v took $((SECONDS - start)) s"
+            LIBASSIMP_NATIVE_ADDON="$GITHUB_WORKSPACE/addons/$v/libassimp.node" node src/cpp/node-addon.test.mjs > "addon-test-$v.log" 2>&1 \
+              && echo "addon tests $v: pass" || { echo "::warning::addon tests failed for $v"; tail -40 "addon-test-$v.log"; }
+            echo "::endgroup::"
+          done
+          ccache --show-stats || true
       - name: Generate models
         shell: bash
         run: |
-          ls -lR addons
           mkdir -p models
           node spike/gen-models.mjs models 64 256 1024
           cp bench/fixtures/helical-gear.glb models/gear.glb
@@ -118,3 +94,4 @@ jobs:
           path: |
             results
             summary.txt
+            addon-test-*.log

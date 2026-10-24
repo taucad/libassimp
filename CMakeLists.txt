@@ -296,7 +296,7 @@ if(LIBASSIMP_NATIVE_ADDON)
     FetchContent_Declare(
       mimalloc
       GIT_REPOSITORY "https://github.com/microsoft/mimalloc"
-      GIT_TAG 02d5f7ce61f9e6a928a9d69840431838582d492e # v2.5.2
+      GIT_TAG e874dbe8d7f248561dd9a65d2e07a204b93af067 # v3.1.6
       EXCLUDE_FROM_ALL
     )
     FetchContent_MakeAvailable(mimalloc)
