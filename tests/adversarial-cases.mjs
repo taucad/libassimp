@@ -259,8 +259,8 @@ export const loadFixture = (relative) => {
   return { name: basename(path), bytes: new Uint8Array(readFileSync(path)) };
 };
 
-// One representative per format family. The formats PR-5 removes (X, X3D,
-// 3DS) are left out on purpose.
+// One representative per format family the build ships (X, X3D, VRML and 3DS
+// were removed in #52).
 export const TRUNCATION_FIXTURES = [
   'fixtures/cube.obj',
   'fixtures/cube-ascii.ply',
@@ -301,7 +301,6 @@ export const TRUNCATION_FIXTURES = [
   'Q3D/earth.q3o',
   'SIB/heffalump.sib',
   'SMD/triangle.smd',
-  'WRL/Wuson.wrl',
   'XGL/sample_official.xgl',
 ];
 

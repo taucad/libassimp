@@ -36,7 +36,7 @@ namespace {
 
 constexpr const char* kExtensions[] = {
     "gltf", "glb", "obj", "fbx", "dae", "stl", "ply", "usda", "usdc", "usdz", "usd", "3mf",
-    "zae",  "pk3", "bsp", "off", "ifc", "x3d", "wrl", "md2", "md3", "md5mesh", "mdl", "ms3d",
+    "zae",  "pk3", "bsp", "off", "ifc", "md2", "md3", "md5mesh", "mdl", "ms3d",
     "lwo",  "lws", "ac",  "ase", "b3d", "blend", "cob", "csm", "dxf", "hmp", "irr", "lxo",
     "ndo",  "nff", "ogex", "pmx", "q3o", "q3s", "sib", "smd", "ter", "xgl", "zgl", "amf",
     "mesh.xml", "3d", "vrm", "md5anim", "md5camera", "bvh", "iqm", "mot"};
