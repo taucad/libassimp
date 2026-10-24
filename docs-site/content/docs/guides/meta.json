@@ -7,6 +7,7 @@
     "export-properties",
     "use-in-the-browser",
     "apple-quick-look",
-    "handle-failures"
+    "handle-failures",
+    "upgrade-to-0-4"
   ]
 }

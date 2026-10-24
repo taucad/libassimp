@@ -3,7 +3,7 @@ title: API reference
 description: Conversion methods, generated capabilities, directional formats, typed options, lifecycle, and failures.
 ---
 
-Every public symbol is available from the single `libassimp` entry.
+Every conversion symbol is available from the `libassimp` entry. The lazy `libassimp/capabilities` subpath adds option and step descriptions, and `libassimp/wasm` is the binary.
 
 ## `convert`
 
@@ -60,6 +60,7 @@ An instance exposes `convert`, `convertFormats`, directional `formats`, `dispose
 
 `CreateAssimpOptions` has only:
 
+- `backend`: `'auto'` (the Node default: native addon, else Wasm with a warning), `'native'` or `'wasm'`. Browsers use Wasm.
 - `wasmUrl`: override the entry's single Wasm URL.
 - `wasmBinary`: compile supplied bytes instead of fetching that URL.
 - `onLog`: receive runtime diagnostics.
@@ -75,11 +76,11 @@ const glbToStl = conversionEdges.find(({ from, to }) => from === 'glb' && to ===
 console.log(stl.binary.default, glbToStl, defaultPostProcess);
 ```
 
-- `assimpCapabilities` is the keyed serializable registry: directional import/export metadata, exact export-option descriptors, `ImportOptions`, and `PostProcessDescriptor` data.
+- `assimpCapabilities` is the keyed serializable registry: directional import/export metadata, exact export-option descriptors, `ImportOptions`, and `PostProcessDescriptor` data. Descriptions are left out of the root entry; `libassimp/capabilities` exports the same registry as `DescribedCapabilities`, with a `description` on each `DescribedOptionDescriptor` and `DescribedPostProcessDescriptor`.
 - `conversionEdges` is the exact import/export cross-product minus identity pairs. `ConversionEdge` remains a discriminated union of valid pairs.
 - `defaultPostProcess` is the default readonly `PostProcessStep` tuple.
 
-Importing these values does not load Wasm.
+Importing these values does not load Wasm or the native addon.
 
 ## Core types
 
@@ -93,7 +94,7 @@ Importing these values does not load Wasm.
 
 ### Options
 
-`ImportOptions` is the generated exact import configuration. `ExportOptionsByFormat` maps every canonical target to its exact options; `ExportOptionsFor<Format>` indexes that map. `ExportOptionDescriptorsFor<Format>` exposes its runtime descriptors. `OptionDescriptor` describes kind, default, bounds, enum values, applicability, and documentation. No public index signature or raw native property bag exists.
+`ImportOptions` is the generated exact import configuration. `ExportOptionsByFormat` maps every canonical target to its exact options; `ExportOptionsFor<Format>` indexes that map. `ExportOptionDescriptorsFor<Format>` exposes its runtime descriptors. `OptionDescriptor` describes kind, default, bounds and enum values. No public index signature or raw native property bag exists.
 
 ### Formats
 

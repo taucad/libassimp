@@ -1172,7 +1172,8 @@
       "publicName": "dropNormals"
     },
     "aiProcess_GenBoundingBoxes": {
-      "publicName": "generateBoundingBoxes"
+      "publicName": "generateBoundingBoxes",
+      "description": "Computes an axis-aligned bounding box for each mesh."
     }
   },
   "defaultPostProcess": [

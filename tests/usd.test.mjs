@@ -2,14 +2,14 @@
 // USDA, USDC and MaterialX sidecars through `resolve`, and the result packs
 // into a self-contained USDZ that follows the package rules ARKit and Quick
 // Look enforce. `scripts/usd-strict-check.py` validates the same exports with
-// OpenUSD itself in CI.
+// OpenUSD itself in CI. It runs once per backend (`tests/backend.mjs`).
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createAssimp } from '../src/index.ts';
+import { createTestAssimp } from './backend.mjs';
 import { usdaGrid, usdSidecarScene } from './generate-usd-fixture.mjs';
 
 const MODELS = fileURLToPath(new URL('../assimp/test/models/', import.meta.url));
@@ -58,7 +58,7 @@ const expectArkitPackage = (bytes) => {
 let assimp;
 
 beforeAll(async () => {
-  assimp = await createAssimp();
+  assimp = await createTestAssimp();
 });
 
 afterAll(() => {
