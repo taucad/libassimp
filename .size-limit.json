@@ -5,6 +5,11 @@
     "limit": "330 B"
   },
   {
+    "name": "generated capability registry",
+    "path": "dist/generated/assimp-capabilities.mjs",
+    "limit": "6.5 kB"
+  },
+  {
     "name": "instance factory",
     "path": "dist/create-assimp.mjs",
     "limit": "2950 B"
@@ -23,5 +28,10 @@
     "name": "native backend",
     "path": "dist/native-backend.mjs",
     "limit": "1.25 kB"
+  },
+  {
+    "name": "capability descriptions subpath",
+    "path": ["dist/capabilities.mjs", "dist/generated/assimp-capability-descriptions.mjs"],
+    "limit": "13 kB"
   }
 ]

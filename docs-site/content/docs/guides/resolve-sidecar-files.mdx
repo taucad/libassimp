@@ -65,7 +65,7 @@ const { files } = await convert(
 console.log(files[0].name);
 ```
 
-The consumer callback is invoked once per exact requested name within a conversion. JSPI hosts suspend inside parsing; other hosts transparently replay staged parsing from the settled per-call cache. The public behavior is identical.
+The consumer callback is invoked once per exact requested name within a conversion. The native backend and JSPI hosts suspend inside parsing; other Wasm hosts transparently replay staged parsing from the settled per-call cache. The public behavior is identical.
 
 ## Browser-picked files
 
