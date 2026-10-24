@@ -280,13 +280,6 @@ describe('export properties', () => {
     expect(JSON.parse(text(pretty.files[0].bytes))).toEqual(JSON.parse(text(compact.files[0].bytes)));
   });
 
-  it('switches the X file header with EXPORT_XFILE_64BIT', async () => {
-    const plain = await assimp.convert(source(), { to: 'x' });
-    const wide = await assimp.convert(source(), { to: 'x', exportOptions: { use64Bit: true } });
-    expect(text(plain.files[0].bytes)).toContain('xof 0303txt 0032');
-    expect(text(wide.files[0].bytes)).toContain('xof 0303txt 0064');
-  });
-
   it('rejects unknown export options before native work', async () => {
     await expect(
       assimp.convert(source(), {

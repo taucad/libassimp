@@ -440,79 +440,39 @@
   "properties": [
     {
       "nativeName": "3MF_EXPORT_APPLICATION",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "string"
-      ],
-      "defaults": [
-        ""
-      ],
-      "owners": [
-        "3MF"
-      ],
+      "phases": ["export"],
+      "kinds": ["string"],
+      "defaults": [""],
+      "owners": ["3MF"],
       "symbols": [],
-      "sources": [
-        "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:522"
-      ]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:522"]
     },
     {
       "nativeName": "3MF_EXPORT_DECIMAL_PRECISION",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        9
-      ],
-      "owners": [
-        "3MF"
-      ],
+      "phases": ["export"],
+      "kinds": ["integer"],
+      "defaults": [9],
+      "owners": ["3MF"],
       "symbols": [],
-      "sources": [
-        "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:835"
-      ]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:835"]
     },
     {
       "nativeName": "3MF_EXPORT_UNIT",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "string"
-      ],
-      "defaults": [
-        "millimeter"
-      ],
-      "owners": [
-        "3MF"
-      ],
+      "phases": ["export"],
+      "kinds": ["string"],
+      "defaults": ["millimeter"],
+      "owners": ["3MF"],
       "symbols": [],
-      "sources": [
-        "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:483"
-      ]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:483"]
     },
     {
       "nativeName": "3MF_EXPORT_UPAXIS",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        2
-      ],
-      "owners": [
-        "3MF"
-      ],
+      "phases": ["export"],
+      "kinds": ["integer"],
+      "defaults": [2],
+      "owners": ["3MF"],
       "symbols": [],
-      "sources": [
-        "assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:497"
-      ]
+      "sources": ["assimp/code/AssetLib/3MF/Lib3MFBridge.cpp:497"]
     },
     {
       "nativeName": "AI_CONFIG_ANDROID_JNI_ASSIMP_MANAGER_SUPPORT",
@@ -520,118 +480,52 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_ANDROID_JNI_ASSIMP_MANAGER_SUPPORT"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_ANDROID_JNI_ASSIMP_MANAGER_SUPPORT"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "AI_CONFIG_FBX_CONVERT_TO_M",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_FBX_CONVERT_TO_M"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:119"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_FBX_CONVERT_TO_M"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:119"]
     },
     {
       "nativeName": "AI_CONFIG_FBX_USE_SKELETON_BONE_CONTAINER",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_FBX_USE_SKELETON_BONE_CONTAINER"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:121"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_FBX_USE_SKELETON_BONE_CONTAINER"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:121"]
     },
     {
       "nativeName": "AI_CONFIG_IMPORT_FBX_EMBEDDED_TEXTURES_LEGACY_NAMING",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_EMBEDDED_TEXTURES_LEGACY_NAMING"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:117"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_EMBEDDED_TEXTURES_LEGACY_NAMING"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:117"]
     },
     {
       "nativeName": "AI_CONFIG_IMPORT_FBX_IGNORE_UP_DIRECTION",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_IGNORE_UP_DIRECTION"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:120"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_IGNORE_UP_DIRECTION"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:120"]
     },
     {
       "nativeName": "AI_CONFIG_IMPORT_REMOVE_EMPTY_BONES",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer",
-        "boolean"
-      ],
-      "defaults": [
-        1,
-        true
-      ],
-      "owners": [
-        "PostProcessing",
-        "Collada",
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_REMOVE_EMPTY_BONES"
-      ],
+      "phases": ["import"],
+      "kinds": ["integer", "boolean"],
+      "defaults": [1, true],
+      "owners": ["PostProcessing", "Collada", "FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_REMOVE_EMPTY_BONES"],
       "sources": [
         "assimp/code/PostProcessing/LimitBoneWeightsProcess.cpp:85",
         "assimp/code/AssetLib/Collada/ColladaLoader.cpp:146",
@@ -640,40 +534,19 @@
     },
     {
       "nativeName": "APP_SCALE_FACTOR",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "number"
-      ],
-      "defaults": [
-        1
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_APP_SCALE_KEY"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/ScaleProcess.cpp:75"
-      ]
+      "phases": ["import"],
+      "kinds": ["number"],
+      "defaults": [1],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_APP_SCALE_KEY"],
+      "sources": ["assimp/code/PostProcessing/ScaleProcess.cpp:75"]
     },
     {
       "nativeName": "bJoinIdenticalVertices",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "Obj",
-        "FBX"
-      ],
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["Obj", "FBX"],
       "symbols": [],
       "sources": [
         "assimp/code/AssetLib/Obj/ObjExporter.cpp:158",
@@ -682,86 +555,38 @@
     },
     {
       "nativeName": "CHECK_IDENTITY_MATRIX_EPSILON",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "number"
-      ],
-      "defaults": [
-        0.00999999977
-      ],
-      "owners": [
-        "glTF2"
-      ],
-      "symbols": [
-        "AI_CONFIG_CHECK_IDENTITY_MATRIX_EPSILON"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:108"
-      ]
+      "phases": ["export"],
+      "kinds": ["number"],
+      "defaults": [0.00999999977],
+      "owners": ["glTF2"],
+      "symbols": ["AI_CONFIG_CHECK_IDENTITY_MATRIX_EPSILON"],
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:108"]
     },
     {
       "nativeName": "EXPORT_BLOB_NAME",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "string"
-      ],
-      "defaults": [
-        "$blobfile"
-      ],
-      "owners": [
-        "Common"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_BLOB_NAME"
-      ],
-      "sources": [
-        "assimp/code/Common/Exporter.cpp:377"
-      ]
+      "phases": ["export"],
+      "kinds": ["string"],
+      "defaults": ["$blobfile"],
+      "owners": ["Common"],
+      "symbols": ["AI_CONFIG_EXPORT_BLOB_NAME"],
+      "sources": ["assimp/code/Common/Exporter.cpp:377"]
     },
     {
       "nativeName": "EXPORT_FBX_TRANSPARENCY_FACTOR_REFER_TO_OPACITY",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_FBX_TRANSPARENCY_FACTOR_REFER_TO_OPACITY"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXExporter.cpp:1188"
-      ]
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_EXPORT_FBX_TRANSPARENCY_FACTOR_REFER_TO_OPACITY"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXExporter.cpp:1188"]
     },
     {
       "nativeName": "EXPORT_POINT_CLOUDS",
-      "phases": [
-        "export",
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "Common",
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_POINT_CLOUDS"
-      ],
+      "phases": ["export", "import"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["Common", "PostProcessing"],
+      "symbols": ["AI_CONFIG_EXPORT_POINT_CLOUDS"],
       "sources": [
         "assimp/code/Common/Exporter.cpp:544",
         "assimp/code/PostProcessing/PretransformVertices.cpp:113"
@@ -773,50 +598,25 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_EXPORT_XFILE_64BIT"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_EXPORT_XFILE_64BIT"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "extras",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "callback"
-      ],
+      "phases": ["export"],
+      "kinds": ["callback"],
       "defaults": [],
-      "owners": [
-        "glTF2"
-      ],
+      "owners": ["glTF2"],
       "symbols": [],
-      "sources": [
-        "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:133"
-      ]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:133"]
     },
     {
       "nativeName": "FAVOUR_SPEED",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "PostProcessing",
-        "LWO",
-        "LWS",
-        "MD3"
-      ],
-      "symbols": [
-        "AI_CONFIG_FAVOUR_SPEED"
-      ],
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["PostProcessing", "LWO", "LWS", "MD3"],
+      "symbols": ["AI_CONFIG_FAVOUR_SPEED"],
       "sources": [
         "assimp/code/PostProcessing/FindInstancesProcess.cpp:75",
         "assimp/code/AssetLib/LWO/LWOLoader.cpp:122",
@@ -826,21 +626,11 @@
     },
     {
       "nativeName": "GLOB_MEASURE_TIME",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "Common"
-      ],
-      "symbols": [
-        "AI_CONFIG_GLOB_MEASURE_TIME"
-      ],
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["Common"],
+      "symbols": ["AI_CONFIG_GLOB_MEASURE_TIME"],
       "sources": [
         "assimp/code/Common/Importer.cpp:635",
         "assimp/code/Common/Importer.cpp:852",
@@ -849,81 +639,39 @@
     },
     {
       "nativeName": "GLOBAL_SCALE_FACTOR",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "number"
-      ],
-      "defaults": [
-        1
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/ScaleProcess.cpp:72"
-      ]
+      "phases": ["import"],
+      "kinds": ["number"],
+      "defaults": [1],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY"],
+      "sources": ["assimp/code/PostProcessing/ScaleProcess.cpp:72"]
     },
     {
       "nativeName": "GLTF2_SPARSE_ACCESSOR_EXP",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "glTF2"
-      ],
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["glTF2"],
       "symbols": [],
-      "sources": [
-        "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1453"
-      ]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1453"]
     },
     {
       "nativeName": "GLTF2_TARGET_NORMAL_EXP",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "glTF2"
-      ],
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["glTF2"],
       "symbols": [],
-      "sources": [
-        "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1455"
-      ]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1455"]
     },
     {
       "nativeName": "GLTF2_TARGETNAMES_EXP",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "glTF2"
-      ],
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["glTF2"],
       "symbols": [],
-      "sources": [
-        "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1457"
-      ]
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1457"]
     },
     {
       "nativeName": "IMPORT_3DS_UNIT_SCALE_TO_METERS",
@@ -931,12 +679,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_3DS_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_3DS_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_3DS_UP_AXIS",
@@ -944,12 +688,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_3DS_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_3DS_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_3MF_UNIT_SCALE_TO_METERS",
@@ -957,12 +697,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_3MF_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_3MF_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_3MF_UP_AXIS",
@@ -970,54 +706,26 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_3MF_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_3MF_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_AC_EVAL_SUBDIVISION",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        1
-      ],
-      "owners": [
-        "AC"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_AC_EVAL_SUBDIVISION"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/AC/ACLoader.cpp:775"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [1],
+      "owners": ["AC"],
+      "symbols": ["AI_CONFIG_IMPORT_AC_EVAL_SUBDIVISION"],
+      "sources": ["assimp/code/AssetLib/AC/ACLoader.cpp:775"]
     },
     {
       "nativeName": "IMPORT_AC_SEPARATE_BFCULL",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        1
-      ],
-      "owners": [
-        "AC"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_AC_SEPARATE_BFCULL"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/AC/ACLoader.cpp:774"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [1],
+      "owners": ["AC"],
+      "symbols": ["AI_CONFIG_IMPORT_AC_SEPARATE_BFCULL"],
+      "sources": ["assimp/code/AssetLib/AC/ACLoader.cpp:774"]
     },
     {
       "nativeName": "IMPORT_AC_UNIT_SCALE_TO_METERS",
@@ -1025,12 +733,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_AC_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_AC_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_AC_UP_AXIS",
@@ -1038,12 +742,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_AC_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_AC_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_AMF_UNIT_SCALE_TO_METERS",
@@ -1051,12 +751,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_AMF_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_AMF_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_AMF_UP_AXIS",
@@ -1064,33 +760,17 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_AMF_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_AMF_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_ASE_RECONSTRUCT_NORMALS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        1
-      ],
-      "owners": [
-        "ASE"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_ASE_RECONSTRUCT_NORMALS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/ASE/ASELoader.cpp:108"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [1],
+      "owners": ["ASE"],
+      "symbols": ["AI_CONFIG_IMPORT_ASE_RECONSTRUCT_NORMALS"],
+      "sources": ["assimp/code/AssetLib/ASE/ASELoader.cpp:108"]
     },
     {
       "nativeName": "IMPORT_ASE_UNIT_SCALE_TO_METERS",
@@ -1098,12 +778,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_ASE_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_ASE_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_ASE_UP_AXIS",
@@ -1111,12 +787,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_ASE_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_ASE_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_BVH_UNIT_SCALE_TO_METERS",
@@ -1124,12 +796,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_BVH_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_BVH_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_BVH_UP_AXIS",
@@ -1137,12 +805,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_BVH_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_BVH_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_COB_UNIT_SCALE_TO_METERS",
@@ -1150,12 +814,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_COB_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_COB_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_COB_UP_AXIS",
@@ -1163,54 +823,26 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_COB_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_COB_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_COLLADA_IGNORE_UNIT_SIZE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "Collada"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_COLLADA_IGNORE_UNIT_SIZE"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:148"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["Collada"],
+      "symbols": ["AI_CONFIG_IMPORT_COLLADA_IGNORE_UNIT_SIZE"],
+      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:148"]
     },
     {
       "nativeName": "IMPORT_COLLADA_IGNORE_UP_DIRECTION",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "Collada"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_COLLADA_IGNORE_UP_DIRECTION"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:147"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["Collada"],
+      "symbols": ["AI_CONFIG_IMPORT_COLLADA_IGNORE_UP_DIRECTION"],
+      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:147"]
     },
     {
       "nativeName": "IMPORT_COLLADA_UNIT_SCALE_TO_METERS",
@@ -1218,12 +850,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_COLLADA_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_COLLADA_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_COLLADA_UP_AXIS",
@@ -1231,33 +859,17 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_COLLADA_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_COLLADA_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_COLLADA_USE_COLLADA_NAMES",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "Collada"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_COLLADA_USE_COLLADA_NAMES"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/Collada/ColladaLoader.cpp:149"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["Collada"],
+      "symbols": ["AI_CONFIG_IMPORT_COLLADA_USE_COLLADA_NAMES"],
+      "sources": ["assimp/code/AssetLib/Collada/ColladaLoader.cpp:149"]
     },
     {
       "nativeName": "IMPORT_DXF_UNIT_SCALE_TO_METERS",
@@ -1265,12 +877,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_DXF_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_DXF_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_DXF_UP_AXIS",
@@ -1278,266 +886,115 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_DXF_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_DXF_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_FBX_OPTIMIZE_EMPTY_ANIMATION_CURVES",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_OPTIMIZE_EMPTY_ANIMATION_CURVES"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:116"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_OPTIMIZE_EMPTY_ANIMATION_CURVES"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:116"]
     },
     {
       "nativeName": "IMPORT_FBX_PRESERVE_PIVOTS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:115"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:115"]
     },
     {
       "nativeName": "IMPORT_FBX_READ_ALL_GEOMETRY_LAYERS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_READ_ALL_GEOMETRY_LAYERS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:106"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_READ_ALL_GEOMETRY_LAYERS"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:106"]
     },
     {
       "nativeName": "IMPORT_FBX_READ_ALL_MATERIALS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_READ_ALL_MATERIALS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:107"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_READ_ALL_MATERIALS"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:107"]
     },
     {
       "nativeName": "IMPORT_FBX_READ_ANIMATIONS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_READ_ANIMATIONS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:112"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_READ_ANIMATIONS"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:112"]
     },
     {
       "nativeName": "IMPORT_FBX_READ_CAMERAS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_READ_CAMERAS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:110"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_READ_CAMERAS"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:110"]
     },
     {
       "nativeName": "IMPORT_FBX_READ_LIGHTS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_READ_LIGHTS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:111"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_READ_LIGHTS"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:111"]
     },
     {
       "nativeName": "IMPORT_FBX_READ_MATERIALS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_READ_MATERIALS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:108"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_READ_MATERIALS"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:108"]
     },
     {
       "nativeName": "IMPORT_FBX_READ_TEXTURES",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_READ_TEXTURES"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:109"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_READ_TEXTURES"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:109"]
     },
     {
       "nativeName": "IMPORT_FBX_READ_WEIGHTS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_READ_WEIGHTS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:113"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_READ_WEIGHTS"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:113"]
     },
     {
       "nativeName": "IMPORT_FBX_STRICT_MODE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "FBX"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_FBX_STRICT_MODE"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/FBX/FBXImporter.cpp:114"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["FBX"],
+      "symbols": ["AI_CONFIG_IMPORT_FBX_STRICT_MODE"],
+      "sources": ["assimp/code/AssetLib/FBX/FBXImporter.cpp:114"]
     },
     {
       "nativeName": "IMPORT_GLOBAL_KEYFRAME",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "MD2",
-        "MD3",
-        "MDC",
-        "MDL",
-        "SMD",
-        "Unreal"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_GLOBAL_KEYFRAME"
-      ],
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["MD2", "MD3", "MDC", "MDL", "SMD", "Unreal"],
+      "symbols": ["AI_CONFIG_IMPORT_GLOBAL_KEYFRAME"],
       "sources": [
         "assimp/code/AssetLib/MD2/MD2Loader.cpp:124",
         "assimp/code/AssetLib/MD3/MD3Loader.cpp:435",
@@ -1553,12 +1010,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_IFC_CUSTOM_TRIANGULATION"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_IFC_CUSTOM_TRIANGULATION"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_IFC_CYLINDRICAL_TESSELLATION",
@@ -1566,12 +1019,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_IFC_CYLINDRICAL_TESSELLATION"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_IFC_CYLINDRICAL_TESSELLATION"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_IFC_SKIP_SPACE_REPRESENTATIONS",
@@ -1579,12 +1028,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_IFC_SKIP_SPACE_REPRESENTATIONS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_IFC_SKIP_SPACE_REPRESENTATIONS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_IFC_SMOOTHING_ANGLE",
@@ -1592,12 +1037,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_IFC_SMOOTHING_ANGLE"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_IFC_SMOOTHING_ANGLE"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_IFC_UNIT_SCALE_TO_METERS",
@@ -1605,12 +1046,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_IFC_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_IFC_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_IFC_UP_AXIS",
@@ -1618,12 +1055,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_IFC_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_IFC_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_IRR_ANIM_FPS",
@@ -1631,36 +1064,17 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_IRR_ANIM_FPS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_IRR_ANIM_FPS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_LWO_ONE_LAYER_ONLY",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer",
-        "string"
-      ],
-      "defaults": [
-        2147483647,
-        ""
-      ],
-      "owners": [
-        "LWO"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_LWO_ONE_LAYER_ONLY"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/LWO/LWOLoader.cpp:123",
-        "assimp/code/AssetLib/LWO/LWOLoader.cpp:124"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer", "string"],
+      "defaults": [2147483647, ""],
+      "owners": ["LWO"],
+      "symbols": ["AI_CONFIG_IMPORT_LWO_ONE_LAYER_ONLY"],
+      "sources": ["assimp/code/AssetLib/LWO/LWOLoader.cpp:123", "assimp/code/AssetLib/LWO/LWOLoader.cpp:124"]
     },
     {
       "nativeName": "IMPORT_LWO_UNIT_SCALE_TO_METERS",
@@ -1668,12 +1082,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_LWO_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_LWO_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_LWO_UP_AXIS",
@@ -1681,197 +1091,89 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_LWO_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_LWO_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_LWS_ANIM_END",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
+      "phases": ["import"],
+      "kinds": ["integer"],
       "defaults": [],
-      "owners": [
-        "LWS"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_LWS_ANIM_END"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/LWS/LWSLoader.cpp:178"
-      ]
+      "owners": ["LWS"],
+      "symbols": ["AI_CONFIG_IMPORT_LWS_ANIM_END"],
+      "sources": ["assimp/code/AssetLib/LWS/LWSLoader.cpp:178"]
     },
     {
       "nativeName": "IMPORT_LWS_ANIM_START",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
+      "phases": ["import"],
+      "kinds": ["integer"],
       "defaults": [],
-      "owners": [
-        "LWS"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_LWS_ANIM_START"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/LWS/LWSLoader.cpp:174"
-      ]
+      "owners": ["LWS"],
+      "symbols": ["AI_CONFIG_IMPORT_LWS_ANIM_START"],
+      "sources": ["assimp/code/AssetLib/LWS/LWSLoader.cpp:174"]
     },
     {
       "nativeName": "IMPORT_MD2_KEYFRAME",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        -1
-      ],
-      "owners": [
-        "MD2"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MD2_KEYFRAME"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MD2/MD2Loader.cpp:122"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [-1],
+      "owners": ["MD2"],
+      "symbols": ["AI_CONFIG_IMPORT_MD2_KEYFRAME"],
+      "sources": ["assimp/code/AssetLib/MD2/MD2Loader.cpp:122"]
     },
     {
       "nativeName": "IMPORT_MD3_HANDLE_MULTIPART",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        1
-      ],
-      "owners": [
-        "MD3"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MD3_HANDLE_MULTIPART"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MD3/MD3Loader.cpp:439"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [1],
+      "owners": ["MD3"],
+      "symbols": ["AI_CONFIG_IMPORT_MD3_HANDLE_MULTIPART"],
+      "sources": ["assimp/code/AssetLib/MD3/MD3Loader.cpp:439"]
     },
     {
       "nativeName": "IMPORT_MD3_KEYFRAME",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        -1
-      ],
-      "owners": [
-        "MD3"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MD3_KEYFRAME"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MD3/MD3Loader.cpp:433"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [-1],
+      "owners": ["MD3"],
+      "symbols": ["AI_CONFIG_IMPORT_MD3_KEYFRAME"],
+      "sources": ["assimp/code/AssetLib/MD3/MD3Loader.cpp:433"]
     },
     {
       "nativeName": "IMPORT_MD3_LOAD_SHADERS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "MD3"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MD3_LOAD_SHADERS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MD3/MD3Loader.cpp:445"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["MD3"],
+      "symbols": ["AI_CONFIG_IMPORT_MD3_LOAD_SHADERS"],
+      "sources": ["assimp/code/AssetLib/MD3/MD3Loader.cpp:445"]
     },
     {
       "nativeName": "IMPORT_MD3_SHADER_SRC",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "string"
-      ],
-      "defaults": [
-        ""
-      ],
-      "owners": [
-        "MD3"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MD3_SHADER_SRC"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MD3/MD3Loader.cpp:448"
-      ]
+      "phases": ["import"],
+      "kinds": ["string"],
+      "defaults": [""],
+      "owners": ["MD3"],
+      "symbols": ["AI_CONFIG_IMPORT_MD3_SHADER_SRC"],
+      "sources": ["assimp/code/AssetLib/MD3/MD3Loader.cpp:448"]
     },
     {
       "nativeName": "IMPORT_MD3_SKIN_NAME",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "string"
-      ],
-      "defaults": [
-        "default"
-      ],
-      "owners": [
-        "MD3"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MD3_SKIN_NAME"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MD3/MD3Loader.cpp:442"
-      ]
+      "phases": ["import"],
+      "kinds": ["string"],
+      "defaults": ["default"],
+      "owners": ["MD3"],
+      "symbols": ["AI_CONFIG_IMPORT_MD3_SKIN_NAME"],
+      "sources": ["assimp/code/AssetLib/MD3/MD3Loader.cpp:442"]
     },
     {
       "nativeName": "IMPORT_MD5_NO_ANIM_AUTOLOAD",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "MD5"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MD5_NO_ANIM_AUTOLOAD"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MD5/MD5Loader.cpp:115"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["MD5"],
+      "symbols": ["AI_CONFIG_IMPORT_MD5_NO_ANIM_AUTOLOAD"],
+      "sources": ["assimp/code/AssetLib/MD5/MD5Loader.cpp:115"]
     },
     {
       "nativeName": "IMPORT_MD5_UNIT_SCALE_TO_METERS",
@@ -1879,12 +1181,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MD5_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_MD5_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_MD5_UP_AXIS",
@@ -1892,243 +1190,107 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MD5_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_MD5_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_MDC_KEYFRAME",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        -1
-      ],
-      "owners": [
-        "MDC"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDC_KEYFRAME"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDC/MDCLoader.cpp:186"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [-1],
+      "owners": ["MDC"],
+      "symbols": ["AI_CONFIG_IMPORT_MDC_KEYFRAME"],
+      "sources": ["assimp/code/AssetLib/MDC/MDCLoader.cpp:186"]
     },
     {
       "nativeName": "IMPORT_MDL_COLORMAP",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "string"
-      ],
-      "defaults": [
-        "colormap.lmp"
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_COLORMAP"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:129"
-      ]
+      "phases": ["import"],
+      "kinds": ["string"],
+      "defaults": ["colormap.lmp"],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_COLORMAP"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:129"]
     },
     {
       "nativeName": "IMPORT_MDL_HL1_READ_ANIMATION_EVENTS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_HL1_READ_ANIMATION_EVENTS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:134"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_HL1_READ_ANIMATION_EVENTS"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:134"]
     },
     {
       "nativeName": "IMPORT_MDL_HL1_READ_ANIMATIONS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_HL1_READ_ANIMATIONS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:132"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_HL1_READ_ANIMATIONS"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:132"]
     },
     {
       "nativeName": "IMPORT_MDL_HL1_READ_ATTACHMENTS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_HL1_READ_ATTACHMENTS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:138"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_HL1_READ_ATTACHMENTS"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:138"]
     },
     {
       "nativeName": "IMPORT_MDL_HL1_READ_BLEND_CONTROLLERS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_HL1_READ_BLEND_CONTROLLERS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:135"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_HL1_READ_BLEND_CONTROLLERS"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:135"]
     },
     {
       "nativeName": "IMPORT_MDL_HL1_READ_BONE_CONTROLLERS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_HL1_READ_BONE_CONTROLLERS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:139"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_HL1_READ_BONE_CONTROLLERS"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:139"]
     },
     {
       "nativeName": "IMPORT_MDL_HL1_READ_HITBOXES",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_HL1_READ_HITBOXES"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:140"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_HL1_READ_HITBOXES"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:140"]
     },
     {
       "nativeName": "IMPORT_MDL_HL1_READ_MISC_GLOBAL_INFO",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_HL1_READ_MISC_GLOBAL_INFO"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:141"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_HL1_READ_MISC_GLOBAL_INFO"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:141"]
     },
     {
       "nativeName": "IMPORT_MDL_HL1_READ_SEQUENCE_TRANSITIONS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_HL1_READ_SEQUENCE_TRANSITIONS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:136"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_HL1_READ_SEQUENCE_TRANSITIONS"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:136"]
     },
     {
       "nativeName": "IMPORT_MDL_KEYFRAME",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        -1
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_KEYFRAME"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:119"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [-1],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_KEYFRAME"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:119"]
     },
     {
       "nativeName": "IMPORT_NFF_UNIT_SCALE_TO_METERS",
@@ -2136,12 +1298,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_NFF_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_NFF_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_NFF_UP_AXIS",
@@ -2149,37 +1307,16 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_NFF_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_NFF_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_NO_SKELETON_MESHES",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer",
-        "boolean"
-      ],
-      "defaults": [
-        0,
-        false
-      ],
-      "owners": [
-        "ASE",
-        "BVH",
-        "Collada",
-        "CSM",
-        "LWS",
-        "SMD"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_NO_SKELETON_MESHES"
-      ],
+      "phases": ["import"],
+      "kinds": ["integer", "boolean"],
+      "defaults": [0, false],
+      "owners": ["ASE", "BVH", "Collada", "CSM", "LWS", "SMD"],
+      "symbols": ["AI_CONFIG_IMPORT_NO_SKELETON_MESHES"],
       "sources": [
         "assimp/code/AssetLib/ASE/ASELoader.cpp:113",
         "assimp/code/AssetLib/BVH/BVHLoader.cpp:101",
@@ -2195,12 +1332,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_OBJ_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_OBJ_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_OBJ_UP_AXIS",
@@ -2208,12 +1341,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_OBJ_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_OBJ_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_OFF_UNIT_SCALE_TO_METERS",
@@ -2221,12 +1350,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_OFF_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_OFF_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_OFF_UP_AXIS",
@@ -2234,12 +1359,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_OFF_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_OFF_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_OGEX_UNIT_SCALE_TO_METERS",
@@ -2247,12 +1368,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_OGEX_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_OGEX_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_OGEX_UP_AXIS",
@@ -2260,54 +1377,26 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_OGEX_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_OGEX_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_OGRE_MATERIAL_FILE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "string"
-      ],
-      "defaults": [
-        "Scene.material"
-      ],
-      "owners": [
-        "Ogre"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_OGRE_MATERIAL_FILE"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/Ogre/OgreImporter.cpp:75"
-      ]
+      "phases": ["import"],
+      "kinds": ["string"],
+      "defaults": ["Scene.material"],
+      "owners": ["Ogre"],
+      "symbols": ["AI_CONFIG_IMPORT_OGRE_MATERIAL_FILE"],
+      "sources": ["assimp/code/AssetLib/Ogre/OgreImporter.cpp:75"]
     },
     {
       "nativeName": "IMPORT_OGRE_TEXTURETYPE_FROM_FILENAME",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "Ogre"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_OGRE_TEXTURETYPE_FROM_FILENAME"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/Ogre/OgreImporter.cpp:76"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["Ogre"],
+      "symbols": ["AI_CONFIG_IMPORT_OGRE_TEXTURETYPE_FROM_FILENAME"],
+      "sources": ["assimp/code/AssetLib/Ogre/OgreImporter.cpp:76"]
     },
     {
       "nativeName": "IMPORT_OGRE_UNIT_SCALE_TO_METERS",
@@ -2315,12 +1404,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_OGRE_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_OGRE_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_OGRE_UP_AXIS",
@@ -2328,12 +1413,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_OGRE_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_OGRE_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_PLY_UNIT_SCALE_TO_METERS",
@@ -2341,12 +1422,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_PLY_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_PLY_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_PLY_UP_AXIS",
@@ -2354,73 +1431,35 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_PLY_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_PLY_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_SCHEMA_DOCUMENT_PROVIDER",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "pointer"
-      ],
+      "phases": ["import"],
+      "kinds": ["pointer"],
       "defaults": [],
-      "owners": [
-        "glTF2"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_SCHEMA_DOCUMENT_PROVIDER"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/glTF2/glTF2Importer.cpp:2327"
-      ]
+      "owners": ["glTF2"],
+      "symbols": ["AI_CONFIG_IMPORT_SCHEMA_DOCUMENT_PROVIDER"],
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Importer.cpp:2327"]
     },
     {
       "nativeName": "IMPORT_SMD_KEYFRAME",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        -1
-      ],
-      "owners": [
-        "SMD"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_SMD_KEYFRAME"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/SMD/SMDLoader.cpp:118"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [-1],
+      "owners": ["SMD"],
+      "symbols": ["AI_CONFIG_IMPORT_SMD_KEYFRAME"],
+      "sources": ["assimp/code/AssetLib/SMD/SMDLoader.cpp:118"]
     },
     {
       "nativeName": "IMPORT_SMD_LOAD_ANIMATION_LIST",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "SMD"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_SMD_LOAD_ANIMATION_LIST"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/SMD/SMDLoader.cpp:123"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["SMD"],
+      "symbols": ["AI_CONFIG_IMPORT_SMD_LOAD_ANIMATION_LIST"],
+      "sources": ["assimp/code/AssetLib/SMD/SMDLoader.cpp:123"]
     },
     {
       "nativeName": "IMPORT_SMD_UNIT_SCALE_TO_METERS",
@@ -2428,12 +1467,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_SMD_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_SMD_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_SMD_UP_AXIS",
@@ -2441,12 +1476,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_SMD_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_SMD_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_STL_UNIT_SCALE_TO_METERS",
@@ -2454,12 +1485,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_STL_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_STL_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_STL_UP_AXIS",
@@ -2467,12 +1494,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_STL_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_STL_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_TER_MAKE_UVS",
@@ -2480,54 +1503,26 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_TER_MAKE_UVS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_TER_MAKE_UVS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_UNREAL_KEYFRAME",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        -1
-      ],
-      "owners": [
-        "Unreal"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_UNREAL_KEYFRAME"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/Unreal/UnrealLoader.cpp:188"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [-1],
+      "owners": ["Unreal"],
+      "symbols": ["AI_CONFIG_IMPORT_UNREAL_KEYFRAME"],
+      "sources": ["assimp/code/AssetLib/Unreal/UnrealLoader.cpp:188"]
     },
     {
       "nativeName": "IMPORT_USD_MAX_MEMORY_MB",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        16384
-      ],
-      "owners": [
-        "USD"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_USD_MAX_MEMORY_MB"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/USD/USDLoader.cpp:109"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [16384],
+      "owners": ["USD"],
+      "symbols": ["AI_CONFIG_IMPORT_USD_MAX_MEMORY_MB"],
+      "sources": ["assimp/code/AssetLib/USD/USDLoader.cpp:109"]
     },
     {
       "nativeName": "IMPORT_USD_UNIT_SCALE_TO_METERS",
@@ -2535,12 +1530,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_USD_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_USD_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_USD_UP_AXIS",
@@ -2548,12 +1539,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_USD_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_USD_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_X_UNIT_SCALE_TO_METERS",
@@ -2561,12 +1548,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_X_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_X_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_X_UP_AXIS",
@@ -2574,12 +1557,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_X_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_X_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_X3D_UNIT_SCALE_TO_METERS",
@@ -2587,12 +1566,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_X3D_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_X3D_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_X3D_UP_AXIS",
@@ -2600,12 +1575,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_X3D_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_X3D_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_XGL_UNIT_SCALE_TO_METERS",
@@ -2613,12 +1584,8 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_XGL_UNIT_SCALE_TO_METERS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_XGL_UNIT_SCALE_TO_METERS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "IMPORT_XGL_UP_AXIS",
@@ -2626,467 +1593,205 @@
       "kinds": [],
       "defaults": [],
       "owners": [],
-      "symbols": [
-        "AI_CONFIG_IMPORT_XGL_UP_AXIS"
-      ],
-      "sources": [
-        "assimp/include/assimp/config.h.in"
-      ]
+      "symbols": ["AI_CONFIG_IMPORT_XGL_UP_AXIS"],
+      "sources": ["assimp/include/assimp/config.h.in"]
     },
     {
       "nativeName": "JSON_SKIP_WHITESPACES",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "Assjson"
-      ],
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["Assjson"],
       "symbols": [],
-      "sources": [
-        "assimp/code/AssetLib/Assjson/json_exporter.cpp:815"
-      ]
+      "sources": ["assimp/code/AssetLib/Assjson/json_exporter.cpp:815"]
     },
     {
       "nativeName": "PP_CT_MAX_SMOOTHING_ANGLE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "number"
-      ],
-      "defaults": [
-        45
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_CT_MAX_SMOOTHING_ANGLE"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/CalcTangentsProcess.cpp:75"
-      ]
+      "phases": ["import"],
+      "kinds": ["number"],
+      "defaults": [45],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_CT_MAX_SMOOTHING_ANGLE"],
+      "sources": ["assimp/code/PostProcessing/CalcTangentsProcess.cpp:75"]
     },
     {
       "nativeName": "PP_CT_TEXTURE_CHANNEL_INDEX",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_CT_TEXTURE_CHANNEL_INDEX"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/CalcTangentsProcess.cpp:79"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_CT_TEXTURE_CHANNEL_INDEX"],
+      "sources": ["assimp/code/PostProcessing/CalcTangentsProcess.cpp:79"]
     },
     {
       "nativeName": "PP_DB_ALL_OR_NONE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_DB_ALL_OR_NONE"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/DeboneProcess.cpp:66"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_DB_ALL_OR_NONE"],
+      "sources": ["assimp/code/PostProcessing/DeboneProcess.cpp:66"]
     },
     {
       "nativeName": "PP_DB_THRESHOLD",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "number"
-      ],
-      "defaults": [
-        1
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_DB_THRESHOLD"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/DeboneProcess.cpp:67"
-      ]
+      "phases": ["import"],
+      "kinds": ["number"],
+      "defaults": [1],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_DB_THRESHOLD"],
+      "sources": ["assimp/code/PostProcessing/DeboneProcess.cpp:67"]
     },
     {
       "nativeName": "PP_FD_CHECKAREA",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        4294967295
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_FD_CHECKAREA"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/FindDegenerates.cpp:78"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [4294967295],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_FD_CHECKAREA"],
+      "sources": ["assimp/code/PostProcessing/FindDegenerates.cpp:78"]
     },
     {
       "nativeName": "PP_FD_REMOVE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_FD_REMOVE"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/FindDegenerates.cpp:77"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_FD_REMOVE"],
+      "sources": ["assimp/code/PostProcessing/FindDegenerates.cpp:77"]
     },
     {
       "nativeName": "PP_FID_ANIM_ACCURACY",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "number"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_FID_ANIM_ACCURACY"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/FindInvalidDataProcess.cpp:73"
-      ]
+      "phases": ["import"],
+      "kinds": ["number"],
+      "defaults": [0],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_FID_ANIM_ACCURACY"],
+      "sources": ["assimp/code/PostProcessing/FindInvalidDataProcess.cpp:73"]
     },
     {
       "nativeName": "PP_FID_IGNORE_TEXTURECOORDS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_FID_IGNORE_TEXTURECOORDS"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/FindInvalidDataProcess.cpp:74"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_FID_IGNORE_TEXTURECOORDS"],
+      "sources": ["assimp/code/PostProcessing/FindInvalidDataProcess.cpp:74"]
     },
     {
       "nativeName": "PP_GSN_MAX_SMOOTHING_ANGLE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "number"
-      ],
-      "defaults": [
-        175
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_GSN_MAX_SMOOTHING_ANGLE"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/GenVertexNormalsProcess.cpp:74"
-      ]
+      "phases": ["import"],
+      "kinds": ["number"],
+      "defaults": [175],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_GSN_MAX_SMOOTHING_ANGLE"],
+      "sources": ["assimp/code/PostProcessing/GenVertexNormalsProcess.cpp:74"]
     },
     {
       "nativeName": "PP_ICL_PTCACHE_SIZE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        12
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_ICL_PTCACHE_SIZE"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/ImproveCacheLocality.cpp:79"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [12],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_ICL_PTCACHE_SIZE"],
+      "sources": ["assimp/code/PostProcessing/ImproveCacheLocality.cpp:79"]
     },
     {
       "nativeName": "PP_LBW_MAX_WEIGHTS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        4
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_LBW_MAX_WEIGHTS"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/LimitBoneWeightsProcess.cpp:84"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [4],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_LBW_MAX_WEIGHTS"],
+      "sources": ["assimp/code/PostProcessing/LimitBoneWeightsProcess.cpp:84"]
     },
     {
       "nativeName": "PP_OG_EXCLUDE_LIST",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "string"
-      ],
-      "defaults": [
-        ""
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_OG_EXCLUDE_LIST"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/OptimizeGraph.cpp:91"
-      ]
+      "phases": ["import"],
+      "kinds": ["string"],
+      "defaults": [""],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_OG_EXCLUDE_LIST"],
+      "sources": ["assimp/code/PostProcessing/OptimizeGraph.cpp:91"]
     },
     {
       "nativeName": "PP_PTV_ADD_ROOT_TRANSFORMATION",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_PTV_ADD_ROOT_TRANSFORMATION"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/PretransformVertices.cpp:109"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_PTV_ADD_ROOT_TRANSFORMATION"],
+      "sources": ["assimp/code/PostProcessing/PretransformVertices.cpp:109"]
     },
     {
       "nativeName": "PP_PTV_KEEP_HIERARCHY",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_PTV_KEEP_HIERARCHY"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/PretransformVertices.cpp:107"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_PTV_KEEP_HIERARCHY"],
+      "sources": ["assimp/code/PostProcessing/PretransformVertices.cpp:107"]
     },
     {
       "nativeName": "PP_PTV_NORMALIZE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_PTV_NORMALIZE"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/PretransformVertices.cpp:108"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_PTV_NORMALIZE"],
+      "sources": ["assimp/code/PostProcessing/PretransformVertices.cpp:108"]
     },
     {
       "nativeName": "PP_PTV_ROOT_TRANSFORMATION",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "matrix"
-      ],
+      "phases": ["import"],
+      "kinds": ["matrix"],
       "defaults": [],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_PTV_ROOT_TRANSFORMATION"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/PretransformVertices.cpp:111"
-      ]
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_PTV_ROOT_TRANSFORMATION"],
+      "sources": ["assimp/code/PostProcessing/PretransformVertices.cpp:111"]
     },
     {
       "nativeName": "PP_RRM_EXCLUDE_LIST",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "string"
-      ],
-      "defaults": [
-        ""
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_RRM_EXCLUDE_LIST"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/RemoveRedundantMaterials.cpp:69"
-      ]
+      "phases": ["import"],
+      "kinds": ["string"],
+      "defaults": [""],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_RRM_EXCLUDE_LIST"],
+      "sources": ["assimp/code/PostProcessing/RemoveRedundantMaterials.cpp:69"]
     },
     {
       "nativeName": "PP_RVC_FLAGS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_RVC_FLAGS"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/RemoveVCProcess.cpp:163"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_RVC_FLAGS"],
+      "sources": ["assimp/code/PostProcessing/RemoveVCProcess.cpp:163"]
     },
     {
       "nativeName": "PP_SBBC_MAX_BONES",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        60
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_SBBC_MAX_BONES"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/SplitByBoneCountProcess.cpp:71"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [60],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_SBBC_MAX_BONES"],
+      "sources": ["assimp/code/PostProcessing/SplitByBoneCountProcess.cpp:71"]
     },
     {
       "nativeName": "PP_SBP_REMOVE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_SBP_REMOVE"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/SortByPTypeProcess.cpp:65"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_SBP_REMOVE"],
+      "sources": ["assimp/code/PostProcessing/SortByPTypeProcess.cpp:65"]
     },
     {
       "nativeName": "PP_SLM_TRIANGLE_LIMIT",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        1000000
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_SLM_TRIANGLE_LIMIT"
-      ],
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [1000000],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_SLM_TRIANGLE_LIMIT"],
       "sources": [
         "assimp/code/PostProcessing/SplitLargeMeshes.cpp:97",
         "assimp/code/PostProcessing/OptimizeMeshes.cpp:93"
@@ -3094,21 +1799,11 @@
     },
     {
       "nativeName": "PP_SLM_VERTEX_LIMIT",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        1000000
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_SLM_VERTEX_LIMIT"
-      ],
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [1000000],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_SLM_VERTEX_LIMIT"],
       "sources": [
         "assimp/code/PostProcessing/SplitLargeMeshes.cpp:380",
         "assimp/code/PostProcessing/OptimizeMeshes.cpp:94"
@@ -3116,314 +1811,138 @@
     },
     {
       "nativeName": "PP_TUV_EVALUATE",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        1
-      ],
-      "owners": [
-        "PostProcessing"
-      ],
-      "symbols": [
-        "AI_CONFIG_PP_TUV_EVALUATE"
-      ],
-      "sources": [
-        "assimp/code/PostProcessing/TextureTransform.cpp:61"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [1],
+      "owners": ["PostProcessing"],
+      "symbols": ["AI_CONFIG_PP_TUV_EVALUATE"],
+      "sources": ["assimp/code/PostProcessing/TextureTransform.cpp:61"]
     },
     {
       "nativeName": "sourceFilePath",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "string"
-      ],
+      "phases": ["import"],
+      "kinds": ["string"],
       "defaults": [],
-      "owners": [
-        "PostProcessing"
-      ],
+      "owners": ["PostProcessing"],
       "symbols": [],
-      "sources": [
-        "assimp/code/PostProcessing/EmbedTexturesProcess.cpp:58"
-      ]
+      "sources": ["assimp/code/PostProcessing/EmbedTexturesProcess.cpp:58"]
     },
     {
       "nativeName": "TRANSFORM COORDSYSTEM FOR HS! MODELS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "MDL"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_MDL_HL1_TRANSFORM_COORD_SYSTEM"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/MDL/MDLLoader.cpp:142"
-      ]
+      "phases": ["import"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["MDL"],
+      "symbols": ["AI_CONFIG_IMPORT_MDL_HL1_TRANSFORM_COORD_SYSTEM"],
+      "sources": ["assimp/code/AssetLib/MDL/MDLLoader.cpp:142"]
     },
     {
       "nativeName": "UNREAL_HANDLE_FLAGS",
-      "phases": [
-        "import"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        1
-      ],
-      "owners": [
-        "Unreal"
-      ],
-      "symbols": [
-        "AI_CONFIG_IMPORT_UNREAL_HANDLE_FLAGS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/Unreal/UnrealLoader.cpp:194"
-      ]
+      "phases": ["import"],
+      "kinds": ["integer"],
+      "defaults": [1],
+      "owners": ["Unreal"],
+      "symbols": ["AI_CONFIG_IMPORT_UNREAL_HANDLE_FLAGS"],
+      "sources": ["assimp/code/AssetLib/Unreal/UnrealLoader.cpp:194"]
     },
     {
       "nativeName": "USD_EXPORT_ANIMATION_INDEX",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "USD"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_USD_ANIMATION_INDEX"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/USD/USDZExporter.cpp:177"
-      ]
+      "phases": ["export"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["USD"],
+      "symbols": ["AI_CONFIG_EXPORT_USD_ANIMATION_INDEX"],
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:177"]
     },
     {
       "nativeName": "USD_EXPORT_COMPRESS_FLOAT_ARRAYS",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "USD"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_USD_COMPRESS_FLOAT_ARRAYS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/USD/USDZExporter.cpp:184"
-      ]
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["USD"],
+      "symbols": ["AI_CONFIG_EXPORT_USD_COMPRESS_FLOAT_ARRAYS"],
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:184"]
     },
     {
       "nativeName": "USD_EXPORT_MAX_FILE_SIZE_MB",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "USD"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_USD_MAX_FILE_SIZE_MB"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/USD/USDZExporter.cpp:182"
-      ]
+      "phases": ["export"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["USD"],
+      "symbols": ["AI_CONFIG_EXPORT_USD_MAX_FILE_SIZE_MB"],
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:182"]
     },
     {
       "nativeName": "USD_EXPORT_MAX_MEMORY_MB",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "integer"
-      ],
-      "defaults": [
-        0
-      ],
-      "owners": [
-        "USD"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_USD_MAX_MEMORY_MB"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/USD/USDZExporter.cpp:183"
-      ]
+      "phases": ["export"],
+      "kinds": ["integer"],
+      "defaults": [0],
+      "owners": ["USD"],
+      "symbols": ["AI_CONFIG_EXPORT_USD_MAX_MEMORY_MB"],
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:183"]
     },
     {
       "nativeName": "USD_EXPORT_SOURCE_DIRECTORY",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "string"
-      ],
-      "defaults": [
-        ""
-      ],
-      "owners": [
-        "USD"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_USD_SOURCE_DIRECTORY"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/USD/USDZExporter.cpp:181"
-      ]
+      "phases": ["export"],
+      "kinds": ["string"],
+      "defaults": [""],
+      "owners": ["USD"],
+      "symbols": ["AI_CONFIG_EXPORT_USD_SOURCE_DIRECTORY"],
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:181"]
     },
     {
       "nativeName": "USDZ_EXPORT_ANIMATIONS",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "USD"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_USD_ANIMATIONS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/USD/USDZExporter.cpp:176"
-      ]
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["USD"],
+      "symbols": ["AI_CONFIG_EXPORT_USD_ANIMATIONS"],
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:176"]
     },
     {
       "nativeName": "USDZ_EXPORT_CLEARCOAT",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        true
-      ],
-      "owners": [
-        "USD"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_USD_CLEARCOAT"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/USD/USDZExporter.cpp:178"
-      ]
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [true],
+      "owners": ["USD"],
+      "symbols": ["AI_CONFIG_EXPORT_USD_CLEARCOAT"],
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:178"]
     },
     {
       "nativeName": "USDZ_EXPORT_LIGHTS",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "USD"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_USDZ_LIGHTS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/USD/USDZExporter.cpp:179"
-      ]
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["USD"],
+      "symbols": ["AI_CONFIG_EXPORT_USDZ_LIGHTS"],
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:179"]
     },
     {
       "nativeName": "USDZ_EXPORT_PHYSICS_JOINTS",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "USD"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_USDZ_PHYSICS_JOINTS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/USD/USDZExporter.cpp:180"
-      ]
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["USD"],
+      "symbols": ["AI_CONFIG_EXPORT_USDZ_PHYSICS_JOINTS"],
+      "sources": ["assimp/code/AssetLib/USD/USDZExporter.cpp:180"]
     },
     {
       "nativeName": "USE_GLTF_PBR_SPECULAR_GLOSSINESS",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "glTF2"
-      ],
-      "symbols": [
-        "AI_CONFIG_USE_GLTF_PBR_SPECULAR_GLOSSINESS"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:928"
-      ]
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["glTF2"],
+      "symbols": ["AI_CONFIG_USE_GLTF_PBR_SPECULAR_GLOSSINESS"],
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:928"]
     },
     {
       "nativeName": "USE_UNLIMITED_BONES_PER VERTEX",
-      "phases": [
-        "export"
-      ],
-      "kinds": [
-        "boolean"
-      ],
-      "defaults": [
-        false
-      ],
-      "owners": [
-        "glTF2"
-      ],
-      "symbols": [
-        "AI_CONFIG_EXPORT_GLTF_UNLIMITED_SKINNING_BONES_PER_VERTEX"
-      ],
-      "sources": [
-        "assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1444"
-      ]
+      "phases": ["export"],
+      "kinds": ["boolean"],
+      "defaults": [false],
+      "owners": ["glTF2"],
+      "symbols": ["AI_CONFIG_EXPORT_GLTF_UNLIMITED_SKINNING_BONES_PER_VERTEX"],
+      "sources": ["assimp/code/AssetLib/glTF2/glTF2Exporter.cpp:1444"]
     }
   ],
   "postProcess": [
