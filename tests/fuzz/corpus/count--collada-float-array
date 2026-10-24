@@ -1,0 +1,5 @@
+dae glb
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+<library_geometries><geometry id="g"><mesh><source id="p"><float_array id="pa" count="2147483647">0 0 0</float_array><technique_common><accessor source="#pa" count="715827882" stride="3"><param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/></accessor></technique_common></source><vertices id="v"><input semantic="POSITION" source="#p"/></vertices><triangles count="715827882"><input semantic="VERTEX" source="#v" offset="0"/><p>0 0 0</p></triangles></mesh></geometry></library_geometries>
+</COLLADA>

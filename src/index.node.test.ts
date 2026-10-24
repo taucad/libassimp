@@ -8,7 +8,10 @@ describe('Node-conditioned entry', () => {
   it('has public parity and loads native only when an instance is requested', async () => {
     const node = await import('./index.node.js');
     const browser = await import('./index.js');
-    expect(Object.keys(node).toSorted()).toEqual(Object.keys(browser).toSorted());
+    // createDirectoryResolver reads the file system, so only the Node entry carries it.
+    expect(Object.keys(node).toSorted()).toEqual(
+      [...Object.keys(browser), 'createDirectoryResolver'].toSorted(),
+    );
     expect(generated.preparePlan).not.toHaveBeenCalled();
     expect(generated.cancelPlan).not.toHaveBeenCalled();
     expect(generated).not.toHaveProperty('pendingName');
@@ -25,10 +28,16 @@ describe('Node-conditioned entry', () => {
     const { convert, convertFormats } = await import('./index.node.js');
     await expect(convert({ name: 'cube.obj', bytes: new Uint8Array([1]) }, { to: 'glb' })).resolves.toEqual({
       files: [],
+      warnings: [],
+      timings: { import: 0, postProcess: 0, export: 0, total: expect.any(Number) },
+      peakMemoryBytes: expect.any(Number),
     });
-    await expect(
-      convertFormats({ name: 'cube.obj', bytes: new Uint8Array([1]) }, { targets: [{ to: 'glb' }] }),
-    ).resolves.toEqual([{ format: 'glb', files: [] }]);
+    const plural = await convertFormats(
+      { name: 'cube.obj', bytes: new Uint8Array([1]) },
+      { targets: [{ to: 'glb' }] },
+    );
+    expect([...plural]).toEqual([{ format: 'glb', files: [] }]);
+    expect(plural.warnings).toEqual([]);
   });
 
   it('can force the unchanged Wasm runtime', async () => {

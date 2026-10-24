@@ -233,6 +233,11 @@ if (!fast) {
     if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
   }
 }
+// An undefined symbol must fail the link: with the setting off, Emscripten
+// emits an abort stub that fires only when a conversion reaches it.
+if (!linkFlags.includes('-sERROR_ON_UNDEFINED_SYMBOLS=1')) {
+  throw new Error(`${target} link flags omit -sERROR_ON_UNDEFINED_SYMBOLS=1`);
+}
 const forbiddenFlags = [...compileFlags, ...linkFlags, ...wasmOptFlags].filter((flag) =>
   /(?:ASYNCIFY|JSPI)/u.test(flag),
 );

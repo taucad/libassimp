@@ -59,7 +59,7 @@ const { files } = await convert(
 console.log(files[0].name);
 ```
 
-The compiler offers only options applicable to `stl`, and runtime validation rejects unknown keys, wrong values, bounds violations, and conflicting post-process steps before Wasm work. Supplying `postProcess` replaces the default tuple.
+The compiler offers only options applicable to `stl`, and runtime validation rejects unknown keys, wrong values, bounds violations, and conflicting post-process steps before any engine work. Supplying `postProcess` replaces the default tuple.
 
 ## Every output file
 

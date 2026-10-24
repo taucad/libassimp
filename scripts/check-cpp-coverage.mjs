@@ -79,6 +79,20 @@ const report = JSON.parse(
   }),
 );
 const totals = report.data[0].totals;
+// Name what is missing before failing, so a gap can be closed from the CI log alone.
+for (const file of report.data[0].files) {
+  const { branches, lines, regions } = file.summary;
+  if (branches.percent === 100 && lines.percent === 100 && regions.percent === 100) continue;
+  const shown = run(
+    cov,
+    ['show', '-show-branches=count', testBinary, ...objects, `-instr-profile=${merged}`, file.filename],
+    { capture: true },
+  );
+  const gaps = shown
+    .split('\n')
+    .filter((line) => /\|\s+0\|/u.test(line) || /(?:True|False): 0\b/u.test(line));
+  console.error(`uncovered in ${file.filename}:\n${gaps.join('\n')}`);
+}
 for (const metric of ['lines', 'functions', 'regions', 'branches']) {
   assert.equal(
     totals[metric].percent,

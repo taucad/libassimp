@@ -25,11 +25,28 @@ import { conversionEdges } from 'libassimp';
 console.log(conversionEdges.some(({ from, to }) => from === 'glb' && to === 'stl'));
 ```
 
-This import reads static JavaScript data and does not fetch or compile Wasm.
+This import reads static JavaScript data and does not fetch or compile Wasm. Option and post-process descriptions for help text live in the lazy `libassimp/capabilities` subpath, so the root entry does not carry them:
+
+```typescript
+import type { DescribedCapabilities } from 'libassimp/capabilities';
+
+const loadHelp = async (): Promise<DescribedCapabilities> =>
+  (await import('libassimp/capabilities')).assimpCapabilities;
+
+console.log((await loadHelp()).export.stl.exportOptions.binary.description);
+```
 
 ## Loading
 
-Vite and webpack 5 can emit the entry-relative glue and Wasm assets. To control the location or provide already-fetched bytes, create an instance:
+The entry finds its glue and Wasm next to itself through `new URL('./wasm/…', import.meta.url)`. CI installs the packed tarball into Vite (build and dev), webpack 5, Next.js with Turbopack, esbuild and a CDN-style static origin, and converts a model in Chromium in each:
+
+- **Vite 8 (build and dev server), webpack 5:** no configuration. They emit both files as assets.
+- **Next.js:** add `serverExternalPackages: ['libassimp']` to `next.config`. Server rendering resolves the Node entry, whose loader requires the native addon package, which Turbopack cannot bundle.
+- **An older Vite dev server** that pre-bundles libassimp and then cannot fetch `libassimp.wasm`: add `optimizeDeps: { exclude: ['libassimp'] }`.
+- **esbuild and other bundlers that leave `import.meta.url` alone:** copy `node_modules/libassimp/dist/wasm/` to a `wasm/` directory next to the bundle, or pass `wasmUrl`.
+- **CDN without a bundler:** import `https://cdn.jsdelivr.net/npm/libassimp@<version>/dist/index.mjs`. Avoid `/+esm`: it rebundles the entry and breaks the relative URLs.
+
+To control the location or provide already-fetched bytes, create an instance:
 
 ```typescript
 import { createAssimp } from 'libassimp';
@@ -40,6 +57,6 @@ using assimp = await createAssimp({ wasmBinary: await response.arrayBuffer() });
 console.log(assimp.formats.export.map(({ id }) => id));
 ```
 
-`CreateAssimpOptions` remains `wasmUrl`, `wasmBinary`, and `onLog`. There is no async-mode selector: the artifact automatically uses JSPI when available or replay otherwise. The published binary subpath is `libassimp/wasm`.
+`CreateAssimpOptions` has `backend`, `wasmUrl`, `wasmBinary`, and `onLog`. `backend` is `'auto'` (the Node default: the native addon when its platform package is installed, otherwise Wasm with a warning), `'native'` (fail instead of falling back) or `'wasm'`. Browsers always use Wasm and reject `'native'`. There is no async-mode selector: the Wasm artifact automatically uses JSPI when available or replay otherwise. The published binary subpath is `libassimp/wasm`.
 
 Workers require no pthread bootstrap or cross-origin isolation. See the canonical [compatibility matrix](https://github.com/taucad/libassimp/blob/main/compatibility.md) for host floors and feature routing.

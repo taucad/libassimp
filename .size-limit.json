@@ -5,14 +5,19 @@
     "limit": "330 B"
   },
   {
+    "name": "generated capability registry",
+    "path": "dist/generated/assimp-capabilities.mjs",
+    "limit": "6.5 kB"
+  },
+  {
     "name": "instance factory",
     "path": "dist/create-assimp.mjs",
-    "limit": "2950 B"
+    "limit": "3450 B"
   },
   {
     "name": "Node ESM facade",
     "path": "dist/index.node.mjs",
-    "limit": "463 B"
+    "limit": "490 B"
   },
   {
     "name": "generated native loader",
@@ -22,6 +27,11 @@
   {
     "name": "native backend",
     "path": "dist/native-backend.mjs",
-    "limit": "1.25 kB"
+    "limit": "1.39 kB"
+  },
+  {
+    "name": "capability descriptions subpath",
+    "path": ["dist/capabilities.mjs", "dist/generated/assimp-capability-descriptions.mjs"],
+    "limit": "13 kB"
   }
 ]

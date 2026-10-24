@@ -2,14 +2,14 @@
 // USDA, USDC and MaterialX sidecars through `resolve`, and the result packs
 // into a self-contained USDZ that follows the package rules ARKit and Quick
 // Look enforce. `scripts/usd-strict-check.py` validates the same exports with
-// OpenUSD itself in CI.
+// OpenUSD itself in CI. It runs once per backend (`tests/backend.mjs`).
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createAssimp } from '../src/index.ts';
+import { createTestAssimp } from './backend.mjs';
 import { usdaGrid, usdSidecarScene } from './generate-usd-fixture.mjs';
 
 const MODELS = fileURLToPath(new URL('../assimp/test/models/', import.meta.url));
@@ -58,7 +58,7 @@ const expectArkitPackage = (bytes) => {
 let assimp;
 
 beforeAll(async () => {
-  assimp = await createAssimp();
+  assimp = await createTestAssimp();
 });
 
 afterAll(() => {
@@ -75,7 +75,7 @@ describe('USD export', () => {
     const source = load('glTF2/BoxTextured-glTF-Binary/BoxTextured.glb');
     const reference = scene((await assimp.convert(source, { to: 'assjson' })).files[0].bytes);
     const { files } = await assimp.convert(source, { to });
-    expect(files[0].name).toBe(`result.${to}`);
+    expect(files[0].name).toBe(`BoxTextured.${to}`);
     if (to === 'usdc') expect(text(files[0].bytes.subarray(0, 8))).toBe('PXR-USDC');
     if (to === 'usda') expect(text(files[0].bytes.subarray(0, 10))).toBe('#usda 1.0\n');
     if (to === 'usdz') expectArkitPackage(files[0].bytes);
@@ -138,7 +138,7 @@ describe('USD sidecars', () => {
     const part = (await assimp.convert(load('glTF2/BoxTextured-glTF-Binary/BoxTextured.glb'), { to: 'usdc' }))
       .files;
     const sidecars = new Map(
-      part.map(({ name, bytes }) => [name === 'result.usdc' ? 'part.usdc' : name, bytes]),
+      part.map(({ name, bytes }) => [name === 'BoxTextured.usdc' ? 'part.usdc' : name, bytes]),
     );
     const root = {
       name: 'root.usda',

@@ -32,7 +32,7 @@ describe('documentation fences', () => {
   });
 
   it('compiles every TypeScript fence against the published declarations', () => {
-    expect(existsSync(join(root, 'dist/index.d.mts')), 'run `pnpm run build` first').toBe(true);
+    expect(existsSync(join(root, 'dist/index.node.d.mts')), 'run `pnpm run build` first').toBe(true);
     for (const [id, code] of blocks) {
       writeFileSync(join(work, `${id.replaceAll(/[^\w]/gu, '_')}.ts`), code);
     }
@@ -50,8 +50,10 @@ describe('documentation fences', () => {
           target: 'ES2024',
           types: ['node'],
           typeRoots: [join(root, 'node_modules/@types')],
+          // The Node entry is the browser entry plus createDirectoryResolver, so one map covers both.
           paths: {
-            libassimp: [join(root, 'dist/index.d.mts')],
+            libassimp: [join(root, 'dist/index.node.d.mts')],
+            'libassimp/capabilities': [join(root, 'dist/capabilities.d.mts')],
           },
         },
         include: ['*.ts'],
