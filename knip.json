@@ -13,7 +13,7 @@
         "*.config.ts",
         "*.test.ts"
       ],
-      "ignore": ["assimp/**", "src/cjs-error.d.cts"],
+      "ignore": ["assimp/**", "src/cjs-error.d.cts", "src/cpp/host-imports.js"],
       "ignoreBinaries": ["cmake", "ctest", "ninja", "xcrun"],
       "ignoreDependencies": ["@nx/js", "libassimp-candidate", "react", "react-dom"]
     },

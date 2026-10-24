@@ -165,16 +165,18 @@ if(EMSCRIPTEN)
     -sEXIT_RUNTIME=0
     -sINVOKE_RUN=0
     -sWASM_BIGINT=1
-    # A link-time undefined symbol is an error, not a runtime abort stub. The
-    # host-supplied libassimp.dispatch import carries an explicit import name,
-    # which wasm-ld always allows to stay undefined.
+    # A link-time undefined symbol is an error, not a runtime abort stub.
+    # host-imports.js names the one host-supplied import as the allowlist.
     -sERROR_ON_UNDEFINED_SYMBOLS=1
+    "SHELL:--js-library ${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/host-imports.js"
     -lembind
     --no-entry
     --emit-symbol-map
     "SHELL:-sEXPORTED_FUNCTIONS=_libassimp_run_plan"
     "SHELL:-sBINARYEN_EXTRA_PASSES=--strip-debug,--strip-producers,--skip-pass=code-folding"
   )
+
+  set_property(TARGET ${LIBASSIMP_TARGET} APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/host-imports.js")
 
   if(LIBASSIMP_FAST)
     target_link_options(${LIBASSIMP_TARGET} PRIVATE -sEVAL_CTORS=0)
