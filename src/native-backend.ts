@@ -141,13 +141,15 @@ export const createNodeRuntimeLoader =
   (loadWasm: RuntimeLoader, loadNative: () => Promise<NativeAddon> = loadNativeAddon): RuntimeLoader =>
   async (options) => {
     const backend = options.backend ?? 'auto';
-    if (backend === 'wasm') return loadWasm(options);
+    // Node.js APIs accept views of resizable buffers, so Wasm output skips the fixed-length copy.
+    const loadNodeWasm = async () => ({ ...(await loadWasm(options)), resizableOutputs: true });
+    if (backend === 'wasm') return loadNodeWasm();
     try {
       return adaptNativeAddon(await loadNative());
     } catch (cause) {
       const error = unavailable(cause);
       if (backend === 'native') throw error;
       warn(options, error);
-      return loadWasm(options);
+      return loadNodeWasm();
     }
   };

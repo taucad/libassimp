@@ -447,7 +447,10 @@ describe('Node backend selection', () => {
     const runtime = wasmRuntime();
     const loadWasm = vi.fn(async () => runtime);
     const loadNative = vi.fn(async () => addon());
-    await expect(createNodeRuntimeLoader(loadWasm, loadNative)({ backend: 'wasm' })).resolves.toBe(runtime);
+    await expect(createNodeRuntimeLoader(loadWasm, loadNative)({ backend: 'wasm' })).resolves.toEqual({
+      ...runtime,
+      resizableOutputs: true,
+    });
     expect(loadNative).not.toHaveBeenCalled();
   });
 
@@ -479,7 +482,7 @@ describe('Node backend selection', () => {
       async () => runtime,
       async () => Promise.reject(cause),
     );
-    await expect(loader({ backend: 'auto' })).resolves.toBe(runtime);
+    await expect(loader({ backend: 'auto' })).resolves.toEqual({ ...runtime, resizableOutputs: true });
     expect(warning).toHaveBeenCalledOnce();
     expect(warning).toHaveBeenCalledWith(expect.stringContaining('reinstall libassimp'), cause);
   });

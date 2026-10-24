@@ -19,7 +19,7 @@
 - A native backend that cannot load reports `BACKEND_UNAVAILABLE` (was `IMPORT_FAILED`). Untyped engine throws reject as `ENGINE_FAILED` with the original value as `cause`. New codes: `LIMIT_EXCEEDED`, `ABORTED`, `INTERNAL`.
 - Empty or repeated input names reject with `INVALID_OPTIONS`.
 - Unset `AssimpError` context fields (`formatIndex`, `format`, `fileName`) are absent instead of present as `undefined`.
-- Output bytes are typed `Uint8Array<ArrayBuffer>`; a Wasm output's buffer may be resizable.
+- Output bytes are typed `Uint8Array<ArrayBuffer>`. In the browser entry the buffer is always fixed-length; on Node.js a Wasm output's buffer may be resizable.
 - The native addon's `importFormats` and `exportFormats` exports are removed; use `assimpCapabilities`.
 
 No released stable version is affected.

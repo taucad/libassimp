@@ -936,11 +936,21 @@ describe('streamed output, progress, and the conversion report', () => {
     const output = new HostOutput(4);
     output.write(0, new Uint8Array([1, 2, 3, 4]));
     output.write(4, new Uint8Array([5, 6, 7, 8, 9]));
-    const bytes = output.take(9);
+    const bytes = output.take(9, true);
     expect([...bytes]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(bytes.buffer.resizable).toBe(true);
     expect(bytes.buffer.maxByteLength).toBe(4 * 1024 * 1024 * 1024);
-    expect(new HostOutput(16).take(3).byteLength).toBe(3);
+    expect(new HostOutput(16).take(3, true).byteLength).toBe(3);
+  });
+
+  it('transfers a finished resizable output to a fixed-length buffer by default', () => {
+    const output = new HostOutput(4);
+    output.write(0, new Uint8Array([1, 2, 3]));
+    const bytes = output.take(5);
+    expect([...bytes]).toEqual([1, 2, 3, 0, 0]);
+    expect(bytes.buffer.resizable).toBe(false);
+    expect(bytes.buffer.byteLength).toBe(5);
+    expect(new TextDecoder().decode(bytes.subarray(0, 3))).toBe('\u0001\u0002\u0003');
   });
 
   it.each([

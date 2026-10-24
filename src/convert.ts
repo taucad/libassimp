@@ -18,9 +18,11 @@ export type AssimpFile = {
 /**
  * One named output payload. Each output owns its own exact-length,
  * non-shared `ArrayBuffer`, so it can be transferred to a worker or handed to
- * APIs that require `Uint8Array<ArrayBuffer>` without a copy. On hosts with
- * resizable `ArrayBuffer`s the Wasm backend grows the buffer in place while
- * the exporter writes, so `bytes.buffer.resizable` may be `true`.
+ * APIs that require `Uint8Array<ArrayBuffer>` without a copy. The browser
+ * entry always returns a fixed-length buffer, because Web APIs such as
+ * `TextDecoder`, WebGL and WebGPU reject views of resizable buffers. On
+ * Node.js the Wasm backend returns the resizable buffer it streamed the output
+ * into, without a final copy, so `bytes.buffer.resizable` may be `true` there.
  *
  * @public
  */
@@ -261,8 +263,9 @@ const resizableBuffer = (maxByteLength: number): ArrayBuffer | undefined => {
 
 /**
  * One streamed Wasm output, assembled on the host. A resizable buffer grows in
- * place, so the finished output is a view of it and is never joined or copied;
- * hosts without resizable buffers grow geometrically and copy once at the end.
+ * place while the exporter writes; the finished output is either a view of it
+ * (no copy) or, when the caller needs a fixed-length buffer, transferred to
+ * one. Hosts without resizable buffers grow geometrically and copy once.
  * @internal
  */
 export class HostOutput {
@@ -278,12 +281,20 @@ export class HostOutput {
     new Uint8Array(this.buffer, offset, bytes.byteLength).set(bytes);
   }
 
-  /** The finished output: exactly `size` bytes, zero-filled past the last write. */
-  public take(size: number): Uint8Array<ArrayBuffer> {
+  /**
+   * The finished output: exactly `size` bytes, zero-filled past the last write.
+   *
+   * @param size - Final output length.
+   * @param resizable - Whether a view of the resizable buffer may be returned.
+   */
+  public take(size: number, resizable = false): Uint8Array<ArrayBuffer> {
     this.grow(size);
     if (this.buffer.resizable) {
       this.buffer.resize(size);
-      return new Uint8Array(this.buffer, 0, size);
+      if (resizable) return new Uint8Array(this.buffer, 0, size);
+      const fixed = this.buffer.transferToFixedLength(size);
+      this.buffer = new ArrayBuffer(0);
+      return new Uint8Array(fixed);
     }
     return new Uint8Array(this.buffer.byteLength === size ? this.buffer : this.buffer.slice(0, size));
   }
@@ -309,6 +320,8 @@ export type ResolutionContextOptions = Readonly<{
   onProgress?: ConvertProgressListener | undefined;
   /** Canonical target formats, by position, for progress reports. */
   formats: readonly AllExportFormat[];
+  /** Whether streamed outputs may stay views of their resizable buffers. */
+  resizableOutputs?: boolean;
 }>;
 
 /** Per-call host state shared by native, JSPI, and replay: resolver cache, outputs, progress. @internal */
@@ -518,7 +531,7 @@ export class ResolutionContext {
   public takeOutput(file: number, size: number): Uint8Array<ArrayBuffer> {
     const output = this.outputs.get(file) ?? new HostOutput(0);
     this.outputs.delete(file);
-    return output.take(size);
+    return output.take(size, this.options.resizableOutputs === true);
   }
 
   /** The first error the host hit while holding streamed output. @internal */
@@ -606,6 +619,8 @@ export type NativeRuntime = Readonly<{
   memoryBytes?: () => number;
   /** The figure reported as {@link ConversionReport.peakMemoryBytes}. */
   peakMemoryBytes: () => number;
+  /** Whether streamed outputs may be returned as views of resizable buffers (the Node.js Wasm runtime). */
+  resizableOutputs?: boolean;
 }>;
 
 /** A validated request that has not copied bytes into Wasm. @internal */
@@ -764,6 +779,7 @@ export const runPreparedConversion = async <
   const context = new ResolutionContext(request.resolve, request.signal, {
     onProgress: request.onProgress,
     formats,
+    resizableOutputs: runtime.resizableOutputs === true,
   });
   const entryName = request.files[0].name;
   let handle: unknown;
