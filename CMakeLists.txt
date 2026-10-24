@@ -30,6 +30,7 @@ option(LIBASSIMP_NATIVE_ADDON "Build the Node-API addon" OFF)
 option(LIBASSIMP_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 option(LIBASSIMP_CPP_COVERAGE "Instrument first-party C++ for LLVM source coverage" OFF)
 option(LIBASSIMP_FAST "Skip the slow optimization passes; local iteration only" OFF)
+option(LIBASSIMP_FUZZ "Build the libFuzzer harness over the Plan pipeline (Clang only)" OFF)
 
 if(NOT EMSCRIPTEN)
   # WebAssembly has no fused multiply-add instruction. Match its IEEE operation
@@ -41,6 +42,16 @@ if(NOT EMSCRIPTEN)
   endif()
 endif()
 
+if(LIBASSIMP_FUZZ)
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR EMSCRIPTEN OR MSVC)
+    message(FATAL_ERROR "LIBASSIMP_FUZZ requires host Clang")
+  endif()
+  # Coverage feedback for libFuzzer reaches every engine translation unit; only
+  # the harness links the libFuzzer driver itself.
+  add_compile_options(-fsanitize=fuzzer-no-link)
+  add_compile_definitions(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
+endif()
+
 if(LIBASSIMP_SANITIZERS)
   if(MSVC)
     add_compile_options(/fsanitize=address)
@@ -50,6 +61,25 @@ if(LIBASSIMP_SANITIZERS)
     add_link_options(-fno-omit-frame-pointer -fsanitize=address,undefined)
     # UBSan's vptr check references typeinfo for every polymorphic type, and LightUSD builds without RTTI by default.
     set(LIGHTUSD_CXX_RTTI ON CACHE BOOL "" FORCE)
+  endif()
+endif()
+
+# Native binaries parse untrusted files in-process, so every translation unit
+# (the engine included) gets the platform's standard memory-safety hardening.
+# _FORTIFY_SOURCE needs optimization and conflicts with ASan's interceptors, so
+# it applies to optimized, unsanitized configurations only. The link-side flags
+# (full RELRO, CFG) are set on the addon target below.
+if(NOT EMSCRIPTEN AND (LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON OR LIBASSIMP_FUZZ))
+  if(MSVC)
+    add_compile_options(/guard:cf /Qspectre)
+  else()
+    add_compile_options(-fstack-protector-strong)
+    if(NOT LIBASSIMP_SANITIZERS AND NOT LIBASSIMP_FUZZ)
+      add_compile_options(
+        "$<$<CONFIG:Release,RelWithDebInfo,MinSizeRel>:-U_FORTIFY_SOURCE>"
+        "$<$<CONFIG:Release,RelWithDebInfo,MinSizeRel>:-D_FORTIFY_SOURCE=2>"
+      )
+    endif()
   endif()
 endif()
 
@@ -79,7 +109,7 @@ if(EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBASSIMP_COMMON_FLAGS}")
 endif()
 
-if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON)
+if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON OR LIBASSIMP_FUZZ)
   # Public glb/gltf are glTF 2 only. These are compile definitions (not CMake
   # cache switches) in Assimp and must exist before its targets are created.
   add_compile_definitions(ASSIMP_BUILD_NO_GLTF1_IMPORTER ASSIMP_BUILD_NO_GLTF1_EXPORTER)
@@ -87,7 +117,7 @@ endif()
 
 add_subdirectory(assimp)
 
-if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON)
+if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON OR LIBASSIMP_FUZZ)
   # Assimp's GLTF CMake group combines v1 and v2 sources. The v1 headers honour
   # ASSIMP_BUILD_NO_GLTF1_*, but the pinned v1 exporter .cpp only checks the
   # broad GLTF guard and otherwise fails after its declarations are removed.
@@ -135,7 +165,10 @@ if(EMSCRIPTEN)
     -sEXIT_RUNTIME=0
     -sINVOKE_RUN=0
     -sWASM_BIGINT=1
-    -sERROR_ON_UNDEFINED_SYMBOLS=0
+    # A link-time undefined symbol is an error, not a runtime abort stub. The
+    # host-supplied libassimp.dispatch import carries an explicit import name,
+    # which wasm-ld always allows to stay undefined.
+    -sERROR_ON_UNDEFINED_SYMBOLS=1
     -lembind
     --no-entry
     --emit-symbol-map
@@ -150,7 +183,7 @@ if(EMSCRIPTEN)
   endif()
 endif()
 
-if(NOT EMSCRIPTEN AND (LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON))
+if(NOT EMSCRIPTEN AND (LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON OR LIBASSIMP_FUZZ))
   add_library(libassimp-core STATIC src/cpp/libassimp.cpp)
   target_link_libraries(libassimp-core PUBLIC assimp)
   target_include_directories(libassimp-core PUBLIC src/cpp)
@@ -251,10 +284,14 @@ if(LIBASSIMP_NATIVE_ADDON)
     )
   elseif(WIN32)
     target_sources(libassimp-native PRIVATE cmake/libassimp-node.def)
+    target_link_options(libassimp-native PRIVATE /guard:cf)
   else()
     target_link_options(
       libassimp-native
       PRIVATE
+        # Full RELRO: resolve every import at load, then map the GOT read-only.
+        "LINKER:-z,relro,-z,now"
+        "LINKER:-z,noexecstack"
         # LightUSD links CMAKE_DL_LIBS but calls nothing from it; drop unused NEEDED entries on old glibc.
         "LINKER:--as-needed"
         "LINKER:--exclude-libs,ALL"
@@ -262,6 +299,12 @@ if(LIBASSIMP_NATIVE_ADDON)
     )
   endif()
   libassimp_enable_coverage(libassimp-native)
+endif()
+
+if(LIBASSIMP_FUZZ)
+  add_executable(libassimp-fuzz-plan tests/fuzz/plan-fuzzer.cpp)
+  target_link_libraries(libassimp-fuzz-plan PRIVATE libassimp-core)
+  target_link_options(libassimp-fuzz-plan PRIVATE -fsanitize=fuzzer)
 endif()
 
 if(LIBASSIMP_NATIVE_TESTS AND LIBASSIMP_CPP_COVERAGE)

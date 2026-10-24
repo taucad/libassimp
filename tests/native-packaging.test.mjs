@@ -9,9 +9,12 @@ import { preparedReleaseFindings } from '../scripts/check-prepared-release.mjs';
 import {
   checkElfDependencies,
   elfDependencies,
+  elfHardening,
+  machoHardening,
   maxCxxabiVersion,
   maxGlibcVersion,
   maxGlibcxxVersion,
+  peHardening,
 } from '../scripts/check-native-host.mjs';
 import { inspectHeader } from '../scripts/inspect-native.mjs';
 import { extractPreviewPackages } from '../scripts/extract-preview-packages.mjs';
@@ -242,6 +245,42 @@ describe('native binary inspection', () => {
     assert.doesNotThrow(() => checkElfDependencies(dependencies));
     assert.throws(() => checkElfDependencies([...dependencies, 'libassimp.so.7']), assert.AssertionError);
     assert.throws(() => checkElfDependencies(['/tmp/libpthread.so.0']), assert.AssertionError);
+  });
+
+  it('requires full RELRO, an NX stack, stack protection, FORTIFY, and CFG in the shipped addons', () => {
+    const hardened = {
+      dynamic:
+        ' 0x000000000000001e (FLAGS)              BIND_NOW\n 0x000000006ffffffb (FLAGS_1)            Flags: NOW\n',
+      programHeaders:
+        '  GNU_STACK      0x000000 0x0 0x0 0x000000 0x000000 RW  0x10\n  GNU_RELRO      0x2033350 0x2033350 0x2033350 0x07ccb0 0x07ccb0 R   0x1\n',
+      symbols:
+        '    12: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __stack_chk_fail@GLIBC_2.4 (5)\n    13: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __memcpy_chk@GLIBC_2.3.4 (6)\n',
+    };
+    assert.deepEqual(elfHardening(hardened), []);
+    assert.deepEqual(elfHardening({ ...hardened, dynamic: ' 0x000000000000000c (INIT) 0x1000\n' }), [
+      'lazy binding (no BIND_NOW)',
+    ]);
+    assert.deepEqual(
+      elfHardening({
+        dynamic: hardened.dynamic,
+        programHeaders: '  GNU_STACK      0x000000 0x0 0x0 0x000000 0x000000 RWE 0x10\n',
+        symbols: '    12: 0 0 FUNC GLOBAL DEFAULT UND __stack_chk_fail@GLIBC_2.4 (5)\n',
+      }),
+      ['no GNU_RELRO segment', 'executable stack', 'no _FORTIFY_SOURCE checked calls (__*_chk)'],
+    );
+    assert.deepEqual(
+      elfHardening({ ...hardened, symbols: '    13: 0 0 FUNC GLOBAL DEFAULT UND memcpy@GLIBC_2.14\n' }),
+      ['no stack protector (__stack_chk_fail)', 'no _FORTIFY_SOURCE checked calls (__*_chk)'],
+    );
+    assert.deepEqual(
+      peHardening('            4160 DLL characteristics\n                   Control Flow Guard\n'),
+      [],
+    );
+    assert.deepEqual(peHardening('             160 DLL characteristics\n'), [
+      'no Control Flow Guard (/guard:cf)',
+    ]);
+    assert.deepEqual(machoHardening('___stack_chk_fail\n___stack_chk_guard\n'), []);
+    assert.deepEqual(machoHardening('_memcpy\n'), ['no stack protector (___stack_chk_fail)']);
   });
 
   it('reads ELF, Mach-O, and PE machine headers without host-specific tools', () => {

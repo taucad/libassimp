@@ -21,6 +21,8 @@ const pageCeilings: Readonly<Record<string, number>> = {
   'guides/handle-failures.mdx': 490,
   'guides/resolve-sidecar-files.mdx': 460,
   'guides/use-in-the-browser.mdx': 470,
+  // Backend choice, isolation, limits and resolver containment for hostile files.
+  'guides/untrusted-input.mdx': 400,
   // The end-to-end page now carries the conversion it explains.
   'how-it-works.mdx': 690,
   'index.mdx': 360,
