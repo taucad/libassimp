@@ -50,7 +50,7 @@ the filename exactly, so never add an `NPM_TOKEN`.
 ## Toolchain
 
 The Emscripten image is digest-pinned in `emsdk-image.txt` and repeated as the
-`container:` literal in `ci.yml` and `bench.yml`, because a container image
+`container:` literal in `ci.yml`, `bench.yml` and `bench-base.yml`, because a container image
 cannot be computed from a file. Dependabot's `docker` ecosystem proposes the
 bump; move the literal in `emsdk-image.txt` in the same pull request, then
 re-anchor the byte and timing budgets from the first build on the new

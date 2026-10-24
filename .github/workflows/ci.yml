@@ -805,6 +805,153 @@ jobs:
       - if: steps.current.outcome == 'failure' || steps.base-checkout.outcome == 'failure' || steps.base.outcome == 'failure' || steps.regression.outcome == 'failure' || steps.usd.outcome == 'failure'
         run: exit 1
 
+  # The base revision's Wasm pair and linux-x64 addon for the format matrix,
+  # built beside this run's own builds (a cache hit once the base's push ran).
+  bench-base:
+    if: github.event_name == 'pull_request'
+    needs: preflight
+    uses: ./.github/workflows/bench-base.yml
+    with:
+      sha: ${{ github.event.pull_request.base.sha }}
+
+  # Every importer fixture crossed with every export target (small), and the
+  # large synthetic grids and the helical gear (large), on both backends. Each
+  # job measures the base and the PR interleaved on one runner; the large tier
+  # is split in two so no job runs much longer than the others.
+  format-matrix:
+    name: format matrix (${{ matrix.backend }}, ${{ matrix.tier }}${{ matrix.shard != '' && format(' {0}', matrix.shard) || '' }})
+    if: github.event_name == 'pull_request'
+    needs: [assemble, bench-base]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { backend: wasm, tier: small, shard: '' }
+          - { backend: native, tier: small, shard: '' }
+          - { backend: wasm, tier: large, shard: '1/2' }
+          - { backend: wasm, tier: large, shard: '2/2' }
+          - { backend: native, tier: large, shard: '1/2' }
+          - { backend: native, tier: large, shard: '2/2' }
+    steps:
+      # The small tier reads the engine's fixture corpus; the large tier generates its inputs.
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          submodules: ${{ matrix.tier == 'small' }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '26'
+      - uses: ./.github/actions/download-verified-artifact
+        with:
+          name: test-tarballs
+          path: tarballs
+          expect: test-tarballs.json
+      - uses: ./.github/actions/download-verified-artifact
+        with:
+          name: bench-base-wasm
+          path: /tmp/base/wasm
+          expect: libassimp.js libassimp.wasm
+      - uses: ./.github/actions/download-verified-artifact
+        with:
+          name: bench-base-native
+          path: /tmp/base/native
+          expect: libassimp.linux-x64-gnu.node
+      - name: Measure the base and the PR on this runner
+        shell: bash
+        env:
+          BACKEND: ${{ matrix.backend }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SHARD: ${{ matrix.shard }}
+          TIER: ${{ matrix.tier }}
+        run: |
+          work="$(mktemp -d)"
+          npm init --yes --prefix "$work" >/dev/null
+          root="$(node -p "require('./tarballs/test-tarballs.json').packages.libassimp.filename")"
+          platform="$(node -p "require('./tarballs/test-tarballs.json').packages['libassimp-linux-x64-gnu'].filename")"
+          npm install --prefix "$work" --ignore-scripts --no-audit --no-fund "./tarballs/$root" "./tarballs/$platform"
+          base="$(bench/prepare-build.sh "$GITHUB_WORKSPACE/.bench-base" "$BASE_SHA" /tmp/base/wasm)"
+          args=(--backend "$BACKEND" --tier "$TIER" --inputs "$RUNNER_TEMP/matrix-inputs"
+            --build "pr=$work/node_modules/libassimp/dist/index.node.mjs,rev=$HEAD_SHA"
+            --build "base=$base,addon=/tmp/base/native/libassimp.linux-x64-gnu.node,rev=$BASE_SHA")
+          name="$BACKEND-$TIER"
+          if [[ -n "$SHARD" ]]; then
+            args+=(--shard "$SHARD")
+            name="$name-${SHARD%/*}"
+          fi
+          mkdir -p /tmp/format-matrix
+          node bench/matrix.mjs "${args[@]}" --out "/tmp/format-matrix/$name.json"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: format-matrix-${{ strategy.job-index }}
+          path: /tmp/format-matrix/*.json
+          if-no-files-found: warn
+
+  # Report-only: posts the delta table and fails only on a cell that crashes
+  # in the PR but not in the base.
+  format-matrix-report:
+    if: always() && github.event_name == 'pull_request' && needs.format-matrix.result != 'skipped'
+    needs: format-matrix
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '26'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: format-matrix-*
+          path: /tmp/format-matrix
+          merge-multiple: true
+      - name: Render the delta table
+        id: report
+        continue-on-error: true # Preserve the comment before the final fail-closed step.
+        shell: bash
+        env:
+          MATRIX_RESULT: ${{ needs.format-matrix.result }}
+        run: |
+          shopt -s nullglob
+          reports=(/tmp/format-matrix/*.json)
+          if (( ${#reports[@]} == 0 )); then
+            printf '%s\n' '<!-- libassimp-format-matrix -->' '### Format matrix' '' 'The format matrix did not produce a report.' > /tmp/format-matrix.md
+            exit 0
+          fi
+          status=0
+          node bench/matrix-report.mjs --fail-on-crash --markdown /tmp/format-matrix.md "${reports[@]}" || status=$?
+          if [[ "$MATRIX_RESULT" != success ]]; then
+            printf '\n%s\n' "Some format-matrix jobs did not finish (${MATRIX_RESULT}); this table covers ${#reports[@]} report(s)." >> /tmp/format-matrix.md
+          fi
+          exit "$status"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: format-matrix-report
+          path: /tmp/format-matrix.md
+          if-no-files-found: warn
+      - if: always()
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const fs = require('node:fs');
+            const marker = '<!-- libassimp-format-matrix -->';
+            if (!fs.existsSync('/tmp/format-matrix.md')) return;
+            const body = fs.readFileSync('/tmp/format-matrix.md', 'utf8');
+            const comments = await github.paginate(github.rest.issues.listComments, { ...context.repo, issue_number: context.issue.number, per_page: 100 });
+            const existing = comments.find((comment) => comment.body?.includes(marker));
+            if (existing) await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            else await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+      - if: steps.report.outcome == 'failure'
+        run: exit 1
+
   security:
     needs: preflight
     runs-on: ubuntu-24.04
@@ -1008,6 +1155,7 @@ jobs:
         browser,
         bundlers,
         benchmark,
+        format-matrix-report,
         security,
         preview,
         preview-consumer,
@@ -1031,5 +1179,7 @@ jobs:
           if (needs.preflight.outputs.kind === 'pull-request') required.push('benchmark');
           const failures = required.filter((name) => needs[name]?.result !== 'success');
           if (!required.includes('benchmark') && !['success', 'skipped'].includes(needs.benchmark?.result)) failures.push('benchmark');
+          // Report-only, except that a cell crashing in the PR but not in the base fails it.
+          if (!['success', 'skipped'].includes(needs['format-matrix-report']?.result)) failures.push('format-matrix-report');
           if (failures.length) throw new Error(`required jobs did not pass: ${failures.join(', ')}`);
           NODE
