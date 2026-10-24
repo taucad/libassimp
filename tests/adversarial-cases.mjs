@@ -353,8 +353,10 @@ const KNOWN_FAILURES = {
   'deep/gltf-json-arrays': ['engine-depth-guard'],
   'deep/fbx-ascii-scopes': ['engine-depth-guard'],
   'deep/collada-node-chain': ['engine-depth-guard'],
-  'count/ply-binary-vertices': ['runtime-error-model'],
-  'count/ply-ascii-faces': ['runtime-error-model'],
+  // Native is killed (SIGKILL) or times out on darwin, where only the
+  // watchdog enforces the memory limit (CI run 40061069486).
+  'count/ply-binary-vertices': ['engine-input-hardening', 'runtime-error-model'],
+  'count/ply-ascii-faces': ['engine-input-hardening', 'runtime-error-model'],
   // Native exceeds the worker memory limit on win32, where only the watchdog
   // enforces it (CI run 40061069486).
   'count/off-vertices': ['engine-input-hardening', 'runtime-error-model'],
@@ -368,7 +370,7 @@ const KNOWN_FAILURES = {
   'truncated-half/molecule.cob': ['engine-input-hardening', 'runtime-error-model'],
   'truncated-head/molecule.cob': ['engine-input-hardening', 'runtime-error-model'],
   'truncated-half/simplecube.md5mesh': ['engine-input-hardening'],
-  // Native crashes on win32 only (CI run 40061069486).
+  // Native crashes on win32 and darwin (CI run 40061069486).
   'truncated-half/chrome_sphere.mdl': ['engine-input-hardening'],
   'garbage/chrome_sphere.mdl': ['engine-input-hardening', 'runtime-error-model'],
   'truncated-half/example.ogex': ['engine-input-hardening', 'runtime-error-model'],
