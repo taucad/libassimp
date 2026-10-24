@@ -49,12 +49,66 @@ Serve Wasm with `application/wasm`, content-hashed immutable caching, and compre
 
 ## Use a worker
 
-A conversion is CPU-heavy even when resolution suspends. Import libassimp inside a module worker and transfer input/output buffers. The artifact has no pthreads, so no cross-origin isolation headers are required.
+A conversion is CPU-heavy even when resolution suspends, and on the main thread a running Wasm import cannot be interrupted. Run libassimp in a module worker and transfer the buffers both ways instead of copying them. The artifact has no pthreads, so no cross-origin isolation headers are required.
+
+`convert-worker.ts` creates one instance and answers each request by id:
 
 ```typescript
-const worker = new Worker(new URL('./convert-worker.js', import.meta.url), { type: 'module' });
-worker.postMessage({ name: 'model.fbx', bytes: new Uint8Array() });
+import { createAssimp, type AssimpFile, type ExportFormat } from 'libassimp';
+
+type Job = { id: number; name: string; bytes: Uint8Array<ArrayBuffer>; to: ExportFormat };
+
+// Created on first use, so a message that arrives during startup is not lost.
+let instance: ReturnType<typeof createAssimp> | undefined;
+
+self.onmessage = async ({ data }: MessageEvent<Job>) => {
+  try {
+    instance ??= createAssimp();
+    const { files } = await (await instance).convert({ name: data.name, bytes: data.bytes }, { to: data.to });
+    // Each output owns its buffer; transfer moves it without a copy.
+    const transfer = [...new Set(files.map(({ bytes }) => bytes.buffer))];
+    self.postMessage({ id: data.id, files } satisfies { id: number; files: readonly AssimpFile[] }, {
+      transfer,
+    });
+  } catch (error) {
+    const { code, message } = error as { code?: string; message?: string };
+    self.postMessage({ id: data.id, error: { code, message: message ?? String(error) } });
+  }
+};
 ```
+
+The page wraps the worker in a Promise API and transfers the input:
+
+```typescript
+import type { AssimpFile, ExportFormat } from 'libassimp';
+
+type Reply = { id: number; files?: readonly AssimpFile[]; error?: { code?: string; message: string } };
+
+const worker = new Worker(new URL('./convert-worker.ts', import.meta.url), { type: 'module' });
+const pending = new Map<
+  number,
+  { resolve: (files: readonly AssimpFile[]) => void; reject: (error: Error) => void }
+>();
+let nextId = 0;
+
+worker.onmessage = ({ data }: MessageEvent<Reply>) => {
+  const job = pending.get(data.id);
+  pending.delete(data.id);
+  if (data.files) job?.resolve(data.files);
+  else job?.reject(Object.assign(new Error(data.error?.message), { code: data.error?.code }));
+};
+
+export const convertInWorker = async (file: File, to: ExportFormat): Promise<readonly AssimpFile[]> => {
+  const buffer = await file.arrayBuffer();
+  const id = nextId++;
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject });
+    worker.postMessage({ id, name: file.name, bytes: new Uint8Array(buffer), to }, [buffer]);
+  });
+};
+```
+
+To cancel a stuck conversion, `worker.terminate()` and start a new worker. For files from untrusted sources, see [Untrusted input](/docs/guides/untrusted-input).
 
 ## Download output
 
@@ -63,7 +117,9 @@ const download = (name: string, bytes: Uint8Array<ArrayBuffer>): void => {
   const url = URL.createObjectURL(new Blob([bytes]));
   const anchor = Object.assign(document.createElement('a'), { download: name, href: url });
   anchor.click();
-  URL.revokeObjectURL(url);
+  // The browser reads the URL after click() returns; revoking now can cancel
+  // the download. FileSaver.js waits 40 s for the slowest (Safari) case.
+  setTimeout(() => URL.revokeObjectURL(url), 40_000);
 };
 ```
 

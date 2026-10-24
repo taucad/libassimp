@@ -68,11 +68,9 @@ describe('capability generator', () => {
     );
     expect(selectors).toHaveLength(4);
     for (const { format, descriptor } of selectors) {
-      expect(descriptor).toMatchObject({
-        nativeKind: descriptor.kind,
-        formats: [format],
-        phases: ['export'],
-      });
+      // The root entry ships validator fields only; provenance stays in the evidence.
+      expect(descriptor.nativeKind, format).toBe(descriptor.kind);
+      expect(Object.keys(descriptor)).not.toContain('formats');
     }
   });
 });

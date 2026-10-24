@@ -52,6 +52,7 @@ describe('documentation fences', () => {
           typeRoots: [join(root, 'node_modules/@types')],
           paths: {
             libassimp: [join(root, 'dist/index.d.mts')],
+            'libassimp/capabilities': [join(root, 'dist/capabilities.d.mts')],
           },
         },
         include: ['*.ts'],
