@@ -627,7 +627,7 @@ TEST(PlanTest, NamesOutputsStreamsThemAndReleasesTheEntry) {
       "chair.obj",
       {{"chair.obj", textBytes("mtllib chair.mtl\nv 0 0 0\nv 1 0 0\nv 0 1 0\nusemtl wood\nf 1 2 3\n")},
        {"chair.mtl", textBytes("newmtl wood\nKd 1 0 0\n")}},
-      {}, kPostProcess, {{"obj", "obj", {}, "chair.obj"}, {"stl", "stl", {}}}, {});
+      {}, kPostProcess, {{"obj", "obj", {}, "chair.obj"}, {"ply", "ply", {}}}, {});
   plan.setReleaseEntryAfterImport(true);
   plan.setOutputSink(host.sink());
   ASSERT_EQ(plan.run(), libassimp::PlanStatus::Completed) << plan.result().message;
@@ -636,7 +636,7 @@ TEST(PlanTest, NamesOutputsStreamsThemAndReleasesTheEntry) {
   ASSERT_EQ(formats[0].files.size(), 2u);
   EXPECT_EQ(formats[0].files[0].name, "chair.obj");
   EXPECT_EQ(formats[0].files[1].name, "chair.mtl");
-  EXPECT_EQ(formats[1].files[0].name, "result.stl");
+  EXPECT_EQ(formats[1].files[0].name, "result.ply");
   for (const auto &format : formats) {
     for (const libassimp::NamedBytes &file : format.files) {
       EXPECT_TRUE(file.bytes.empty());
@@ -694,7 +694,7 @@ TEST(PlanTest, ReportsProgressThrottledBetweenPhaseBoundaries) {
 }
 
 TEST(PlanTest, CollectsWarningsUpToTheCapAndCountsTheRest) {
-  libassimp::Plan few("few.obj", {{"few.obj", noisyObj(2)}}, {}, kPostProcess, {{"stl", "stl", {}}}, {});
+  libassimp::Plan few("few.obj", {{"few.obj", noisyObj(2)}}, {}, kPostProcess, {{"ply", "ply", {}}}, {});
   ASSERT_EQ(few.run(), libassimp::PlanStatus::Completed) << few.result().message;
   ASSERT_GE(few.result().warnings.size(), 2u);
   EXPECT_FALSE(few.result().warnings[0].error);
@@ -702,7 +702,7 @@ TEST(PlanTest, CollectsWarningsUpToTheCapAndCountsTheRest) {
   EXPECT_EQ(few.result().warnings[0].formatIndex, -1);
   EXPECT_NE(few.result().warnings[0].message.find("material library"), std::string::npos);
 
-  libassimp::Plan many("many.obj", {{"many.obj", noisyObj(70)}}, {}, kPostProcess, {{"stl", "stl", {}}}, {});
+  libassimp::Plan many("many.obj", {{"many.obj", noisyObj(70)}}, {}, kPostProcess, {{"ply", "ply", {}}}, {});
   ASSERT_EQ(many.run(), libassimp::PlanStatus::Completed) << many.result().message;
   const auto &warnings = many.result().warnings;
   ASSERT_EQ(warnings.size(), libassimp::kMaxWarnings + 1);
@@ -719,7 +719,7 @@ TEST(PlanTest, CollectsWarningsUpToTheCapAndCountsTheRest) {
   logger->info("info");
   logger->warn("warning outside a run");
   logger->error("error outside a run");
-  libassimp::Plan quiet("quiet.obj", {{"quiet.obj", noisyObj(0)}}, {}, kPostProcess, {{"stl", "stl", {}}}, {});
+  libassimp::Plan quiet("quiet.obj", {{"quiet.obj", noisyObj(0)}}, {}, kPostProcess, {{"ply", "ply", {}}}, {});
   ASSERT_EQ(quiet.run(), libassimp::PlanStatus::Completed) << quiet.result().message;
   for (const libassimp::Warning &warning : quiet.result().warnings)
     EXPECT_EQ(warning.message.find("outside a run"), std::string::npos);

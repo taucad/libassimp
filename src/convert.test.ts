@@ -1150,9 +1150,9 @@ describe('engine diagnostics and resource limits on the real Wasm runtime', () =
     const source = `${'mtllib\n'.repeat(70)}v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n`;
     const result = await convert(
       { name: 'noisy.obj', bytes: new TextEncoder().encode(source) },
-      { to: 'stl' },
+      { to: 'ply' },
     );
-    expect(result.files.map(({ name }) => name)).toEqual(['noisy.stl']);
+    expect(result.files.map(({ name }) => name)).toEqual(['noisy.ply']);
     expect(result.warnings).toHaveLength(65);
     expect(result.warnings[0]).toEqual({
       severity: 'warning',
