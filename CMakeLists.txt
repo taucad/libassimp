@@ -130,7 +130,7 @@ if(EMSCRIPTEN)
     -sMAXIMUM_MEMORY=4GB
     -sSTACK_SIZE=8MB
     -sFILESYSTEM=1 # the STEP and USD exporters go through the filesystem shim
-    -sABORTING_MALLOC=1
+    -sABORTING_MALLOC=0 # allocation failure throws std::bad_alloc, reported as LIMIT_EXCEEDED
     -sSUPPORT_LONGJMP=0
     -sEXIT_RUNTIME=0
     -sINVOKE_RUN=0

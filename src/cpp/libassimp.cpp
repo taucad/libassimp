@@ -17,8 +17,10 @@
 
 #include "libassimp.hpp"
 
+#include <assimp/DefaultLogger.hpp>
 #include <assimp/Exporter.hpp>
 #include <assimp/Importer.hpp>
+#include <assimp/Logger.hpp>
 #include <assimp/ProgressHandler.hpp>
 #include <assimp/cimport.h>
 #include <assimp/importerdesc.h>
@@ -26,6 +28,7 @@
 #include <assimp/scene.h>
 
 #include <exception>
+#include <new>
 #ifdef LIBASSIMP_CPP_COVERAGE
 #include <condition_variable>
 #include <mutex>
@@ -40,8 +43,122 @@ namespace {
 
 static_assert(std::is_same_v<ai_real, float>, "TypeScript validation assumes float32 ai_real storage");
 
-#ifdef LIBASSIMP_CPP_COVERAGE
 using Clock = std::chrono::steady_clock;
+
+double milliseconds(Clock::duration duration) {
+  return std::chrono::duration<double, std::milli>(duration).count();
+}
+
+// Set by the new-handler while a plan runs, so a failure caused by an allocation that could not be
+// satisfied (std::bad_alloc, which assimp turns into an error string) is reported as LIMIT_EXCEEDED.
+thread_local bool outOfMemory = false;
+
+[[noreturn]] void recordOutOfMemory() {
+  outOfMemory = true;
+  throw std::bad_alloc();
+}
+
+class OutOfMemoryScope {
+ public:
+  OutOfMemoryScope() : previous_(std::set_new_handler(&recordOutOfMemory)) { outOfMemory = false; }
+  ~OutOfMemoryScope() { std::set_new_handler(previous_); }
+  OutOfMemoryScope(const OutOfMemoryScope&) = delete;
+  OutOfMemoryScope& operator=(const OutOfMemoryScope&) = delete;
+
+ private:
+  std::new_handler previous_;
+};
+
+/** Phase, timing and throttled progress for one run; warnings are attributed to its current phase. */
+class RunTracker {
+ public:
+  RunTracker(const ProgressSink& sink, Clock::duration interval) : sink_(sink), interval_(interval) {}
+
+  void enter(ProgressPhase phase, int formatIndex) {
+    phase_ = phase;
+    formatIndex_ = formatIndex;
+  }
+
+  void report(ProgressPhase phase, int step, int total) {
+    const Clock::time_point now = Clock::now();
+    if (phase == ProgressPhase::PostProcessing && !postProcessing_) {
+      postProcessing_ = true;
+      postProcessStarted_ = now;
+    }
+    phase_ = phase;
+    if (!sink_) return;
+    if (step > 0 && step < total && now - reported_ < interval_) return;
+    reported_ = now;
+    sink_(phase, step, total, formatIndex_);
+  }
+
+  /** Split the import call's wall time into import and post-processing. */
+  void finishImport(Timings& timings, Clock::time_point started, Clock::time_point finished) const {
+    const Clock::time_point split = postProcessing_ ? postProcessStarted_ : finished;
+    timings.import = milliseconds(split - started);
+    timings.postProcess = milliseconds(finished - split);
+  }
+
+  ProgressPhase phase() const { return phase_; }
+  int formatIndex() const { return formatIndex_; }
+
+ private:
+  const ProgressSink& sink_;
+  Clock::duration interval_;
+  ProgressPhase phase_ = ProgressPhase::Importing;
+  int formatIndex_ = -1;
+  bool postProcessing_ = false;
+  Clock::time_point postProcessStarted_;
+  Clock::time_point reported_;
+};
+
+/** Collects assimp's warning and error messages for the plan running on this thread. */
+struct WarningCollector {
+  const RunTracker& tracker;
+  std::vector<Warning>& warnings;
+  std::size_t omitted = 0;
+
+  void add(bool error, const char* message) {
+    if (warnings.size() >= kMaxWarnings) {
+      ++omitted;
+      return;
+    }
+    warnings.push_back(Warning{error, tracker.phase(), tracker.formatIndex(), message});
+  }
+};
+
+thread_local WarningCollector* activeCollector = nullptr;
+
+class CollectingLogger final : public Assimp::Logger {
+ public:
+  CollectingLogger() : Assimp::Logger(Assimp::Logger::NORMAL) {}
+  bool attachStream(Assimp::LogStream*, unsigned int) override { return false; }
+  bool detachStream(Assimp::LogStream*, unsigned int) override { return false; }
+
+ private:
+  void OnDebug(const char*) override {}
+  void OnVerboseDebug(const char*) override {}
+  void OnInfo(const char*) override {}
+  void OnWarn(const char* message) override { collect(false, message); }
+  void OnError(const char* message) override { collect(true, message); }
+  static void collect(bool error, const char* message) {
+    if (activeCollector != nullptr) activeCollector->add(error, message);
+  }
+};
+
+class CollectorScope {
+ public:
+  explicit CollectorScope(WarningCollector& collector) {
+    static const bool installed = (Assimp::DefaultLogger::set(new CollectingLogger()), true);
+    (void)installed;
+    activeCollector = &collector;
+  }
+  ~CollectorScope() { activeCollector = nullptr; }
+  CollectorScope(const CollectorScope&) = delete;
+  CollectorScope& operator=(const CollectorScope&) = delete;
+};
+
+#ifdef LIBASSIMP_CPP_COVERAGE
 std::atomic<ProgressPhase> coverageBlockPhase{ProgressPhase::None};
 std::atomic<ProgressPhase> coverageBlockedPhase{ProgressPhase::None};
 std::mutex progressMutex;
@@ -52,11 +169,12 @@ bool releaseBlockedProgress = false;
 class CancelProgress final : public Assimp::ProgressHandler {
  public:
 #ifdef LIBASSIMP_CPP_COVERAGE
-  CancelProgress(const std::atomic<bool>& cancelled, PhaseDiagnostics& diagnostics,
+  CancelProgress(const std::atomic<bool>& cancelled, RunTracker& tracker, PhaseDiagnostics& diagnostics,
                  ProgressPhase phase)
-      : cancelled_(cancelled), diagnostics_(diagnostics), phase_(phase) {}
+      : cancelled_(cancelled), tracker_(tracker), diagnostics_(diagnostics), phase_(phase) {}
 #else
-  explicit CancelProgress(const std::atomic<bool>& cancelled) : cancelled_(cancelled) {}
+  CancelProgress(const std::atomic<bool>& cancelled, RunTracker& tracker)
+      : cancelled_(cancelled), tracker_(tracker) {}
 #endif
 
   bool Update(float) noexcept override {
@@ -72,24 +190,35 @@ class CancelProgress final : public Assimp::ProgressHandler {
     return !cancelled_.load();
   }
 
-#ifdef LIBASSIMP_CPP_COVERAGE
   bool UpdateFileRead(int currentStep, int numberOfSteps) override {
+    tracker_.report(ProgressPhase::Importing, currentStep, numberOfSteps);
+#ifdef LIBASSIMP_CPP_COVERAGE
     observe(ProgressPhase::Importing, currentStep, numberOfSteps);
     const bool keepGoing = Assimp::ProgressHandler::UpdateFileRead(currentStep, numberOfSteps);
     if (currentStep == numberOfSteps) phase_ = ProgressPhase::PostProcessing;
     return keepGoing;
+#else
+    return Assimp::ProgressHandler::UpdateFileRead(currentStep, numberOfSteps);
+#endif
   }
 
   bool UpdatePostProcess(int currentStep, int numberOfSteps) override {
+    tracker_.report(ProgressPhase::PostProcessing, currentStep, numberOfSteps);
+#ifdef LIBASSIMP_CPP_COVERAGE
     observe(ProgressPhase::PostProcessing, currentStep, numberOfSteps);
+#endif
     return Assimp::ProgressHandler::UpdatePostProcess(currentStep, numberOfSteps);
   }
 
   bool UpdateFileWrite(int currentStep, int numberOfSteps) override {
+    tracker_.report(ProgressPhase::Exporting, currentStep, numberOfSteps);
+#ifdef LIBASSIMP_CPP_COVERAGE
     observe(ProgressPhase::Exporting, currentStep, numberOfSteps);
+#endif
     return Assimp::ProgressHandler::UpdateFileWrite(currentStep, numberOfSteps);
   }
 
+#ifdef LIBASSIMP_CPP_COVERAGE
   void finish() {
     const Clock::time_point now = Clock::now();
     for (std::size_t index = 0; index < boundaries_.size(); ++index) close(index, now);
@@ -129,6 +258,7 @@ class CancelProgress final : public Assimp::ProgressHandler {
 
  private:
   const std::atomic<bool>& cancelled_;
+  RunTracker& tracker_;
 #ifdef LIBASSIMP_CPP_COVERAGE
   PhaseDiagnostics& diagnostics_;
   ProgressPhase phase_;
@@ -277,6 +407,17 @@ PlanStatus Plan::run(Resolver resolve) {
     result_ = fail("RESOLVE_FAILED", "Failed to resolve '" + name + "'.", activeFormatIndex, activeFormat);
     return PlanStatus::Failed;
   };
+  const OutOfMemoryScope outOfMemoryScope;
+  // An allocation failure surfaces as a phase failure (assimp catches std::bad_alloc), so the
+  // new-handler's mark decides whether the failure is a resource limit.
+  const auto failed = [&](std::string message) {
+    result_ = fail(outOfMemory ? "LIMIT_EXCEEDED" : phase, std::move(message), activeFormatIndex, activeFormat);
+    return PlanStatus::Failed;
+  };
+  RunTracker tracker(progress_, progressInterval_);
+  std::vector<Warning> warnings;
+  WarningCollector collector{tracker, warnings};
+  const CollectorScope collectorScope(collector);
   try {
     if (!pendingName_.empty()) {
       Bytes resolved;
@@ -296,13 +437,16 @@ PlanStatus Plan::run(Resolver resolve) {
     importer.SetIOHandler(new MemoryIO(inputs, false));
 #ifdef LIBASSIMP_CPP_COVERAGE
     auto* const importProgress =
-        new CancelProgress(cancelled_, phaseDiagnostics_, ProgressPhase::Importing);
+        new CancelProgress(cancelled_, tracker, phaseDiagnostics_, ProgressPhase::Importing);
 #else
-    auto* const importProgress = new CancelProgress(cancelled_);
+    auto* const importProgress = new CancelProgress(cancelled_, tracker);
 #endif
     importer.SetProgressHandler(importProgress);
     ++importAttempts_;
+    Timings timings;
+    const Clock::time_point importStarted = Clock::now();
     const aiScene* scene = importer.ReadFile(entryName_, postProcess_);
+    tracker.finishImport(timings, importStarted, Clock::now());
 #ifdef LIBASSIMP_CPP_COVERAGE
     importProgress->finish();
 #endif
@@ -314,19 +458,26 @@ PlanStatus Plan::run(Resolver resolve) {
       pendingName_ = inputs.pendingName();
       return PlanStatus::Pending;
     }
-    if (scene == nullptr) {
-      result_ = fail(phase, importer.GetErrorString());
-      return PlanStatus::Failed;
+    if (scene == nullptr) return failed(importer.GetErrorString());
+
+    if (releaseEntry_) {
+      // The importer is done with the entry file; exporters read only sidecars.
+      for (NamedBytes& file : files_) {
+        if (file.name == entryName_) Bytes().swap(file.bytes);
+      }
     }
 
     Result completed;
     completed.ok = true;
     completed.formats.reserve(targets_.size());
+    std::uint32_t nextHostFile = 1;
     for (std::size_t index = 0; index < targets_.size(); ++index) {
       const Target& target = targets_[index];
       activeFormatIndex = static_cast<int>(index);
       activeFormat = target.format;
       phase = "EXPORT_FAILED";
+      tracker.enter(ProgressPhase::Exporting, activeFormatIndex);
+      const Clock::time_point exportStarted = Clock::now();
       Assimp::Exporter exporter;
 #ifdef LIBASSIMP_CPP_COVERAGE
       exporter.RegisterExporter(
@@ -342,17 +493,18 @@ PlanStatus Plan::run(Resolver resolve) {
         return PlanStatus::Failed;
       }
 
-      const std::string outputName = "result." + std::string(description->fileExtension);
-      MemoryFiles outputs(files_, activeResolve);
+      const std::string outputName =
+          target.outputName.empty() ? "result." + std::string(description->fileExtension) : target.outputName;
+      MemoryFiles outputs(files_, activeResolve, sink_ ? &sink_ : nullptr, &nextHostFile);
       outputs.neverResolve(outputName);
       Assimp::ExportProperties exportProperties;
       applyProperties(target.properties, exportProperties);
       exporter.SetIOHandler(new MemoryIO(outputs, true));
 #ifdef LIBASSIMP_CPP_COVERAGE
       auto* const exportProgress =
-          new CancelProgress(cancelled_, phaseDiagnostics_, ProgressPhase::Exporting);
+          new CancelProgress(cancelled_, tracker, phaseDiagnostics_, ProgressPhase::Exporting);
 #else
-      auto* const exportProgress = new CancelProgress(cancelled_);
+      auto* const exportProgress = new CancelProgress(cancelled_, tracker);
 #endif
       exporter.SetProgressHandler(exportProgress);
       const aiReturn exported = exporter.Export(scene, target.nativeId, outputName, 0u, &exportProperties);
@@ -367,27 +519,27 @@ PlanStatus Plan::run(Resolver resolve) {
         pendingName_ = outputs.pendingName();
         return PlanStatus::Pending;
       }
-      if (exported != aiReturn_SUCCESS) {
-        result_ = fail(phase, exporter.GetErrorString(), static_cast<int>(index), target.format);
-        return PlanStatus::Failed;
-      }
+      if (exported != aiReturn_SUCCESS) return failed(exporter.GetErrorString());
       std::vector<NamedBytes> files = outputs.takeOutputs(outputName);
-      if (files.empty()) {
-        result_ = fail(phase, "The exporter produced no output.", static_cast<int>(index), target.format);
-        return PlanStatus::Failed;
-      }
+      if (files.empty()) return failed("The exporter produced no output.");
       completed.formats.push_back(ConvertedFormat{target.format, std::move(files)});
+      timings.exportAll += milliseconds(Clock::now() - exportStarted);
     }
+    if (collector.omitted != 0) {
+      warnings.push_back(Warning{false, tracker.phase(), tracker.formatIndex(),
+                                 std::to_string(collector.omitted) + " more assimp messages were omitted."});
+    }
+    completed.warnings = std::move(warnings);
+    completed.timings = timings;
     result_ = std::move(completed);
     return PlanStatus::Completed;
   } catch (const std::exception& error) {
     if (cancelled()) return PlanStatus::Aborted;
-    result_ = fail(phase, error.what(), activeFormatIndex, activeFormat);
+    return failed(error.what());
   } catch (...) {
     if (cancelled()) return PlanStatus::Aborted;
-    result_ = fail(phase, "Unknown error.", activeFormatIndex, activeFormat);
+    return failed("Unknown error.");
   }
-  return PlanStatus::Failed;
 }
 
 std::vector<FormatInfo> importFormats() {
@@ -474,14 +626,43 @@ constexpr int kResolveBegin = 1;
 constexpr int kResolveSize = 2;
 constexpr int kResolveCopy = 3;
 constexpr int kResolveRelease = 4;
+constexpr int kOutputWrite = 5;
+constexpr int kProgress = 6;
 constexpr int kPending = -1;
+
+std::uint32_t pointer(const void* value) {
+  return static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(value));
+}
+
+/** Passed by pointer with kOutputWrite: `size` bytes at `data` belong at `offset` of host file `file`. */
+struct OutputChunk {
+  std::uint32_t file;
+  std::uint32_t data;
+  std::uint32_t size;
+  std::uint32_t offset;
+};
+
+bool writeToHost(std::uint32_t file, std::size_t offset, const std::uint8_t* data, std::size_t size) {
+  const OutputChunk chunk{file, pointer(data), static_cast<std::uint32_t>(size),
+                          static_cast<std::uint32_t>(offset)};
+  return libassimp_host_dispatch(kOutputWrite, pointer(&chunk), 0u) == 0;
+}
+
+/** Passed by pointer with kProgress. */
+struct ProgressReport {
+  std::int32_t phase;
+  std::int32_t step;
+  std::int32_t total;
+  std::int32_t formatIndex;
+};
+
+void progressToHost(libassimp::ProgressPhase phase, int step, int total, int formatIndex) {
+  const ProgressReport report{static_cast<std::int32_t>(phase), step, total, formatIndex};
+  libassimp_host_dispatch(kProgress, pointer(&report), 0u);
+}
 
 std::unordered_map<std::uint32_t, std::unique_ptr<libassimp::Plan>> plans;
 std::uint32_t nextPlan = 1;
-
-val bytesToJs(const libassimp::Bytes& bytes) {
-  return val(emscripten::typed_memory_view(bytes.size(), bytes.data())).call<val>("slice");
-}
 
 libassimp::Bytes bytesFromJs(const val& value) {
   return emscripten::convertJSArrayToNumberVector<std::uint8_t>(value);
@@ -545,13 +726,18 @@ std::uint32_t preparePlanJs(const std::string& entryName, val files, val options
   for (unsigned index = 0; index < targetCount; ++index) {
     const val target = targetValues[index];
     targets.push_back({target["format"].as<std::string>(), target["nativeId"].as<std::string>(),
-                       propertiesFromJs(target["properties"])});
+                       propertiesFromJs(target["properties"]), target["outputName"].as<std::string>()});
   }
 
   const std::uint32_t handle = nextPlan++;
   plans.emplace(handle, std::make_unique<libassimp::Plan>(
                             entryName, std::move(inputs), propertiesFromJs(options["importProperties"]),
                             options["postProcess"].as<unsigned>(), std::move(targets), resolveFromHost));
+  libassimp::Plan& plan = *plans[handle];
+  // Without JSPI a pending sidecar replays the whole import, which needs the entry file again.
+  plan.setReleaseEntryAfterImport(options["releaseEntry"].as<bool>());
+  plan.setOutputSink(writeToHost);
+  if (options["progress"].as<bool>()) plan.setProgressSink(progressToHost, std::chrono::milliseconds(50));
   return handle;
 }
 
@@ -573,13 +759,29 @@ val takePlanResultJs(std::uint32_t handle) {
     for (const libassimp::NamedBytes& file : converted.files) {
       val item = val::object();
       item.set("name", file.name);
-      item.set("bytes", bytesToJs(file.bytes));
+      item.set("hostFile", file.hostFile);
+      item.set("size", static_cast<double>(file.size));
       files.call<void>("push", item);
     }
     format.set("files", files);
     formats.call<void>("push", format);
   }
   output.set("formats", formats);
+  val warnings = val::array();
+  for (const libassimp::Warning& warning : result.warnings) {
+    val item = val::object();
+    item.set("error", warning.error);
+    item.set("phase", static_cast<int>(warning.phase));
+    item.set("formatIndex", warning.formatIndex);
+    item.set("message", warning.message);
+    warnings.call<void>("push", item);
+  }
+  output.set("warnings", warnings);
+  val timings = val::object();
+  timings.set("import", result.timings.import);
+  timings.set("postProcess", result.timings.postProcess);
+  timings.set("export", result.timings.exportAll);
+  output.set("timings", timings);
   return output;
 }
 

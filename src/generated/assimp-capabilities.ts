@@ -1014,7 +1014,7 @@ export const exportFormats = [
   },
   {
     id: 'step',
-    extension: 'stp',
+    extension: 'step',
     description: 'ISO 10303 STEP',
     exportOptions: {
       pointClouds: {
@@ -3313,18 +3313,22 @@ export const internalPostProcessDescriptors = {
 export const internalCanonicalExportRoutes = [
   {
     id: '3mf',
+    extension: '3mf',
     nativeId: '3mf',
   },
   {
     id: 'assjson',
+    extension: 'json',
     nativeId: 'assjson',
   },
   {
     id: 'dae',
+    extension: 'dae',
     nativeId: 'collada',
   },
   {
     id: 'fbx',
+    extension: 'fbx',
     nativeId: 'fbx',
     routes: {
       binary: {
@@ -3335,14 +3339,17 @@ export const internalCanonicalExportRoutes = [
   },
   {
     id: 'glb',
+    extension: 'glb',
     nativeId: 'glb2',
   },
   {
     id: 'gltf',
+    extension: 'gltf',
     nativeId: 'gltf2',
   },
   {
     id: 'obj',
+    extension: 'obj',
     nativeId: 'obj',
     routes: {
       materials: {
@@ -3353,6 +3360,7 @@ export const internalCanonicalExportRoutes = [
   },
   {
     id: 'ply',
+    extension: 'ply',
     nativeId: 'ply',
     routes: {
       binary: {
@@ -3363,10 +3371,12 @@ export const internalCanonicalExportRoutes = [
   },
   {
     id: 'step',
+    extension: 'step',
     nativeId: 'stp',
   },
   {
     id: 'stl',
+    extension: 'stl',
     nativeId: 'stl',
     routes: {
       binary: {
@@ -3377,14 +3387,17 @@ export const internalCanonicalExportRoutes = [
   },
   {
     id: 'usda',
+    extension: 'usda',
     nativeId: 'usda',
   },
   {
     id: 'usdc',
+    extension: 'usdc',
     nativeId: 'usdc',
   },
   {
     id: 'usdz',
+    extension: 'usdz',
     nativeId: 'usdz',
   },
 ] as const;

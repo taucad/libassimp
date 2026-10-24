@@ -50,7 +50,7 @@ describe('format matrix', () => {
     const project = (name: 'ImportMatrix' | 'ExportMatrix') =>
       llmStringifyMdx({ attributes: [], name, type: 'mdxJsxFlowElement' });
     expect(project('ImportMatrix')).toContain('Wavefront Object: `.obj`');
-    expect(project('ExportMatrix')).toContain('`glb`: `result.glb` — glTF 2 binary container');
+    expect(project('ExportMatrix')).toContain('`glb`: `<stem>.glb` — glTF 2 binary container');
   });
 
   generatedTest('regenerates to the committed file, when the package is built', () => {
