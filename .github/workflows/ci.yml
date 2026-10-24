@@ -515,14 +515,15 @@ jobs:
       # documented PARITY_EXCEPTIONS in the format matrix.
       - name: Run the format matrix and USD suite on the native backend
         env:
-          LIBASSIMP_FINGERPRINTS_OUT: ${{ runner.temp }}/fingerprints-${{ matrix.suffix }}.json
+          LIBASSIMP_FINGERPRINTS_OUT: ${{ runner.temp }}/native-fingerprints
         run: pnpm exec vitest run --config vitest.native.config.ts
-      - if: failure()
+      - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: native-fingerprints-${{ matrix.suffix }}
-          path: ${{ runner.temp }}/fingerprints-${{ matrix.suffix }}.json
+          path: ${{ runner.temp }}/native-fingerprints
           if-no-files-found: ignore
+          retention-days: 7
       - uses: ./.github/actions/download-verified-artifact
         with:
           name: test-tarballs

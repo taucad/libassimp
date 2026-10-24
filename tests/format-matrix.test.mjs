@@ -6,7 +6,7 @@
 // changes with LIBASSIMP_RECORD_DETERMINISM=1 (see CONTRIBUTING.md). The same
 // suite runs once per backend (`tests/backend.mjs`): native output must match
 // the Wasm fingerprints, except the entries in `PARITY_EXCEPTIONS`.
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
@@ -123,6 +123,10 @@ const recorded = JSON.parse(readFileSync(fingerprints, 'utf8'));
 // Wasm is the recording backend; native is checked against what it recorded.
 const recording = backend === 'wasm' && process.env['LIBASSIMP_RECORD_DETERMINISM'] === '1';
 const observed = {};
+// CI uploads this directory: every observed fingerprint, plus each output that
+// differs from determinism.json, so a parity difference can be diffed offline.
+const report = process.env['LIBASSIMP_FINGERPRINTS_OUT'];
+if (report) mkdirSync(report, { recursive: true });
 
 // Fingerprints native may not share with Wasm, each with the cause. An entry
 // must still differ on the platforms it names, so a fixed difference fails
@@ -142,11 +146,24 @@ const PARITY_EXCEPTIONS = {
       'SGSpatialSort sorts vertices with std::sort on plane distance alone; each standard library orders ' +
       'ties differently, so smoothing-group normals sum in a different order (last-ulp float32 difference).',
   },
-  'import BVH': { platforms: ['linux'], reason: `Euler channels become quaternions. ${LIBM}` },
-  'import MDC': { platforms: ['linux'], reason: `MD3::LatLngNormalToVec3 decodes the normals. ${LIBM}` },
+  'import BVH': { platforms: ['linux', 'win32'], reason: `Euler channels become quaternions. ${LIBM}` },
+  'import FBX': { platforms: ['win32'], reason: `Lcl Rotation Euler angles become node matrices. ${LIBM}` },
+  'import FBX ascii': {
+    platforms: ['win32'],
+    reason: `Lcl Rotation Euler angles become node matrices. ${LIBM}`,
+  },
+  'import MDC': {
+    platforms: ['linux', 'win32'],
+    reason: `MD3::LatLngNormalToVec3 decodes the normals. ${LIBM}`,
+  },
   'import MDL HL1': { platforms: ['linux'], reason: `Bone Euler angles become quaternions. ${LIBM}` },
-  'import USDA': { platforms: ['linux'], reason: USD_ROOT_ORDER },
-  'import USDC': { platforms: ['linux'], reason: USD_ROOT_ORDER },
+  'import NFF': { platforms: ['win32'], reason: `Spheres, cones and cylinders are tessellated. ${LIBM}` },
+  'import USDA': { platforms: ['linux', 'win32'], reason: USD_ROOT_ORDER },
+  'import USDC': { platforms: ['linux', 'win32'], reason: USD_ROOT_ORDER },
+  'import X3D': {
+    platforms: ['win32'],
+    reason: `The scene's sphere, cone and cylinder are tessellated. ${LIBM}`,
+  },
 };
 
 /** Pin one primary output's fingerprint, or record it when re-recording. */
@@ -154,6 +171,8 @@ const pin = (id, bytes) => {
   const hash = fnv64(bytes);
   observed[id] = hash;
   if (recording) return;
+  // Keep each output that differs from the recording, to diff against Wasm.
+  if (report && hash !== recorded[id]) writeFileSync(join(report, `${id.replaceAll(' ', '-')}.out`), bytes);
   const exception = backend === 'native' ? PARITY_EXCEPTIONS[id] : undefined;
   if (exception?.platforms.includes(process.platform)) {
     expect.soft(hash, `${id} now matches Wasm; remove its parity exception`).not.toBe(recorded[id]);
@@ -196,9 +215,12 @@ beforeAll(async () => {
 afterAll(() => {
   assimp?.dispose();
   // CI uploads each backend's observed fingerprints to diagnose a parity failure.
-  const report = process.env['LIBASSIMP_FINGERPRINTS_OUT'];
-  if (report)
-    writeFileSync(report, `${JSON.stringify({ backend, platform: process.platform, observed }, null, 2)}\n`);
+  if (report) {
+    writeFileSync(
+      join(report, 'fingerprints.json'),
+      `${JSON.stringify({ backend, platform: process.platform, observed }, null, 2)}\n`,
+    );
+  }
   if (recording) {
     const sorted = Object.fromEntries(
       Object.entries(observed).sort(([left], [right]) => (left < right ? -1 : 1)),
