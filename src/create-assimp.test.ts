@@ -212,7 +212,6 @@ describe('createAssimp loading and lifetime', () => {
     using assimp = await createAssimp();
     expect(assimp.backend).toBe('wasm');
     expect(assimp.formats.export.map(({ id }) => id)).toEqual([
-      '3ds',
       '3mf',
       'assjson',
       'dae',
@@ -226,8 +225,6 @@ describe('createAssimp loading and lifetime', () => {
       'usda',
       'usdc',
       'usdz',
-      'x',
-      'x3d',
     ]);
     expect(assimp.formats.import.map(({ id }) => id)).toContain('obj');
     expect(assimp.formats.export.find(({ id }) => id === 'stl')?.exportOptions).toHaveProperty('binary');

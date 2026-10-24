@@ -46,9 +46,9 @@ describe('assimp-builds-to-presets', () => {
         ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT: 'ON',
         ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT: 'ON',
         ASSIMP_BUILD_USD_IMPORTER: 'ON',
-        ASSIMP_BUILD_VRML_IMPORTER: 'ON',
         ASSIMP_BUILD_IFC_IMPORTER: 'ON',
       });
+      expect(buildCacheVariables(name).ASSIMP_BUILD_VRML_IMPORTER).toBeUndefined();
     }
     expect(buildCacheVariables('native-test')).toMatchObject({
       ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT: 'OFF',

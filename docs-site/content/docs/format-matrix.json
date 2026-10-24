@@ -21,11 +21,6 @@
       "description": "USD Object Importer"
     },
     {
-      "id": "x",
-      "extension": "x",
-      "description": "Direct3D XFile Importer"
-    },
-    {
       "id": "obj",
       "extension": "obj",
       "description": "Wavefront Object Importer"
@@ -34,16 +29,6 @@
       "id": "amf",
       "extension": "amf",
       "description": "Additive manufacturing file format(AMF) Importer"
-    },
-    {
-      "id": "3ds",
-      "extension": "3ds",
-      "description": "Discreet 3DS Importer"
-    },
-    {
-      "id": "prj",
-      "extension": "prj",
-      "description": "Discreet 3DS Importer"
     },
     {
       "id": "md3",
@@ -316,26 +301,6 @@
       "description": "3mf Importer"
     },
     {
-      "id": "wrl",
-      "extension": "wrl",
-      "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-    },
-    {
-      "id": "x3d",
-      "extension": "x3d",
-      "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-    },
-    {
-      "id": "x3db",
-      "extension": "x3db",
-      "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-    },
-    {
-      "id": "x3dv",
-      "extension": "x3dv",
-      "description": "VRML(WRL, X3DV) and Extensible 3D(X3D, X3DB) Importer"
-    },
-    {
       "id": "pmx",
       "extension": "pmx",
       "description": "MMD Importer"
@@ -347,18 +312,6 @@
     }
   ],
   "export": [
-    {
-      "id": "3ds",
-      "extension": "3ds",
-      "description": "Autodesk 3DS (legacy)",
-      "exportOptions": {
-        "pointClouds": {
-          "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
-        }
-      }
-    },
     {
       "id": "3mf",
       "extension": "3mf",
@@ -738,35 +691,6 @@
           "default": false,
           "description": "USDZ exporter: keep UsdPhysics joint prims. ARKit allows no joint prim types, so USDZ packages export joint nodes as plain Xforms unless this is set. USDA and USDC always keep them. Property type: Bool. Default value: false."
         },
-        "pointClouds": {
-          "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
-        }
-      }
-    },
-    {
-      "id": "x",
-      "extension": "x",
-      "description": "DirectX X file",
-      "exportOptions": {
-        "pointClouds": {
-          "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
-        },
-        "use64Bit": {
-          "kind": "boolean",
-          "default": false,
-          "description": "Specifies the xfile use double for real values of float Property type: Bool. Default value: false."
-        }
-      }
-    },
-    {
-      "id": "x3d",
-      "extension": "x3d",
-      "description": "Extensible 3D",
-      "exportOptions": {
         "pointClouds": {
           "kind": "boolean",
           "default": false,
