@@ -11,7 +11,7 @@
 // Sources, in order: the engine submodule commit, the FetchContent pins in the
 // engine's code/CMakeLists.txt, the vendored assimp/contrib libraries that the
 // compiled format set links, the Emscripten image that supplies libc, libc++
-// and mimalloc to the Wasm binary, node-addon-api (headers compiled into the
+// and dlmalloc to the Wasm binary, node-addon-api (headers compiled into the
 // addon), and every npm package in pnpm-lock.yaml (build-time only, so their
 // scope is `excluded`). The osv-cpp-pins.json manifest lists every component
 // pinned to a git commit, which is how OSV's GIT ecosystem matches C/C++ code
@@ -237,7 +237,7 @@ export const sbom = ({ engine, gitPins, vendored: libraries }) => {
       name: emsdkName,
       version: emsdkDigest,
       description:
-        'Emscripten toolchain image; supplies libc, libc++ and mimalloc linked into libassimp.wasm',
+        'Emscripten toolchain image; supplies libc, libc++ and dlmalloc linked into libassimp.wasm',
       purl: `pkg:docker/${emsdkName.split(':')[0]}@${encodeURIComponent(emsdkDigest)}`,
     },
     ...platforms.map((platform) => ({
