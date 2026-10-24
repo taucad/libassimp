@@ -64,6 +64,10 @@
       },
       "default": "./dist/index.mjs"
     },
+    "./capabilities": {
+      "types": "./dist/capabilities.d.mts",
+      "default": "./dist/capabilities.mjs"
+    },
     "./wasm": "./dist/wasm/libassimp.wasm",
     "./package.json": "./package.json"
   },
