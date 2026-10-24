@@ -133,12 +133,15 @@ if (report) mkdirSync(report, { recursive: true });
 // until its entry is removed. All causes are in the engine (taucad/assimp and
 // its LightUSD), not in libassimp's bridge.
 const LIBM =
-  'The importer computes float32 values with std::sin/std::cos. Wasm links musl libm and each native ' +
+  'The values come from std::sin, std::cos, std::atan2 or std::asin. Wasm links musl libm and each native ' +
   'platform its own libm; they differ in the last ulp, which the assjson text shows.';
 const USD_ROOT_ORDER =
   "LightUSD's Layer::primspecs() is an std::unordered_map and LayerToStage adds root prims in its " +
   "iteration order (its own TODO: follow primChildren), so root children follow each standard library's " +
   'string hash instead of the authored order. Engine bug, reported to the engine workstream.';
+const FBX_RAW_ORDER =
+  "FBXConverter's SetShadingPropertiesRaw copies the `$raw.*` material properties in the iteration order " +
+  "of an fbx_unordered_map, so they follow each standard library's string hash (MSVC's differs). Engine bug.";
 const PARITY_EXCEPTIONS = {
   'import ASE': {
     platforms: ['linux'],
@@ -146,23 +149,26 @@ const PARITY_EXCEPTIONS = {
       'SGSpatialSort sorts vertices with std::sort on plane distance alone; each standard library orders ' +
       'ties differently, so smoothing-group normals sum in a different order (last-ulp float32 difference).',
   },
-  'import BVH': { platforms: ['linux', 'win32'], reason: `Euler channels become quaternions. ${LIBM}` },
-  'import FBX': { platforms: ['win32'], reason: `Lcl Rotation Euler angles become node matrices. ${LIBM}` },
-  'import FBX ascii': {
-    platforms: ['win32'],
-    reason: `Lcl Rotation Euler angles become node matrices. ${LIBM}`,
+  'import BVH': {
+    platforms: ['darwin', 'linux', 'win32'],
+    reason: `Euler channels become quaternions. ${LIBM}`,
   },
+  'import FBX': { platforms: ['win32'], reason: FBX_RAW_ORDER },
+  'import FBX ascii': { platforms: ['win32'], reason: FBX_RAW_ORDER },
   'import MDC': {
-    platforms: ['linux', 'win32'],
+    platforms: ['darwin', 'linux', 'win32'],
     reason: `MD3::LatLngNormalToVec3 decodes the normals. ${LIBM}`,
   },
   'import MDL HL1': { platforms: ['linux'], reason: `Bone Euler angles become quaternions. ${LIBM}` },
-  'import NFF': { platforms: ['win32'], reason: `Spheres, cones and cylinders are tessellated. ${LIBM}` },
-  'import USDA': { platforms: ['linux', 'win32'], reason: USD_ROOT_ORDER },
-  'import USDC': { platforms: ['linux', 'win32'], reason: USD_ROOT_ORDER },
+  'import NFF': {
+    platforms: ['darwin', 'win32'],
+    reason: `aiProcess_GenUVCoords maps the shapes' UVs. ${LIBM}`,
+  },
+  'import USDA': { platforms: ['darwin', 'linux', 'win32'], reason: USD_ROOT_ORDER },
+  'import USDC': { platforms: ['darwin', 'linux', 'win32'], reason: USD_ROOT_ORDER },
   'import X3D': {
-    platforms: ['win32'],
-    reason: `The scene's sphere, cone and cylinder are tessellated. ${LIBM}`,
+    platforms: ['darwin', 'win32'],
+    reason: `aiProcess_GenUVCoords maps the sphere's UVs. ${LIBM}`,
   },
 };
 
