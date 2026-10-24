@@ -375,6 +375,9 @@ const KNOWN_FAILURES = {
   'truncated-half/example.ogex': ['engine-input-hardening', 'runtime-error-model'],
   'garbage/example.ogex': ['engine-input-hardening', 'runtime-error-model'],
   'garbage/triangle.smd': ['engine-input-hardening'],
+  // Native reports LIMIT_EXCEEDED on win32, where only the watchdog enforces
+  // the memory limit; Wasm reports IMPORT_FAILED (CI run 40084716727).
+  'garbage/earth.q3o': ['engine-input-hardening'],
 };
 
 const BASE_CASES = [
