@@ -28,11 +28,11 @@ const glbJson = (bytes) => {
 };
 
 // One representative fixture per importer the reference suite exercised.
-// `error` marks the formats `assimp-builds.json` disables and the fixtures assimp
-// itself refuses.
+// `error` marks the formats `assimp-builds.json` disables (X, X3D/VRML and 3DS
+// were removed in 0.4) and the fixtures assimp itself refuses.
 const IMPORTS = [
   ['3D', ['3D/box.uc', '3D/box_a.3d', '3D/box_d.3d']],
-  ['3DS', ['3DS/test1.3ds']],
+  ['3DS', ['3DS/test1.3ds'], 'error'],
   ['3MF', ['3MF/box.3mf']],
   ['AC', ['AC/SphereWithLight.ac']],
   ['AMF', ['AMF/test1.amf']],
@@ -76,11 +76,10 @@ const IMPORTS = [
   ['USDA', ['../models-nonbsd/USD/usda/texturedcube.usda']],
   ['USDC', ['../models-nonbsd/USD/usdc/texturedcube.usdc']],
   ['USDZ', ['../models-nonbsd/USD/usdz/damaged-helmet-gltf.usdz']],
-  ['VRML', ['WRL/Wuson.wrl']],
-  ['X', ['X/test_cube_text.x']],
-  ['X binary', ['X/test_cube_binary.x']],
-  ['X3D', ['X3D/HelloWorld.x3d']],
-  // Assimp recognizes the extension but has no binary X3D decoder.
+  ['VRML', ['WRL/Wuson.wrl'], 'error'],
+  ['X', ['X/test_cube_text.x'], 'error'],
+  ['X binary', ['X/test_cube_binary.x'], 'error'],
+  ['X3D', ['X3D/HelloWorld.x3d'], 'error'],
   ['X3DB', ['X3DB/HelloWorld.x3db'], 'error'],
   ['XGL', ['XGL/sample_official.xgl']],
   ['IRR', ['IRR/box.irr'], 'error'],
@@ -279,13 +278,6 @@ describe('export properties', () => {
     expect(pretty.files[0].bytes.byteLength).toBeGreaterThan(compact.files[0].bytes.byteLength);
     expect(text(compact.files[0].bytes)).not.toContain('\n');
     expect(JSON.parse(text(pretty.files[0].bytes))).toEqual(JSON.parse(text(compact.files[0].bytes)));
-  });
-
-  it('switches the X file header with EXPORT_XFILE_64BIT', async () => {
-    const plain = await assimp.convert(source(), { to: 'x' });
-    const wide = await assimp.convert(source(), { to: 'x', exportOptions: { use64Bit: true } });
-    expect(text(plain.files[0].bytes)).toContain('xof 0303txt 0032');
-    expect(text(wide.files[0].bytes)).toContain('xof 0303txt 0064');
   });
 
   it('rejects unknown export options before native work', async () => {
