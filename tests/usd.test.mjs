@@ -75,7 +75,7 @@ describe('USD export', () => {
     const source = load('glTF2/BoxTextured-glTF-Binary/BoxTextured.glb');
     const reference = scene((await assimp.convert(source, { to: 'assjson' })).files[0].bytes);
     const { files } = await assimp.convert(source, { to });
-    expect(files[0].name).toBe(`result.${to}`);
+    expect(files[0].name).toBe(`BoxTextured.${to}`);
     if (to === 'usdc') expect(text(files[0].bytes.subarray(0, 8))).toBe('PXR-USDC');
     if (to === 'usda') expect(text(files[0].bytes.subarray(0, 10))).toBe('#usda 1.0\n');
     if (to === 'usdz') expectArkitPackage(files[0].bytes);

@@ -275,10 +275,11 @@ class NativePlan {
 public:
   NativePlan(std::string entryName, std::vector<InputFile> files,
              libassimp::Properties importProperties, unsigned int postProcess,
-             std::vector<libassimp::Target> targets)
+             std::vector<libassimp::Target> targets, bool releaseEntry)
       : entryName_(std::move(entryName)), files_(std::move(files)),
         importProperties_(std::move(importProperties)),
-        postProcess_(postProcess), targets_(std::move(targets)) {
+        postProcess_(postProcess), targets_(std::move(targets)),
+        releaseEntry_(releaseEntry) {
     stagingResult_.code = "INVALID_INPUT";
     stagingResult_.message = "Input buffers changed before native admission.";
   }
@@ -322,6 +323,7 @@ private:
   libassimp::Properties importProperties_;
   unsigned int postProcess_;
   std::vector<libassimp::Target> targets_;
+  bool releaseEntry_ = false;
   napi_ref inputValues_ = nullptr;
   std::size_t retainedBytes_ = 0;
   std::unique_ptr<libassimp::Plan> plan_;
@@ -1028,8 +1030,9 @@ bool NativePlan::stage(napi_env env) {
       auto plan = std::make_unique<libassimp::Plan>(
           std::move(entryName_), std::move(files), std::move(importProperties_),
           postProcess_, std::move(targets_), libassimp::Resolver{});
-      // The native executor never replays an import, so the entry file can go once it is parsed.
-      plan->setReleaseEntryAfterImport(true);
+      // The native executor never replays an import, so a plan that runs once can drop its
+      // entry file as soon as it is parsed. Such a plan cannot run again.
+      plan->setReleaseEntryAfterImport(releaseEntry_);
       plan_ = std::move(plan);
       succeeded = true;
 #ifdef LIBASSIMP_CPP_COVERAGE
@@ -1313,11 +1316,16 @@ Napi::Value preparePlan(const Napi::CallbackInfo &info) {
     throw Napi::TypeError::New(env, "options.postProcess must be a uint32");
   }
 
+  const Napi::Value releaseEntry = options.Get("releaseEntry");
+  if (!releaseEntry.IsUndefined() && !releaseEntry.IsBoolean())
+    throw Napi::TypeError::New(env, "options.releaseEntry must be a boolean");
+
   ValidatedFiles files = validateFilesFromJs(info[1]);
   auto plan = std::make_shared<NativePlan>(
       stringAt(info[0], "entryName"), std::move(files.files),
       propertiesFromJs(options.Get("importProperties")), postProcessValue,
-      targetsFromJs(options.Get("targets")));
+      targetsFromJs(options.Get("targets")),
+      releaseEntry.IsBoolean() && releaseEntry.As<Napi::Boolean>().Value());
   plan->retainInputs(env, files.values, files.bytes);
   try {
 #ifdef LIBASSIMP_CPP_COVERAGE

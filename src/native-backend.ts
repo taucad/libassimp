@@ -5,7 +5,14 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import packageMetadata from '../package.json' with { type: 'json' };
 import { AssimpError } from './assimp-error.js';
 import type { CreateAssimpOptions, RuntimeLoader } from './create-assimp.js';
-import type { EngineProgress, NativeRuntime, ResolutionContext, ResolutionResult } from './convert.js';
+import type { NativePlanOptions } from './assimp-options.js';
+import type {
+  AssimpFile,
+  EngineProgress,
+  NativeRuntime,
+  ResolutionContext,
+  ResolutionResult,
+} from './convert.js';
 
 type NativeSettlement = (status: 0 | 1 | 2 | 3, bytes?: Uint8Array) => void;
 type NativeResolveRequest = (name: string, settle: NativeSettlement) => void;
@@ -25,7 +32,11 @@ export type NativeAddon = Readonly<{
   buildIdentity: string;
   napiVersion: number;
   packageVersion: string;
-  preparePlan: NativeRuntime['preparePlan'];
+  preparePlan: (
+    entryName: string,
+    files: readonly AssimpFile[],
+    options: NativePlanOptions & { readonly releaseEntry: boolean },
+  ) => unknown;
   runPlan: (
     handle: unknown,
     resolveRequest: NativeResolveRequest,
@@ -76,7 +87,9 @@ export const adaptNativeAddon = (addon: NativeAddon): NativeRuntime => {
           "libassimp native conversion cannot start from a native resolver because the process-wide native executor is waiting for that resolver; use an instance with { backend: 'wasm' } for independent nested conversion.",
         );
       }
-      return addon.preparePlan(...arguments_);
+      const [entryName, files, options] = arguments_;
+      // A facade plan runs once and the native executor never replays, so the engine may drop the entry after import.
+      return addon.preparePlan(entryName, files, { ...options, releaseEntry: true });
     },
     runPlan: (handle, context: ResolutionContext) => {
       const resolveRequest: NativeResolveRequest = (name, settle) => {

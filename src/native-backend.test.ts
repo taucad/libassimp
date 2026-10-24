@@ -63,7 +63,7 @@ describe('native addon adapter', () => {
 
   it('adapts completed work and forwards every plan operation', async () => {
     const handle = {};
-    const preparePlan = vi.fn(() => handle);
+    const preparePlan = vi.fn<(...arguments_: unknown[]) => object>(() => handle);
     const runPlan = vi.fn(async () => 1);
     const cancelPlan = vi.fn();
     const takePlanResult = vi.fn(() => ({ ok: true, code: '' as const, message: '', formats: [] }));
@@ -82,6 +82,11 @@ describe('native addon adapter', () => {
         progress: false,
       }),
     ).toBe(handle);
+    expect(preparePlan.mock.calls[0]).toEqual([
+      'cube.obj',
+      [],
+      { importProperties: [], postProcess: 0, targets: [], progress: false, releaseEntry: true },
+    ]);
     await expect(runtime.runPlan(handle, new ResolutionContext(undefined))).resolves.toBe(1);
     expect(runtime.takePlanResult(handle)).toEqual({ ok: true, code: '', message: '', formats: [] });
     runtime.destroyPlan(handle);

@@ -409,6 +409,28 @@ if (addon._coverageBlockNextExecute) {
   addon.destroyPlan(plan);
 }
 
+{
+  // A plan that releases its entry after import serves exactly one run.
+  const box = await input('OBJ/box.obj');
+  assert.throws(
+    () =>
+      addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], {
+        ...options(),
+        releaseEntry: 1,
+      }),
+    /releaseEntry must be a boolean/,
+  );
+  const plan = addon.preparePlan(box.entry, [{ name: box.entry, bytes: box.bytes }], {
+    ...options(),
+    releaseEntry: true,
+  });
+  assert.equal(await run(plan), 1);
+  assert(addon.takePlanResult(plan).ok);
+  assert.equal(await run(plan), FAILED);
+  assert.equal(addon.takePlanResult(plan).code, 'IMPORT_FAILED');
+  addon.destroyPlan(plan);
+}
+
 assert.throws(() => addon.preparePlan('', [], {}), /postProcess/);
 assert.throws(() => addon.preparePlan(), /expects entryName/);
 assert.throws(() => addon.runPlan(), /expects a plan/);
