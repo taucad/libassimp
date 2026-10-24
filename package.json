@@ -64,6 +64,10 @@
       },
       "default": "./dist/index.mjs"
     },
+    "./capabilities": {
+      "types": "./dist/capabilities.d.mts",
+      "default": "./dist/capabilities.mjs"
+    },
     "./wasm": "./dist/wasm/libassimp.wasm",
     "./package.json": "./package.json"
   },
@@ -85,6 +89,7 @@
     "docs:build": "pnpm --filter libassimp-docs build",
     "docs:source": "pnpm --filter libassimp-docs generate:source",
     "docs:test": "pnpm --filter libassimp-docs test",
+    "fetch:wasm": "node scripts/fetch-wasm.mjs",
     "format:check": "oxfmt --check .",
     "generate:capabilities": "node scripts/generate-assimp-capabilities.mjs",
     "lint": "pnpm run docs:source && oxlint --deny-warnings --type-aware && eslint .",
@@ -145,6 +150,6 @@
   },
   "packageManager": "pnpm@11.11.0",
   "assimp": {
-    "commit": "6e6225df55cad73e74982bf17e86cdc70e97398e"
+    "commit": "67589a4139fc7e45ace94242113279da2279bc20"
   }
 }

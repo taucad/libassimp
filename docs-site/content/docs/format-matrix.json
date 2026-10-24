@@ -319,32 +319,31 @@
       "exportOptions": {
         "application": {
           "kind": "string",
-          "default": "",
-          "description": "3MF_EXPORT_APPLICATION"
+          "default": ""
         },
         "decimalPrecision": {
           "kind": "integer",
           "default": 9,
           "minimum": 1,
-          "maximum": 16,
-          "description": "3MF_EXPORT_DECIMAL_PRECISION"
+          "maximum": 16
         },
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
+        },
+        "requireManifold": {
+          "kind": "boolean",
+          "default": true
         },
         "unit": {
           "kind": "string",
           "default": "millimeter",
-          "values": ["micron", "millimeter", "centimeter", "inch", "foot", "meter"],
-          "description": "3MF_EXPORT_UNIT"
+          "values": ["micron", "millimeter", "centimeter", "inch", "foot", "meter"]
         },
         "upAxis": {
           "kind": "string",
           "default": "z",
-          "values": ["x", "y", "z"],
-          "description": "3MF_EXPORT_UPAXIS"
+          "values": ["x", "y", "z"]
         }
       }
     },
@@ -355,13 +354,11 @@
       "exportOptions": {
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         },
         "skipWhitespaces": {
           "kind": "boolean",
-          "default": true,
-          "description": "JSON_SKIP_WHITESPACES"
+          "default": true
         }
       }
     },
@@ -372,8 +369,7 @@
       "exportOptions": {
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         }
       }
     },
@@ -384,23 +380,19 @@
       "exportOptions": {
         "binary": {
           "kind": "boolean",
-          "default": true,
-          "description": "Write binary FBX when true and ASCII FBX when false."
+          "default": true
         },
         "joinIdenticalVertices": {
           "kind": "boolean",
-          "default": true,
-          "description": "bJoinIdenticalVertices"
+          "default": true
         },
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         },
         "transparencyFactorRefersToOpacity": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether to write the value referenced to opacity in TransparencyFactor of each material. When this flag is not defined, the TransparencyFactor value of each meterial is 1.0. By enabling this flag, the value is 1.0 - opacity; Property type: Bool. Default value: false."
+          "default": false
         }
       }
     },
@@ -412,38 +404,31 @@
         "identityMatrixEpsilon": {
           "kind": "number",
           "default": 0.00999999977,
-          "minimum": 0,
-          "description": "Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code. Property type: Float."
+          "minimum": 0
         },
         "includeTargetNames": {
           "kind": "boolean",
-          "default": false,
-          "description": "GLTF2_TARGETNAMES_EXP"
+          "default": false
         },
         "includeTargetNormals": {
           "kind": "boolean",
-          "default": false,
-          "description": "GLTF2_TARGET_NORMAL_EXP"
+          "default": false
         },
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         },
         "sparseAccessors": {
           "kind": "boolean",
-          "default": false,
-          "description": "GLTF2_SPARSE_ACCESSOR_EXP"
+          "default": false
         },
         "unlimitedSkinningBonesPerVertex": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…"
+          "default": false
         },
         "useGltfPbrSpecularGlossiness": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec. Property type: Bool. Default value: false."
+          "default": false
         }
       }
     },
@@ -455,38 +440,31 @@
         "identityMatrixEpsilon": {
           "kind": "number",
           "default": 0.00999999977,
-          "minimum": 0,
-          "description": "Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code. Property type: Float."
+          "minimum": 0
         },
         "includeTargetNames": {
           "kind": "boolean",
-          "default": false,
-          "description": "GLTF2_TARGETNAMES_EXP"
+          "default": false
         },
         "includeTargetNormals": {
           "kind": "boolean",
-          "default": false,
-          "description": "GLTF2_TARGET_NORMAL_EXP"
+          "default": false
         },
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         },
         "sparseAccessors": {
           "kind": "boolean",
-          "default": false,
-          "description": "GLTF2_SPARSE_ACCESSOR_EXP"
+          "default": false
         },
         "unlimitedSkinningBonesPerVertex": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…"
+          "default": false
         },
         "useGltfPbrSpecularGlossiness": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec. Property type: Bool. Default value: false."
+          "default": false
         }
       }
     },
@@ -497,18 +475,15 @@
       "exportOptions": {
         "joinIdenticalVertices": {
           "kind": "boolean",
-          "default": true,
-          "description": "bJoinIdenticalVertices"
+          "default": true
         },
         "materials": {
           "kind": "boolean",
-          "default": true,
-          "description": "Write an MTL sidecar when the scene has materials."
+          "default": true
         },
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         }
       }
     },
@@ -519,13 +494,11 @@
       "exportOptions": {
         "binary": {
           "kind": "boolean",
-          "default": false,
-          "description": "Write binary PLY when true and ASCII PLY when false."
+          "default": false
         },
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         }
       }
     },
@@ -536,8 +509,7 @@
       "exportOptions": {
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         }
       }
     },
@@ -548,13 +520,11 @@
       "exportOptions": {
         "binary": {
           "kind": "boolean",
-          "default": false,
-          "description": "Write binary STL when true and ASCII STL when false."
+          "default": false
         },
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         }
       }
     },
@@ -566,35 +536,29 @@
         "animationIndex": {
           "kind": "integer",
           "default": 0,
-          "minimum": 0,
-          "description": "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0."
+          "minimum": 0
         },
         "animations": {
           "kind": "boolean",
-          "default": true,
-          "description": "USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true."
+          "default": true
         },
         "clearcoat": {
           "kind": "boolean",
-          "default": true,
-          "description": "USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true."
+          "default": true
         },
         "maxFileSizeMb": {
           "kind": "integer",
           "default": 0,
-          "minimum": 0,
-          "description": "USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0."
+          "minimum": 0
         },
         "maxMemoryMb": {
           "kind": "integer",
           "default": 0,
-          "minimum": 0,
-          "description": "USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0."
+          "minimum": 0
         },
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         }
       }
     },
@@ -606,40 +570,33 @@
         "animationIndex": {
           "kind": "integer",
           "default": 0,
-          "minimum": 0,
-          "description": "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0."
+          "minimum": 0
         },
         "animations": {
           "kind": "boolean",
-          "default": true,
-          "description": "USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true."
+          "default": true
         },
         "clearcoat": {
           "kind": "boolean",
-          "default": true,
-          "description": "USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true."
+          "default": true
         },
         "compressFloatArrays": {
           "kind": "boolean",
-          "default": true,
-          "description": "USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays). Property type: Bool. Default value: true."
+          "default": true
         },
         "maxFileSizeMb": {
           "kind": "integer",
           "default": 0,
-          "minimum": 0,
-          "description": "USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0."
+          "minimum": 0
         },
         "maxMemoryMb": {
           "kind": "integer",
           "default": 0,
-          "minimum": 0,
-          "description": "USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0."
+          "minimum": 0
         },
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         }
       }
     },
@@ -651,50 +608,41 @@
         "animationIndex": {
           "kind": "integer",
           "default": 0,
-          "minimum": 0,
-          "description": "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Property type: Integer. Default value: 0."
+          "minimum": 0
         },
         "animations": {
           "kind": "boolean",
-          "default": true,
-          "description": "USD exporters (usda, usdc, usdz): export animations. Property type: Bool. Default value: true."
+          "default": true
         },
         "clearcoat": {
           "kind": "boolean",
-          "default": true,
-          "description": "USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Property type: Bool. Default value: true."
+          "default": true
         },
         "compressFloatArrays": {
           "kind": "boolean",
-          "default": true,
-          "description": "USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays). Property type: Bool. Default value: true."
+          "default": true
         },
         "lights": {
           "kind": "boolean",
-          "default": false,
-          "description": "USDZ exporter: keep lights. ARKit allows no UsdLux prims, so USDZ packages drop lights unless this is set. USDA and USDC always keep them. Property type: Bool. Default value: false."
+          "default": false
         },
         "maxFileSizeMb": {
           "kind": "integer",
           "default": 0,
-          "minimum": 0,
-          "description": "USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0."
+          "minimum": 0
         },
         "maxMemoryMb": {
           "kind": "integer",
           "default": 0,
-          "minimum": 0,
-          "description": "USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Property type: Integer. Default value: 0."
+          "minimum": 0
         },
         "physicsJoints": {
           "kind": "boolean",
-          "default": false,
-          "description": "USDZ exporter: keep UsdPhysics joint prims. ARKit allows no joint prim types, so USDZ packages export joint nodes as plain Xforms unless this is set. USDA and USDC always keep them. Property type: Bool. Default value: false."
+          "default": false
         },
         "pointClouds": {
           "kind": "boolean",
-          "default": false,
-          "description": "Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Property type: Bool. Default value: false."
+          "default": false
         }
       }
     }

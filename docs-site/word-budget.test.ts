@@ -12,7 +12,8 @@ const countWords = (source: string): number => source.split(/\s+/u).filter(Boole
 // paying for it here; a new page needs a row before it can ship. Measured
 // 2026-08-23; each page carries its measured count plus a little slack.
 const pageCeilings: Readonly<Record<string, number>> = {
-  'api.mdx': 620,
+  // The backend option and the lazy capabilities subpath (broad review F13, F20).
+  'api.mdx': 650,
   'guides/convert-a-model.mdx': 440,
   'guides/convert-to-multiple-formats.mdx': 260,
   'guides/apple-quick-look.mdx': 460,
@@ -20,9 +21,12 @@ const pageCeilings: Readonly<Record<string, number>> = {
   'guides/export-properties.mdx': 430,
   'guides/handle-failures.mdx': 490,
   'guides/resolve-sidecar-files.mdx': 460,
-  'guides/use-in-the-browser.mdx': 470,
+  // A complete worker and page pair with transferables (broad review F20).
+  'guides/use-in-the-browser.mdx': 660,
   // Backend choice, isolation, limits and resolver containment for hostile files.
   'guides/untrusted-input.mdx': 400,
+  // The 0.4 breaking-change migration (broad review F19).
+  'guides/upgrade-to-0-4.mdx': 420,
   // The end-to-end page now carries the conversion it explains.
   'how-it-works.mdx': 690,
   'index.mdx': 360,

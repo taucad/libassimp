@@ -522,6 +522,20 @@ jobs:
           pnpm run build
           cp native-artifacts/libassimp.*.node dist/native/
           node tests/native-parity.mjs
+      # The quality job runs these suites on Wasm; native must reproduce the
+      # same determinism.json fingerprints on every target, except the
+      # documented PARITY_EXCEPTIONS in the format matrix.
+      - name: Run the format matrix and USD suite on the native backend
+        env:
+          LIBASSIMP_FINGERPRINTS_OUT: ${{ runner.temp }}/native-fingerprints
+        run: pnpm exec vitest run --config vitest.native.config.ts
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-fingerprints-${{ matrix.suffix }}
+          path: ${{ runner.temp }}/native-fingerprints
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: ./.github/actions/download-verified-artifact
         with:
           name: test-tarballs
@@ -599,6 +613,39 @@ jobs:
         env:
           BROWSER: ${{ matrix.browser }}
           LIBASSIMP_DIST_DIR: tarballs/extracted/package/dist
+
+  # Consumers install the frozen tarball and bundle it: Vite (build and dev),
+  # webpack 5, Next.js with Turbopack, esbuild and a cross-origin CDN-style
+  # host each convert cube.obj in Chromium to the bytes Node produces.
+  bundlers:
+    needs: assemble
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '26'
+      - uses: ./.github/actions/download-verified-artifact
+        with:
+          name: test-tarballs
+          path: tarballs
+          expect: test-tarballs.json
+      - name: Record the Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.npm
+          key: npm-bundlers-${{ hashFiles('tests/bundlers/package-lock.json') }}
+      - run: pnpm exec playwright install chromium
+      - run: node scripts/test-bundlers.mjs --tarballs tarballs
 
   benchmark:
     if: github.event_name == 'pull_request'
@@ -790,7 +837,7 @@ jobs:
 
   preview:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    needs: [assemble, smoke, browser, security]
+    needs: [assemble, smoke, browser, bundlers, security]
     runs-on: ubuntu-24.04
     outputs:
       sha: ${{ steps.publish.outputs.sha }}
@@ -852,7 +899,7 @@ jobs:
   publish:
     if: needs.preflight.outputs.npm-publish == 'true'
     # native-gates runs beside the release build, so publishing waits for it here.
-    needs: [preflight, assemble, native-gates, smoke, browser, security]
+    needs: [preflight, assemble, native-gates, smoke, browser, bundlers, security]
     runs-on: ubuntu-24.04
     permissions:
       attestations: write
@@ -995,6 +1042,7 @@ jobs:
         assemble,
         smoke,
         browser,
+        bundlers,
         benchmark,
         security,
         preview,
@@ -1013,7 +1061,7 @@ jobs:
         run: |
           node <<'NODE'
           const needs = JSON.parse(process.env.RESULTS);
-          const required = ['preflight', 'build-wasm', 'quality', 'node', 'usd-validation', 'native-build', 'native-gates', 'assemble', 'smoke', 'browser', 'security'];
+          const required = ['preflight', 'build-wasm', 'quality', 'node', 'usd-validation', 'native-build', 'native-gates', 'assemble', 'smoke', 'browser', 'bundlers', 'security'];
           if (process.env.PUBLISH === 'true') required.push('publish', 'registry-verify', 'registry-smoke', 'registry-release');
           if (process.env.PREVIEW === 'true') required.push('preview', 'preview-consumer');
           if (needs.preflight.outputs.kind === 'pull-request') required.push('benchmark');

@@ -17,6 +17,8 @@ export default tseslint.config(
       'docs-site/public/demo/**',
       'node_modules/**',
       'src/wasm/**',
+      // JSX for the Next.js fixture; Next compiles it in scripts/test-bundlers.mjs.
+      'tests/bundlers/next/app/**',
     ],
   },
   eslint.configs.recommended,
@@ -25,7 +27,7 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
-    files: ['tests/browser/**/*.mjs'],
+    files: ['tests/browser/**/*.mjs', 'tests/bundlers/{src,vite}/**/*.js'],
     languageOptions: { globals: { ...globals.browser, ...globals.worker } },
   },
   {

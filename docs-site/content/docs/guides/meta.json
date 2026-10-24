@@ -8,6 +8,7 @@
     "use-in-the-browser",
     "apple-quick-look",
     "handle-failures",
-    "untrusted-input"
+    "untrusted-input",
+    "upgrade-to-0-4"
   ]
 }

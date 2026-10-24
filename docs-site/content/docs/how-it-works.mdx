@@ -55,10 +55,12 @@ The import table is directional: it lists readable extensions, not writable targ
 
 ## Post-processing
 
-`defaultPostProcess` is `Triangulate`, `GenUVCoords`, `JoinIdenticalVertices`, and `SortByPType`. Supplying `postProcess` is an exact replacement. `assimpCapabilities.postProcess` publishes every supported named step, bit value, description, and conflict.
+`defaultPostProcess` is `Triangulate`, `GenUVCoords`, `JoinIdenticalVertices`, and `SortByPType`. Supplying `postProcess` is an exact replacement. `assimpCapabilities.postProcess` publishes every supported named step and its conflicts; `libassimp/capabilities` adds each description.
 
 ## Production build
 
 The artifact compiles and links with `-O3 -DNDEBUG`, fixed SIMD, mimalloc, Wasm exceptions, Closure-compiled glue, constructor evaluation, and standalone `wasm-opt -O4 --converge --traps-never-happen --skip-pass=code-folding`. The build explicitly pins `WASM_LEGACY_EXCEPTIONS=1`; exnref waits until every documented host floor supports it. LTO, relaxed SIMD, pthreads, Asyncify, and mode-specific JSPI artifacts remain absent.
+
+The Node-API addon compiles the same engine and plan bridge with floating-point contraction off, as Wasm has no fused multiply-add. CI runs the format matrix and USD suite on both backends against one set of output fingerprints; the few remaining differences come from the engine (platform `libm`, unstable sorts, and LightUSD root-prim order) and are listed with their causes in the test.
 
 The build manifest records exact definitions, compile/link/optimizer flags, import/export inventory, and raw/gzip/brotli size. CI ratchets those measured files rather than estimating them.
