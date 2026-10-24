@@ -14,7 +14,7 @@ const materialUrl = new URL('./fixtures/cube-material.obj', import.meta.url);
 
 const summarize = (result) => {
   assert.equal(result.files.length, 1);
-  assert.equal(result.files[0].name, 'result.glb');
+  assert.match(result.files[0].name, /^cube(?:-material)?\.glb$/u);
   assert.equal(Buffer.from(result.files[0].bytes.subarray(0, 4)).toString('latin1'), 'glTF');
   return createHash('sha256').update(result.files[0].bytes).digest('hex');
 };

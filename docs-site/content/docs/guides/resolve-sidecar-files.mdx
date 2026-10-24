@@ -34,36 +34,22 @@ console.log(files[0].name);
 
 Returning `undefined` means unavailable; Assimp decides whether that reference is optional. Throwing or rejecting produces `RESOLVE_FAILED` with the exact `fileName` and original `cause`.
 
-## Read from Node asynchronously
+## Read from a directory on Node.js
 
 ```typescript
-import { convert } from 'libassimp';
 import { readFile } from 'node:fs/promises';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { convert, createDirectoryResolver } from 'libassimp';
 
-const modelsRoot = resolve('models');
-const bytes = new Uint8Array(await readFile(resolve(modelsRoot, 'cube.obj')));
+const bytes = new Uint8Array(await readFile('models/cube.obj'));
 const { files } = await convert(
   { name: 'cube.obj', bytes },
-  {
-    to: 'glb',
-    resolve: async (name) => {
-      const candidate = resolve(modelsRoot, name);
-      const relativePath = relative(modelsRoot, candidate);
-      if (relativePath === '..' || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
-        return undefined;
-      }
-      try {
-        return new Uint8Array(await readFile(candidate));
-      } catch {
-        return undefined;
-      }
-    },
-  },
+  { to: 'glb', resolve: createDirectoryResolver('models') },
 );
 
 console.log(files[0].name);
 ```
+
+`createDirectoryResolver(root)` reads only inside `root`: absolute names, `..` escapes, and symbolic links that leave `root` resolve as missing. Other I/O errors, such as `EACCES`, reject and surface as `RESOLVE_FAILED`.
 
 The consumer callback is invoked once per exact requested name within a conversion. The native backend and JSPI hosts suspend inside parsing; other Wasm hosts transparently replay staged parsing from the settled per-call cache. The public behavior is identical.
 

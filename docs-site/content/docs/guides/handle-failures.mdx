@@ -14,6 +14,11 @@ const remedy = (error: AssimpError): string => {
     RESOLVE_FAILED: `Retry or replace the source for ${error.fileName ?? 'the sidecar'}.`,
     IMPORT_FAILED: 'Correct the entry bytes/name or supply a required sidecar.',
     EXPORT_FAILED: `Correct target ${error.formatIndex ?? 0} (${error.format ?? 'unknown'}).`,
+    LIMIT_EXCEEDED: 'Split the input, request fewer post-processing steps, or use the native backend.',
+    ENGINE_FAILED: 'Retry once; the Wasm runtime has been replaced. Report a repeat.',
+    BACKEND_UNAVAILABLE: "Reinstall the native package or use backend: 'wasm'.",
+    ABORTED: 'The host is shutting down; do not retry.',
+    INTERNAL: 'Report a libassimp bug with the input.',
   };
   return remedies[error.code];
 };
@@ -21,9 +26,9 @@ const remedy = (error: AssimpError): string => {
 console.log(remedy(new AssimpError('NO_FILES', 'convert needs at least one input file.')));
 ```
 
-`INVALID_OPTIONS` is raised before any engine work for unknown/inapplicable fields, wrong kinds, bounds, duplicate steps, and conflicts. `RESOLVE_FAILED` preserves the exact requested `fileName` and the thrown/rejected value as `cause`.
+`INVALID_OPTIONS` is raised before any engine work for unknown/inapplicable fields, wrong kinds, bounds, duplicate steps, conflicts, and empty or repeated input names. `RESOLVE_FAILED` preserves the exact requested `fileName` and the thrown/rejected value as `cause`.
 
-Plural target failures carry zero-based `formatIndex` and canonical `format`. Results are atomic: if a later exporter fails, no earlier output is returned.
+Plural target failures carry zero-based `formatIndex` and canonical `format`; context that does not apply is absent, so `'formatIndex' in error` is a reliable test. Results are atomic: if a later exporter fails, no earlier output is returned.
 
 ```typescript
 import { AssimpError, convertFormats } from 'libassimp';
@@ -40,4 +45,4 @@ try {
 }
 ```
 
-Binary loading/instantiation failures and calls after disposal are plain errors rather than conversion failures. A rejected queued conversion does not poison later jobs on the same live instance.
+`LIMIT_EXCEEDED` means the engine ran out of memory; the instance stays usable. Anything the engine throws that is not already typed becomes `ENGINE_FAILED` with the original value as `cause`. Wasm loading failures and calls after disposal are plain errors rather than conversion failures. A rejected queued conversion does not poison later jobs on the same live instance.

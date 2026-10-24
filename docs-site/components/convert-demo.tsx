@@ -140,7 +140,7 @@ export const ConvertDemo = ({
 
       const files = result.files.map((file) => {
         const mime = MIME[extension(file.name)] ?? 'application/octet-stream';
-        const url = URL.createObjectURL(new Blob([file.bytes as Uint8Array<ArrayBuffer>], { type: mime }));
+        const url = URL.createObjectURL(new Blob([file.bytes], { type: mime }));
         createdUrls.push(url);
         return {
           bytes: file.bytes.byteLength,

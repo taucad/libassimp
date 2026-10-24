@@ -16,7 +16,7 @@ export declare const convert: <Format extends import('libassimp').ExportFormat>(
 ) => Promise<ConvertResult>;
 ```
 
-Converts one entry file to one canonical target. The first array element is always the entry file. `ConvertOptions` contains `to`, `resolve`, `importOptions`, `postProcess`, and target-specific `exportOptions`.
+Converts one entry file to one canonical target. The first array element is the entry file; names must be unique and non-empty. `ConvertOptions` contains `to`, `resolve`, `signal`, `onProgress`, `importOptions`, `postProcess`, and target-specific `exportOptions`. Outputs are named after the entry: `chair.obj` to `step` gives `chair.step`.
 
 ## `convertFormats`
 
@@ -56,14 +56,15 @@ import type { Assimp, CreateAssimpOptions } from 'libassimp';
 export declare const createAssimp: (options?: CreateAssimpOptions) => Promise<Assimp>;
 ```
 
-An instance exposes `convert`, `convertFormats`, directional `formats`, `dispose()`, and `Symbol.dispose`. Work is FIFO-serialized per instance; create separate instances for parallel conversions.
+An instance exposes `convert`, `convertFormats`, and directional `formats`. Work is FIFO-serialized per instance; create separate instances for parallel conversions. `dispose()` resolves after queued work drains; `await using` awaits it.
 
-`CreateAssimpOptions` has only:
+`CreateAssimpOptions`:
 
 - `backend`: `'auto'` (the Node default: native addon, else Wasm with a warning), `'native'` or `'wasm'`. Browsers use Wasm.
 - `wasmUrl`: override the entry's single Wasm URL.
 - `wasmBinary`: compile supplied bytes instead of fetching that URL.
 - `onLog`: receive runtime diagnostics.
+- `recycleAboveBytes`: drop an idle Wasm runtime above this much memory (default 512 MiB); a trapped one is also replaced.
 
 ## Static generated data
 
@@ -102,7 +103,15 @@ Importing these values does not load Wasm or the native addon.
 
 ### Requests and results
 
-`ConvertTarget`, `ConvertOptions`, `ConvertFormatsOptions`, `ConvertResult`, `ConvertedFormat`, and `ConvertFormatsResult` preserve exact target types. Empty plural target arrays are rejected by both TypeScript and runtime validation.
+`ConvertTarget`, `ConvertOptions`, `ConvertFormatsOptions`, `ConvertResult`, `ConvertedFormat`, and `ConvertFormatsResult` preserve exact target types. Empty plural target arrays are rejected by both TypeScript and runtime validation. Each `ConvertedFile` holds `Uint8Array<ArrayBuffer>` bytes that it owns.
+
+### Diagnostics
+
+Results carry a `ConversionReport`: `warnings` (`ConversionWarning`), `timings` (`ConversionTimings`, milliseconds), and `peakMemoryBytes`. `onProgress`, a `ConvertProgressListener`, receives throttled `ConvertProgress` reports per `ConversionPhase`.
+
+<auto-type-table path="./props.ts" name="ConvertProgress" />
+
+Node.js also exports `createDirectoryResolver`; see [Resolve sidecar files](/docs/guides/resolve-sidecar-files).
 
 ## Failures
 
@@ -125,7 +134,7 @@ try {
 }
 ```
 
-Codes are `NO_FILES`, `UNSUPPORTED_FORMAT`, `INVALID_OPTIONS`, `RESOLVE_FAILED`, `IMPORT_FAILED`, and `EXPORT_FAILED`. Plural output is atomic: a failed target exposes no partial result.
+Context fields that do not apply are absent. [Handle failures](/docs/guides/handle-failures) gives each code's remedy. Plural output is atomic: a failed target exposes no partial result.
 
 ## Versioning
 

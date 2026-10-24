@@ -39,6 +39,10 @@ DirectX X, X3D (with VRML) and Autodesk 3DS are no longer compiled. The `x`, `x3
 
 USD exports no longer flip UVs and author `metersPerUnit` on the stage instead of scaling geometry. Code that compensated for the old flip or scale should stop, and cached USD outputs or golden files need regenerating.
 
+## Expect stem-based names and an awaitable dispose
+
+Outputs are named after the entry's stem (`chair.obj` to `glb` gives `chair.glb`, not `result.glb`), and sidecar references follow. `dispose()` returns a Promise; await it, or use `await using`, before relying on queued work being finished. Engine traps reject as `ENGINE_FAILED` and allocation failures as `LIMIT_EXCEEDED`.
+
 ## Load descriptions from the subpath
 
 The root `assimpCapabilities` no longer carries option and post-process descriptions. Forms that show them as help text import the described registry lazily:

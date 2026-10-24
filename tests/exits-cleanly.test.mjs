@@ -37,5 +37,5 @@ test('a process converting through the one-shot API exits on its own', async () 
     );
   });
 
-  expect(stdout.trim()).toBe('result.glb result.stl 0');
+  expect(stdout.trim()).toBe('cube.glb cube.stl 0');
 });

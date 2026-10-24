@@ -21,12 +21,16 @@
 #include <assimp/IOSystem.hpp>
 #include <assimp/MemoryIOWrapper.h>
 
+#include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <deque>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -41,6 +45,93 @@ using Bytes = std::vector<std::uint8_t>;
 struct NamedBytes {
   std::string name;
   Bytes bytes;
+  /** Non-zero when the bytes went to the host through an OutputSink instead of `bytes`. */
+  std::uint32_t hostFile = 0;
+  /** Final length of a host file; equal to `bytes.size()` otherwise. */
+  std::size_t size = 0;
+};
+
+/** Receives `size` bytes written at `offset` of streamed output `file`. Returns false on failure. */
+using OutputSink = std::function<bool(std::uint32_t file, std::size_t offset, const std::uint8_t* data,
+                                      std::size_t size)>;
+
+/**
+ * Output bytes in fixed-size chunks. Growth never copies, and with a sink every chunk below the
+ * write position leaves Wasm as soon as it is complete; a later seek into it writes straight through.
+ */
+class OutputFile {
+ public:
+  static constexpr std::size_t kChunk = std::size_t(1) << 20;
+
+  OutputFile(std::string name, const OutputSink* sink, std::uint32_t id)
+      : name_(std::move(name)), sink_(sink), id_(id) {}
+
+  bool write(std::size_t offset, const std::uint8_t* data, std::size_t size) {
+    size_ = std::max(size_, offset + size);
+    while (size != 0) {
+      const std::size_t index = offset / kChunk;
+      const std::size_t within = offset % kChunk;
+      const std::size_t part = std::min(size, kChunk - within);
+      if (index < flushed_) {
+        if (!(*sink_)(id_, offset, data, part)) return false;
+      } else {
+        std::memcpy(chunk(index) + within, data, part);
+      }
+      offset += part;
+      data += part;
+      size -= part;
+    }
+    return true;
+  }
+
+  /** Grow to `size`, zero-filled, as a seek past the end does. */
+  void extend(std::size_t size) { size_ = std::max(size_, size); }
+
+  /** Hand every complete chunk below `position` to the sink. */
+  bool release(std::size_t position) {
+    if (sink_ == nullptr) return true;
+    while ((flushed_ + 1) * kChunk <= position) {
+      if (!(*sink_)(id_, flushed_ * kChunk, chunk(flushed_), kChunk)) return false;
+      chunks_[flushed_].reset();
+      ++flushed_;
+    }
+    return true;
+  }
+
+  /** Move the file out: stream the tail to the sink, or gather the chunks into exact-size bytes. */
+  NamedBytes take() {
+    NamedBytes file{name_, {}, sink_ == nullptr ? 0u : id_, size_};
+    if (sink_ == nullptr) file.bytes.reserve(size_);
+    for (std::size_t index = flushed_, offset = flushed_ * kChunk; offset < size_; ++index, offset += kChunk) {
+      const std::size_t part = std::min(kChunk, size_ - offset);
+      const std::uint8_t* bytes = chunk(index);
+      if (sink_ != nullptr) {
+        if (!(*sink_)(id_, offset, bytes, part)) throw std::runtime_error("Could not hand an output to the host.");
+      } else {
+        file.bytes.insert(file.bytes.end(), bytes, bytes + part);
+      }
+      chunks_[index].reset();
+    }
+    chunks_.clear();
+    return file;
+  }
+
+  const std::string& name() const { return name_; }
+  std::size_t size() const { return size_; }
+
+ private:
+  std::uint8_t* chunk(std::size_t index) {
+    if (chunks_.size() <= index) chunks_.resize(index + 1);
+    if (!chunks_[index]) chunks_[index].reset(new std::uint8_t[kChunk]());
+    return chunks_[index].get();
+  }
+
+  std::string name_;
+  const OutputSink* sink_;
+  std::uint32_t id_;
+  std::vector<std::unique_ptr<std::uint8_t[]>> chunks_;
+  std::size_t flushed_ = 0;
+  std::size_t size_ = 0;
 };
 
 enum class ResolveStatus : int {
@@ -57,7 +148,9 @@ using Resolver = std::function<ResolveStatus(const std::string& name, Bytes& out
 /** Everything one convert call reads and writes. Both IOSystems below share exactly one of these. */
 class MemoryFiles {
  public:
-  MemoryFiles(std::deque<NamedBytes>& inputs, Resolver resolve) : inputs_(inputs), resolve_(std::move(resolve)) {
+  MemoryFiles(std::deque<NamedBytes>& inputs, Resolver resolve, const OutputSink* sink = nullptr,
+              std::uint32_t* nextHostFile = nullptr)
+      : inputs_(inputs), resolve_(std::move(resolve)), sink_(sink), nextHostFile_(nextHostFile) {
     for (const NamedBytes& input : inputs_) index(input);
   }
 
@@ -98,12 +191,12 @@ class MemoryFiles {
   }
 
   /** The write target for `name`, created on first open. */
-  Bytes& output(const std::string& name) {
+  OutputFile& output(const std::string& name) {
     const auto found = outputIndex_.find(name);
-    if (found != outputIndex_.end()) return outputs_[found->second].bytes;
+    if (found != outputIndex_.end()) return outputs_[found->second];
     outputIndex_.emplace(name, outputs_.size());
-    outputs_.push_back(NamedBytes{name, Bytes{}});
-    return outputs_.back().bytes;
+    outputs_.emplace_back(name, sink_, sink_ == nullptr ? 0u : (*nextHostFile_)++);
+    return outputs_.back();
   }
 
   bool wrote(const std::string& name) const { return outputIndex_.count(name) != 0; }
@@ -112,7 +205,7 @@ class MemoryFiles {
   void neverResolve(const std::string& name) { missing_.insert(name); }
 
   /** Everything the exporter wrote, in write order. */
-  const std::deque<NamedBytes>& outputs() const { return outputs_; }
+  const std::deque<OutputFile>& outputs() const { return outputs_; }
 
   /** Moves every output out, `primary` first and the rest in write order. Call once, after the exporter is gone. */
   std::vector<NamedBytes> takeOutputs(const std::string& primary) {
@@ -120,9 +213,9 @@ class MemoryFiles {
     files.reserve(outputs_.size());
     const auto found = outputIndex_.find(primary);
     const std::size_t primaryIndex = found == outputIndex_.end() ? outputs_.size() : found->second;
-    if (primaryIndex < outputs_.size()) files.push_back(std::move(outputs_[primaryIndex]));
+    if (primaryIndex < outputs_.size()) files.push_back(outputs_[primaryIndex].take());
     for (std::size_t index = 0; index < outputs_.size(); ++index) {
-      if (index != primaryIndex) files.push_back(std::move(outputs_[index]));
+      if (index != primaryIndex) files.push_back(outputs_[index].take());
     }
     outputs_.clear();
     outputIndex_.clear();
@@ -149,22 +242,24 @@ class MemoryFiles {
 
   // Deques, not vectors: streams hold pointers into these while assimp keeps opening more files.
   std::deque<NamedBytes>& inputs_;
-  std::deque<NamedBytes> outputs_;
+  std::deque<OutputFile> outputs_;
   std::unordered_map<std::string, const Bytes*> byName_;
   std::unordered_map<std::string, const Bytes*> byBasename_;
   std::unordered_map<std::string, std::size_t> outputIndex_;
   std::unordered_set<std::string> missing_;
   Resolver resolve_;
+  const OutputSink* sink_;
+  std::uint32_t* nextHostFile_;
   bool pending_ = false;
   std::string pendingName_;
   std::optional<ResolveStatus> terminal_;
   std::string terminalName_;
 };
 
-/** Append-and-seek stream over one output buffer. */
+/** Append-and-seek stream over one output file. */
 class MemoryWriteStream : public Assimp::IOStream {
  public:
-  explicit MemoryWriteStream(Bytes& out) : out_(out) {}
+  explicit MemoryWriteStream(OutputFile& out) : out_(out) {}
 
   std::size_t Read(void*, std::size_t, std::size_t) override { return 0; }
 
@@ -172,12 +267,9 @@ class MemoryWriteStream : public Assimp::IOStream {
     if (size != 0 && count > std::numeric_limits<std::size_t>::max() / size) return 0;
     const std::size_t total = size * count;
     if (total > std::numeric_limits<std::size_t>::max() - position_) return 0;
-    const std::size_t end = position_ + total;
-    if (end > out_.size()) out_.resize(end);
-    if (total == 0) return count;
-    std::memcpy(out_.data() + position_, buffer, total);
-    position_ = end;
-    return count;
+    if (!out_.write(position_, static_cast<const std::uint8_t*>(buffer), total)) return 0;
+    position_ += total;
+    return out_.release(position_) ? count : 0;
   }
 
   aiReturn Seek(std::size_t offset, aiOrigin origin) override {
@@ -189,7 +281,7 @@ class MemoryWriteStream : public Assimp::IOStream {
     const std::size_t target = origin == aiOrigin_CUR  ? position_ + offset
                                : origin == aiOrigin_END ? out_.size() - offset
                                                         : offset;
-    if (target > out_.size()) out_.resize(target);
+    out_.extend(target);
     position_ = target;
     return AI_SUCCESS;
   }
@@ -199,7 +291,7 @@ class MemoryWriteStream : public Assimp::IOStream {
   void Flush() override {}
 
  private:
-  Bytes& out_;
+  OutputFile& out_;
   std::size_t position_ = 0;
 };
 
