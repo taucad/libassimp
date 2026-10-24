@@ -229,7 +229,7 @@ if (!fast) {
     if (!compileFlags.includes(flag)) throw new Error(`${target} compile flags omit ${flag}`);
     if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
   }
-  for (const flag of ['--closure=1', '-sEVAL_CTORS=2', '-sMALLOC=mimalloc', '-sWASM_LEGACY_EXCEPTIONS=1']) {
+  for (const flag of ['--closure=1', '-sEVAL_CTORS=2', '-sMALLOC=dlmalloc', '-sWASM_LEGACY_EXCEPTIONS=1']) {
     if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
   }
 }

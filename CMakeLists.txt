@@ -115,6 +115,19 @@ if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON OR LIBASSIMP_F
   add_compile_definitions(ASSIMP_BUILD_NO_GLTF1_IMPORTER ASSIMP_BUILD_NO_GLTF1_EXPORTER)
 endif()
 
+# Link-time optimization cuts the shipped addon from 30.5 MB to 18.8 MB at the
+# same speed (S6 spike, 31-cell matrix, byte-identical output). Coverage,
+# fuzzer and sanitizer builds keep per-unit code so their instrumentation maps
+# onto the sources. Set before assimp so the engine and its dependencies join in.
+if(LIBASSIMP_NATIVE_ADDON AND NOT EMSCRIPTEN AND NOT (LIBASSIMP_CPP_COVERAGE OR LIBASSIMP_FUZZ OR LIBASSIMP_SANITIZERS OR LIBASSIMP_FAST))
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT LIBASSIMP_IPO_SUPPORTED OUTPUT LIBASSIMP_IPO_ERROR LANGUAGES C CXX)
+  if(NOT LIBASSIMP_IPO_SUPPORTED)
+    message(FATAL_ERROR "The release addon requires link-time optimization: ${LIBASSIMP_IPO_ERROR}")
+  endif()
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
 add_subdirectory(assimp)
 
 if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON OR LIBASSIMP_FUZZ)
@@ -181,7 +194,10 @@ if(EMSCRIPTEN)
   if(LIBASSIMP_FAST)
     target_link_options(${LIBASSIMP_TARGET} PRIVATE -sEVAL_CTORS=0)
   else()
-    target_link_options(${LIBASSIMP_TARGET} PRIVATE --closure=1 -sEVAL_CTORS=2 -sMALLOC=mimalloc)
+    # dlmalloc over mimalloc: 60 kB smaller, 12-52% lower linear-memory
+    # high-water on 1024^2 conversions (memory never shrinks, so that is the
+    # headroom under the 4 GiB cap) and the same speed (S6 spike).
+    target_link_options(${LIBASSIMP_TARGET} PRIVATE --closure=1 -sEVAL_CTORS=2 -sMALLOC=dlmalloc)
   endif()
 endif()
 
