@@ -35,7 +35,14 @@
    `pnpm run benchmark:record -- <reports> --origin "<what moved and why>"`.
    Tolerances change only as a reviewed edit with a measured origin; never
    re-record to turn a red gate green.
-10. Open a pull request with commands and results.
+10. Read the format-matrix comment on performance or engine pull requests. It
+    measures every fixture against every export target, plus 1024 x 1024 grids
+    of each mesh format, for the base and the PR on one runner, and fails only
+    when a cell crashes in the PR but not in the base. Reproduce a cell with
+    `node bench/matrix.mjs --backend wasm|native --tier small|large --out report.json`
+    (add `--filter <regex>`), and compare two reports with
+    `node bench/matrix-report.mjs base=<before.json> pr=<after.json>`.
+11. Open a pull request with commands and results.
 
 Adding a format the engine supports is an edit to `assimp-builds.json`, which the
 CMake presets and the docs matrix read. The export unions in `src/formats.ts`
