@@ -22,12 +22,15 @@ export const MARKER = '<!-- libassimp-format-matrix -->';
 // Origin: GitHub rejects comment bodies over 65,536 characters.
 const COMMENT_LIMIT = 60_000;
 // A time change is reported only when the two builds' runs do not overlap and
-// the medians differ by at least this much and by at least MIN_TIME_DELTA_MS.
-// Origin: an A/A run of one build against itself on a shared 4-vCPU machine
-// separated the runs of a few 1-3 ms cells by up to 2.5 ms; below that, wall
-// time is scheduler noise and the heap, output and status columns carry the signal.
-const TIME_THRESHOLD = 0.1;
-const MIN_TIME_DELTA_MS = 3;
+// the slower median is at least the tier's factor times the faster one and
+// at least its milliseconds above it.
+// Origin: the A/A run on PR #53 (base and PR on the same engine, ubuntu-24.04)
+// stayed within 6.2% on every large cell, while small Wasm cells of 2-20 ms
+// swung by up to 2.3x and 11.4 ms with separated runs, because V8 tiers each
+// fresh process's code up at a different moment. Small-tier time is therefore
+// flagged only beyond that noise; its heap, output and status columns carry
+// the signal, and the helical gear covers real-model time in the large tier.
+const TIME_THRESHOLDS = { small: { factor: 2.5, ms: 15 }, large: { factor: 1.1, ms: 3 } };
 const SIGNIFICANT_CELLS = 30;
 
 const mb = (bytes) => (bytes == null ? '–' : (bytes / 1_048_576).toFixed(bytes < 10_485_760 ? 2 : 1));
@@ -79,7 +82,7 @@ export const mergeReports = (entries) => {
 };
 
 /** Classifies one cell's base-to-PR change. */
-export const compareCell = (base, pr, to) => {
+export const compareCell = (base, pr, { to, tier = 'large' } = {}) => {
   const change = { status: `${base?.status ?? 'absent'} → ${pr?.status ?? 'absent'}` };
   change.newCrash = pr?.status === 'crash' && base?.status !== 'crash';
   change.statusChanged = base?.status !== pr?.status;
@@ -89,8 +92,9 @@ export const compareCell = (base, pr, to) => {
   change.timeDelta = delta;
   change.time =
     separated &&
-    Math.abs(delta) >= TIME_THRESHOLD &&
-    Math.abs(pr.medianMs - base.medianMs) >= MIN_TIME_DELTA_MS
+    Math.max(pr.medianMs, base.medianMs) >=
+      Math.min(pr.medianMs, base.medianMs) * TIME_THRESHOLDS[tier].factor &&
+    Math.abs(pr.medianMs - base.medianMs) >= TIME_THRESHOLDS[tier].ms
       ? delta > 0
         ? 'slower'
         : 'faster'
@@ -118,7 +122,7 @@ const summarize = (group, baseName, prName) => {
     cell,
     base: cell.results[baseName],
     pr: cell.results[prName],
-    change: compareCell(cell.results[baseName], cell.results[prName], cell.to),
+    change: compareCell(cell.results[baseName], cell.results[prName], { to: cell.to, tier: group.tier }),
   }));
   const count = (predicate) => rows.filter(predicate).length;
   const sum = (pick) =>
@@ -206,7 +210,8 @@ export const renderMarkdown = (groups, { baseName = 'base', prName = 'pr' } = {}
     '',
     `Report-only: only a new crash fails this check. ${baseName} ${short(anyGroup?.builds[baseName])} against ${prName} ${short(anyGroup?.builds[prName])}, ` +
       'both measured on the same runner with their runs interleaved. Wall time is the median of the timed runs; ' +
-      `a cell is **slower** or **faster** only when the two builds' runs do not overlap and the medians differ by at least ${TIME_THRESHOLD * 100}% and ${MIN_TIME_DELTA_MS} ms. ` +
+      `a cell is **slower** or **faster** only when the two builds' runs do not overlap and the medians differ by at least ${TIME_THRESHOLDS.large.factor}x and ${TIME_THRESHOLDS.large.ms} ms ` +
+      `(small tier: ${TIME_THRESHOLDS.small.factor}x and ${TIME_THRESHOLDS.small.ms} ms, where V8 tier-up timing dominates). ` +
       '"× gear" divides by the same build\'s helical-gear GLB round trip. "output" compares a SHA-256 over every output file ("varies" marks exporters that stamp the time). ' +
       'Small-tier RSS is the growth over the RSS the cell started from; large-tier RSS is the peak of a process that ran only that cell.',
     '',
@@ -232,6 +237,10 @@ export const renderMarkdown = (groups, { baseName = 'base', prName = 'pr' } = {}
         `**New crashes:** ${summary.newCrashes.map(({ cell, pr }) => `${cell.id} (${pr.message})`).join('; ')}`,
         '',
       );
+    }
+    const known = summary.rows.filter(({ base, pr }) => base?.status === 'crash' && pr?.status === 'crash');
+    if (known.length > 0) {
+      out.push(`Crashes in both builds: ${known.map(({ cell }) => cell.id).join(', ')}.`, '');
     }
     if (group.tier === 'large') {
       out.push(cellTable(summary.rows, group.tier, group.backend));

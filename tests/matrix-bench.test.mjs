@@ -226,28 +226,40 @@ describe('bench/matrix-report.mjs', () => {
     ...overrides,
   });
 
-  it('calls a cell slower or faster only when the runs separate by 10% and 3 ms', () => {
-    expect(compareCell(ok(), ok({ medianMs: 130, minMs: 120, maxMs: 140 }), 'glb').time).toBe('slower');
-    expect(compareCell(ok(), ok({ medianMs: 80, minMs: 75, maxMs: 85 }), 'glb').time).toBe('faster');
-    expect(compareCell(ok(), ok({ medianMs: 130, minMs: 100, maxMs: 140 }), 'glb').time).toBe('same');
-    expect(compareCell(ok(), ok({ medianMs: 108, minMs: 106, maxMs: 110 }), 'glb').time).toBe('same');
+  it('calls a cell slower or faster only when the runs separate beyond the tier noise', () => {
+    expect(compareCell(ok(), ok({ medianMs: 130, minMs: 120, maxMs: 140 }), { to: 'glb' }).time).toBe(
+      'slower',
+    );
+    expect(compareCell(ok(), ok({ medianMs: 80, minMs: 75, maxMs: 85 }), { to: 'glb' }).time).toBe('faster');
+    expect(compareCell(ok(), ok({ medianMs: 130, minMs: 100, maxMs: 140 }), { to: 'glb' }).time).toBe('same');
+    expect(compareCell(ok(), ok({ medianMs: 108, minMs: 106, maxMs: 110 }), { to: 'glb' }).time).toBe('same');
+    const small = { to: 'glb', tier: 'small' };
+    expect(compareCell(ok(), ok({ medianMs: 130, minMs: 120, maxMs: 140 }), small).time).toBe('same');
+    expect(compareCell(ok(), ok({ medianMs: 260, minMs: 250, maxMs: 270 }), small).time).toBe('slower');
+    expect(
+      compareCell(ok({ medianMs: 20, minMs: 19, maxMs: 21 }), ok({ medianMs: 5, minMs: 4, maxMs: 6 }), small)
+        .time,
+    ).toBe('faster');
     const tiny = ok({ medianMs: 1, minMs: 0.9, maxMs: 1.1 });
-    expect(compareCell(tiny, ok({ medianMs: 3, minMs: 2.9, maxMs: 3.1 }), 'glb').time).toBe('same');
+    expect(compareCell(tiny, ok({ medianMs: 3, minMs: 2.9, maxMs: 3.1 }), { to: 'glb' }).time).toBe('same');
   });
 
   it('separates changed outputs from timestamped ones and finds new crashes only', () => {
-    expect(compareCell(ok(), ok({ sha256: 'b' }), 'glb').fingerprint).toBe('changed');
-    expect(compareCell(ok(), ok({ sha256: 'b' }), 'fbx').fingerprint).toBe('varies');
-    expect(compareCell(ok(), ok({ sha256: 'b', stable: false }), 'glb').fingerprint).toBe('varies');
-    expect(compareCell(ok(), { status: 'crash' }, 'glb')).toMatchObject({
+    expect(compareCell(ok(), ok({ sha256: 'b' }), { to: 'glb' }).fingerprint).toBe('changed');
+    expect(compareCell(ok(), ok({ sha256: 'b' }), { to: 'fbx' }).fingerprint).toBe('varies');
+    expect(compareCell(ok(), ok({ sha256: 'b', stable: false }), { to: 'glb' }).fingerprint).toBe('varies');
+    expect(compareCell(ok(), { status: 'crash' }, { to: 'glb' })).toMatchObject({
       newCrash: true,
       statusChanged: true,
     });
-    expect(compareCell({ status: 'crash' }, { status: 'crash' }, 'glb')).toMatchObject({
+    expect(compareCell({ status: 'crash' }, { status: 'crash' }, { to: 'glb' })).toMatchObject({
       newCrash: false,
       statusChanged: false,
     });
-    expect(compareCell(undefined, ok(), 'glb')).toMatchObject({ status: 'absent → ok', statusChanged: true });
+    expect(compareCell(undefined, ok(), { to: 'glb' })).toMatchObject({
+      status: 'absent → ok',
+      statusChanged: true,
+    });
   });
 
   it('merges shards and keeps the comment under the GitHub limit', () => {
