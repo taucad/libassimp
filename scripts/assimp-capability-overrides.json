@@ -294,6 +294,12 @@
       "minimum": 1,
       "maximum": 16
     },
+    "3MF_EXPORT_REQUIRE_MANIFOLD": {
+      "publicName": "requireManifold",
+      "supported": true,
+      "formats": ["3mf"],
+      "description": "Whether every mesh must be manifold and oriented, as 3MF Core requires for model objects. When false, a mesh that is not is written as an object of type other instead of failing the export."
+    },
     "3MF_EXPORT_UNIT": {
       "publicName": "unit",
       "supported": true,
@@ -658,6 +664,11 @@
       "publicName": "importLwsAnimStart",
       "supported": true,
       "default": 150392
+    },
+    "IMPORT_MAX_NODE_DEPTH": {
+      "publicName": "importMaxNodeDepth",
+      "supported": false,
+      "reason": "A safety cap on scene-graph nesting: raising it would let hostile files overflow the engine's stack."
     },
     "IMPORT_MD2_KEYFRAME": {
       "publicName": "importMd2Keyframe",

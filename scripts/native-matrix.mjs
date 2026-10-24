@@ -31,7 +31,7 @@ export const nativeMatrices = (packageJson = new URL('../package.json', import.m
         os: RUNNER[os],
         runtime: 'node',
         scale: scale ? '1' : '0',
-        scaleBytes: scale ? '671088640' : '',
+        scaleBytes: scale ? '939524096' : '',
         suffix,
       };
     }),

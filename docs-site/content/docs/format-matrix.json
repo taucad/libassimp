@@ -331,6 +331,10 @@
           "kind": "boolean",
           "default": false
         },
+        "requireManifold": {
+          "kind": "boolean",
+          "default": true
+        },
         "unit": {
           "kind": "string",
           "default": "millimeter",

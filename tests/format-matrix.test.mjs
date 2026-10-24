@@ -203,6 +203,36 @@ describe('importers', () => {
     pin(`import ${id}`, outputs[0].bytes);
   });
 
+  it('drops faces without indices when splitting by primitive type', async () => {
+    const ply = [
+      'ply',
+      'format ascii 1.0',
+      'element vertex 4',
+      'property float x',
+      'property float y',
+      'property float z',
+      'element face 3',
+      'property list uchar int vertex_indices',
+      'end_header',
+      '0 0 0',
+      '1 0 0',
+      '1 1 0',
+      '0 1 0',
+      '3 0 1 2',
+      '4 0 1 2 3',
+      '0',
+      '',
+    ].join('\n');
+    const { files } = await assimp.convert(
+      { name: 'empty-face.ply', bytes: new TextEncoder().encode(ply) },
+      { to: 'assjson', postProcess: ['sortByPrimitiveType'] },
+    );
+    const faces = JSON.parse(text(files[0].bytes)).meshes.map((mesh) =>
+      mesh.faces.map((face) => face.length),
+    );
+    expect(faces).toEqual([[3], [4]]);
+  });
+
   it('takes the entry file from the first element, whatever the order', async () => {
     const obj = load('OBJ/cube_usemtl.obj');
     const mtl = load('OBJ/cube_usemtl.mtl');
@@ -260,6 +290,96 @@ describe('exporters', () => {
   });
 });
 
+describe('export pipeline', () => {
+  /** Sum of POSITION counts over every GLB primitive, and whether all are indexed. */
+  const glbVertices = (bytes) => {
+    const json = glbJson(bytes);
+    const primitives = json.meshes.flatMap((mesh) => mesh.primitives);
+    return {
+      count: primitives.reduce(
+        (sum, primitive) => sum + json.accessors[primitive.attributes.POSITION].count,
+        0,
+      ),
+      indexed: primitives.every((primitive) => primitive.indices !== undefined),
+    };
+  };
+
+  it('keeps a joined scene indexed when exporting GLB', async () => {
+    // The import joins identical vertices; the export used to un-index them
+    // again (MakeVerboseFormat) and re-join only some, inflating the GLB.
+    const source = load('Collada/duck.dae');
+    const [json, glb] = await assimp.convertFormats(source, { targets: [{ to: 'assjson' }, { to: 'glb' }] });
+    const imported = JSON.parse(text(json.files[0].bytes)).meshes;
+    const vertices = glbVertices(glb.files[0].bytes);
+    expect(vertices.indexed).toBe(true);
+    expect(vertices.count).toBe(imported.reduce((sum, mesh) => sum + mesh.vertices.length / 3, 0));
+  });
+
+  it('leaves the imported scene untouched for every exporter in one plan', async () => {
+    // Read-only exporters share the imported scene instead of copying it, so
+    // a later target must see exactly what an earlier one saw.
+    const source = load(TEXTURED_SOURCE);
+    const ids = assimp.formats.export.map(({ id }) => id);
+    const targets = [{ to: 'assjson' }, ...ids.map((to) => ({ to })), { to: 'assjson' }];
+    const results = await assimp.convertFormats(source, { targets });
+    expect(results.at(-1).files).toEqual(results[0].files);
+    for (const [index, id] of ids.entries()) {
+      if (TIMESTAMPED.has(id)) continue;
+      const { files } = await assimp.convert(source, { to: id });
+      expect(results[index + 1].files, `${id} after the other exporters`).toEqual(files);
+    }
+  });
+
+  it('writes mirrored, instanced, normal-less meshes to STL with outward facet normals', async () => {
+    // One four-triangle mesh without normals, instanced plainly, mirrored in
+    // X, and under a rotated parent with a negative Y scale.
+    const positions = new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1]);
+    const indices = new Uint16Array([0, 1, 2, 0, 2, 3, 0, 1, 4, 1, 5, 4]);
+    const buffer = Buffer.concat([Buffer.from(positions.buffer), Buffer.from(indices.buffer)]);
+    const gltf = {
+      asset: { version: '2.0' },
+      scene: 0,
+      scenes: [{ nodes: [0, 1, 2] }],
+      nodes: [
+        { mesh: 0, name: 'plain' },
+        { mesh: 0, name: 'mirrored', scale: [-1, 1, 1], translation: [3, 0, 0] },
+        { name: 'parent', rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2], children: [3] },
+        { mesh: 0, name: 'child', translation: [0, 2, 0], scale: [1, -2, 1] },
+      ],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1 }] }],
+      accessors: [
+        { bufferView: 0, componentType: 5126, count: 6, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 1] },
+        { bufferView: 1, componentType: 5123, count: 12, type: 'SCALAR' },
+      ],
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: 72 },
+        { buffer: 0, byteOffset: 72, byteLength: 24 },
+      ],
+      buffers: [{ byteLength: 96, uri: `data:application/octet-stream;base64,${buffer.toString('base64')}` }],
+    };
+    const input = { name: 'instances.gltf', bytes: new TextEncoder().encode(JSON.stringify(gltf)) };
+    const [ascii, binary] = await assimp.convertFormats(input, {
+      targets: [{ to: 'stl' }, { to: 'stl', exportOptions: { binary: true } }],
+    });
+    const facets = [
+      ...text(ascii.files[0].bytes).matchAll(
+        /facet normal (\S+) (\S+) (\S+)\s+outer loop\s+vertex (\S+) (\S+) (\S+)\s+vertex (\S+) (\S+) (\S+)\s+vertex (\S+) (\S+) (\S+)/gu,
+      ),
+    ].map((match) => match.slice(1).map(Number));
+    expect(facets).toHaveLength(12);
+    for (const [nx, ny, nz, ax, ay, az, bx, by, bz, cx, cy, cz] of facets) {
+      const [ux, uy, uz, vx, vy, vz] = [bx - ax, by - ay, bz - az, cx - ax, cy - ay, cz - az];
+      const cross = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+      const length = Math.hypot(...cross);
+      expect(
+        [nx, ny, nz].map((value, axis) => value - cross[axis] / length).every((d) => Math.abs(d) < 1e-4),
+      ).toBe(true);
+    }
+    const view = new DataView(binary.files[0].bytes.buffer, binary.files[0].bytes.byteOffset);
+    expect(view.getUint32(80, true)).toBe(12);
+  });
+});
+
 describe('export properties', () => {
   const source = () => load(TEXTURED_SOURCE);
 
@@ -281,6 +401,20 @@ describe('export properties', () => {
         exportOptions: { nonexistent: true },
       }),
     ).rejects.toMatchObject({ code: 'INVALID_OPTIONS' });
+  });
+
+  it('writes an open surface to 3MF only when 3MF_EXPORT_REQUIRE_MANIFOLD is false', async () => {
+    const plane = {
+      name: 'plane.obj',
+      bytes: new TextEncoder().encode('v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3\nf 1 3 4\n'),
+    };
+    const strict = assimp.convert(plane, { to: '3mf' });
+    await expect(strict).rejects.toMatchObject({ code: 'EXPORT_FAILED' });
+    await expect(strict).rejects.toThrow('3MF_EXPORT_REQUIRE_MANIFOLD');
+    const { files } = await assimp.convert(plane, { to: '3mf', exportOptions: { requireManifold: false } });
+    const xml = modelXml(files[0].bytes);
+    expect(xml).toMatch(/<object\b[^>]*\btype="other"/u);
+    expect(xml.match(/<triangle\b/gu)).toHaveLength(2);
   });
 
   it('defaults 3MF to millimeter and takes the unit from 3MF_EXPORT_UNIT', async () => {
