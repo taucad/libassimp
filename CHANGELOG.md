@@ -1,3 +1,19 @@
+## 0.4.0 (2026-10-24)
+
+### 🚀 Features
+
+- Move the USD importer and exporter to LightUSD (the successor to TinyUSDZ) and add the `usdc` export target. USD sublayers, references and payloads, including USDA, USDC and MaterialX sidecars, resolve through `resolve`, and a composed scene exports as a self-contained USDZ that passes OpenUSD's ARKit compliance checks. Large USD scenes convert several times faster in a fraction of the memory. The Node-API worker gets an 8 MiB stack, Wasm `dispose` releases the instance's memory, and the module-level `convert` recycles its shared Wasm instance after a job grows linear memory past 512 MiB. ([#47](https://github.com/taucad/libassimp/pull/47))
+
+### 🩹 Fixes
+
+- Publish installable package previews for same-repository pull requests, verify the hosted root and native-package graph before merge, and refresh security-sensitive build dependencies. ([#37](https://github.com/taucad/libassimp/pull/37))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Opus 5.5 (1M context)
+- Richard Fontein @rifont
+
 ## 0.3.0 (2026-09-05)
 
 ### 🚀 Features
