@@ -650,7 +650,11 @@ const effectiveOverride = (property, overrides) => {
   const [, rawFormat, field] = match;
   const format = rawFormat.toLowerCase();
   const contract = overrides.unitAxis[format];
-  if (contract === undefined) throw new Error(`Missing unit/axis contract override for ${symbol}.`);
+  if (contract === undefined) {
+    // A format compiled out of the engine keeps its config.h macro but has no reader to configure.
+    if (property.phases.length === 0) return override;
+    throw new Error(`Missing unit/axis contract override for ${symbol}.`);
+  }
   if (field === 'UNIT_SCALE_TO_METERS') {
     return {
       ...override,
