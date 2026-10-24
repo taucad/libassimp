@@ -285,6 +285,11 @@ if(LIBASSIMP_NATIVE_ADDON)
     set(MI_BUILD_OBJECT OFF CACHE BOOL "" FORCE)
     set(MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(MI_OVERRIDE OFF CACHE BOOL "" FORCE)
+    # 3.x commits each 1 GiB arena up front where Linux overcommits; that
+    # counts against RLIMIT_DATA, and a zip bomb under a data limit then
+    # aborts instead of failing the import. Commit on demand instead (same
+    # speed and peak RSS).
+    set(MI_EXTRA_CPPDEFS "MI_DEFAULT_ARENA_EAGER_COMMIT=0" CACHE STRING "" FORCE)
     FetchContent_Declare(
       mimalloc
       GIT_REPOSITORY "https://github.com/microsoft/mimalloc"
