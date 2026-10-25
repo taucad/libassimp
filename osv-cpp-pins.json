@@ -51,6 +51,12 @@
         },
         {
           "package": {
+            "name": "mimalloc",
+            "commit": "e874dbe8d7f248561dd9a65d2e07a204b93af067"
+          }
+        },
+        {
+          "package": {
             "name": "spdlog",
             "commit": "f355b3d58f7067eee1706ff3c801c2361011f3d5"
           }

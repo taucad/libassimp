@@ -271,6 +271,36 @@ if(LIBASSIMP_NATIVE_ADDON)
   add_library(libassimp-native MODULE src/cpp/node-addon.cpp ${CMAKE_JS_SRC})
   target_include_directories(libassimp-native PRIVATE ${CMAKE_JS_INC} "${NODE_ADDON_API_DIR}")
   target_link_libraries(libassimp-native PRIVATE libassimp-core Threads::Threads ${CMAKE_JS_LIB})
+  # mimalloc serves the addon's C++ allocations: large conversions run 8-14%
+  # faster than on glibc malloc for 2-4% more peak RSS (S6 spike,
+  # byte-identical output). The 2.x line from 2.2 holds about 50% more peak
+  # RSS than 3.x on the USD baselines, so stay on 3.x. libstdc++
+  # is linked statically with it, because a shared libstdc++ allocates some
+  # objects (stringstream buffers, for one) with its own operator new that the
+  # addon would then free through mimalloc. Linux only until macOS and Windows
+  # are measured; instrumented builds keep the system allocator for their tools.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT (LIBASSIMP_CPP_COVERAGE OR LIBASSIMP_FUZZ OR LIBASSIMP_SANITIZERS))
+    include(FetchContent)
+    set(MI_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    set(MI_BUILD_OBJECT OFF CACHE BOOL "" FORCE)
+    set(MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(MI_OVERRIDE OFF CACHE BOOL "" FORCE)
+    # 3.x commits each 1 GiB arena up front where Linux overcommits; that
+    # counts against RLIMIT_DATA, and a zip bomb under a data limit then
+    # aborts instead of failing the import. Commit on demand instead (same
+    # speed and peak RSS).
+    set(MI_EXTRA_CPPDEFS "MI_DEFAULT_ARENA_EAGER_COMMIT=0" CACHE STRING "" FORCE)
+    FetchContent_Declare(
+      mimalloc
+      GIT_REPOSITORY "https://github.com/microsoft/mimalloc"
+      GIT_TAG e874dbe8d7f248561dd9a65d2e07a204b93af067 # v3.1.6
+      EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(mimalloc)
+    target_sources(libassimp-native PRIVATE src/cpp/mimalloc-new-delete.cpp)
+    target_link_libraries(libassimp-native PRIVATE mimalloc-static)
+    target_link_options(libassimp-native PRIVATE -static-libstdc++ -static-libgcc)
+  endif()
   target_compile_definitions(
     libassimp-native
     PRIVATE
