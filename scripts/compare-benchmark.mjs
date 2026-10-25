@@ -41,7 +41,10 @@ export const averageBenchmarks = (reports) => {
   return { ...first, medianMs: average('medianMs'), initMs: average('initMs') };
 };
 
-export const compareBenchmark = (current, base) => {
+// `baseName` is the name the base revision's own harness declares. The PR's
+// harness runs on both revisions, so the reports carry the same name; a rename
+// shows only against the base's declaration.
+export const compareBenchmark = (current, base, { baseName } = {}) => {
   validateBenchmark(current);
   if (base !== undefined) validateBenchmark(base);
   if (base === undefined || current.name !== base.name) {
@@ -50,7 +53,8 @@ export const compareBenchmark = (current, base) => {
       markdown: `${MARKER}\n### Benchmark\n\nNew benchmark admitted: \`${current.name}\` (${current.medianMs} ms median).`,
     };
   }
-  if (current.outputBytes !== base.outputBytes || current.outputFnv !== base.outputFnv) {
+  const renamed = baseName !== undefined && baseName !== current.name;
+  if (!renamed && (current.outputBytes !== base.outputBytes || current.outputFnv !== base.outputFnv)) {
     return {
       failed: true,
       markdown: `${MARKER}\n### Benchmark\n\nByte fingerprints changed for \`${current.name}\`. Rename the benchmark only when the semantic change is intentional.`,
@@ -59,9 +63,12 @@ export const compareBenchmark = (current, base) => {
 
   const change = (current.medianMs - base.medianMs) / base.medianMs;
   const percentage = `${change >= 0 ? '+' : ''}${(change * 100).toFixed(1)}%`;
+  const note = renamed
+    ? `\n\nRenamed from \`${baseName}\`, so changed output bytes are accepted; time is still gated.`
+    : '';
   return {
     failed: change > THRESHOLD,
-    markdown: `${MARKER}\n### Benchmark\n\n| Benchmark | main | PR | Change | Limit |\n| --- | ---: | ---: | ---: | ---: |\n| \`${current.name}\` | ${base.medianMs} ms | ${current.medianMs} ms | ${percentage} | +10.0% |\n| \`createAssimp\` | ${base.initMs} ms | ${current.initMs} ms | | |`,
+    markdown: `${MARKER}\n### Benchmark\n\n| Benchmark | main | PR | Change | Limit |\n| --- | ---: | ---: | ---: | ---: |\n| \`${current.name}\` | ${base.medianMs} ms | ${current.medianMs} ms | ${percentage} | +10.0% |\n| \`createAssimp\` | ${base.initMs} ms | ${current.initMs} ms | | |${note}`,
   };
 };
 
@@ -69,16 +76,17 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const currentPath = process.argv[2];
   const basePath = process.argv[3];
   const outputPath = process.argv[4];
+  const baseName = process.argv[5] || undefined;
   if (!currentPath || !outputPath) {
     throw new Error(
-      'usage: node scripts/compare-benchmark.mjs <current.json[,current.json]> <base.json[,base.json]|-> <output.md>',
+      'usage: node scripts/compare-benchmark.mjs <current.json[,current.json]> <base.json[,base.json]|-> <output.md> [base-name]',
     );
   }
   const readReports = (paths) =>
     averageBenchmarks(paths.split(',').map((path) => JSON.parse(readFileSync(path, 'utf8'))));
   const current = readReports(currentPath);
   const base = basePath && basePath !== '-' ? readReports(basePath) : undefined;
-  const result = compareBenchmark(current, base);
+  const result = compareBenchmark(current, base, { baseName });
   writeFileSync(outputPath, `${result.markdown}\n`);
   process.stdout.write(`${result.markdown}\n`);
   if (result.failed) process.exitCode = 1;
