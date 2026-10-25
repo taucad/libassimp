@@ -762,6 +762,10 @@ jobs:
           cp src/wasm/libassimp.js src/wasm/libassimp.wasm dist/wasm/
           # The PR owns the workload. Both revisions run the same harness and
           # fixture so changing the corpus cannot bypass the benchmark identity.
+          # The base's own benchmark name is kept so an intentional rename is
+          # visible to the comparison.
+          base_name="$(sed -nE "/^const report = \\{$/,/^\\};$/ s/^  name: '([^']+)',$/\\1/p" bench/gated.mjs)"
+          echo "name=$base_name" >> "$GITHUB_OUTPUT"
           cp "$GITHUB_WORKSPACE/bench/gated.mjs" bench/gated.mjs
           cp "$GITHUB_WORKSPACE/bench/fixtures/helical-gear.glb" bench/fixtures/helical-gear.glb
           cp "$GITHUB_WORKSPACE/tests/fnv64.mjs" tests/fnv64.mjs
@@ -770,6 +774,8 @@ jobs:
         id: regression
         continue-on-error: true # The final step fails after the comment is preserved.
         shell: bash
+        env:
+          BASE_BENCHMARK_NAME: ${{ steps.base.outputs.name }}
         run: |
           failed=0
           entry='${{ steps.current.outputs.entry }}'
@@ -783,7 +789,8 @@ jobs:
           node scripts/compare-benchmark.mjs \
             /tmp/current-regression-1.json,/tmp/current-regression-2.json \
             /tmp/base-benchmark-1.json,/tmp/base-benchmark-2.json \
-            /tmp/regression-benchmark.md || failed=1
+            /tmp/regression-benchmark.md \
+            "$BASE_BENCHMARK_NAME" || failed=1
           if [[ '${{ steps.base.outputs.wasm }}' != main ]]; then
             printf '\n%s\n' "main's Wasm was unavailable, so main ran the PR's binary: this row compares the TypeScript facades only." >> /tmp/regression-benchmark.md
           fi
