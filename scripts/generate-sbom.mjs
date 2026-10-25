@@ -187,7 +187,7 @@ export const collect = () => {
       description: 'Open Asset Import Library engine (taucad fork), the assimp/ submodule',
     },
     ...fetched,
-    // libassimp's own pins: mimalloc in the Linux addon.
+    // libassimp's own pins: mimalloc in the Linux and Windows addons.
     ...parseFetchContent(read('CMakeLists.txt')),
   ].toSorted((a, b) => a.name.localeCompare(b.name));
   return { engine, gitPins, vendored: vendored(engine) };

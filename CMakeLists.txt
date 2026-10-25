@@ -277,18 +277,21 @@ if(LIBASSIMP_NATIVE_ADDON)
   # RSS than 3.x on the USD baselines, so stay on 3.x. libstdc++
   # is linked statically with it, because a shared libstdc++ allocates some
   # objects (stringstream buffers, for one) with its own operator new that the
-  # addon would then free through mimalloc. Linux only until macOS and Windows
-  # are measured; instrumented builds keep the system allocator for their tools.
-  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT (LIBASSIMP_CPP_COVERAGE OR LIBASSIMP_FUZZ OR LIBASSIMP_SANITIZERS))
+  # addon would then free through mimalloc. Windows already links the static
+  # CRT, so every allocation stays inside the addon there too (6-16% faster,
+  # 4-16% more peak RSS in the S6 spike). macOS stays on the system allocator:
+  # its shared libc++ splits allocations the same way and aborted on USD.
+  # Instrumented builds keep the system allocator for their tools.
+  if((CMAKE_SYSTEM_NAME STREQUAL "Linux" OR WIN32) AND NOT (LIBASSIMP_CPP_COVERAGE OR LIBASSIMP_FUZZ OR LIBASSIMP_SANITIZERS))
     include(FetchContent)
     set(MI_BUILD_SHARED OFF CACHE BOOL "" FORCE)
     set(MI_BUILD_OBJECT OFF CACHE BOOL "" FORCE)
     set(MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(MI_OVERRIDE OFF CACHE BOOL "" FORCE)
     # 3.x commits each 1 GiB arena up front where Linux overcommits; that
-    # counts against RLIMIT_DATA, and a zip bomb under a data limit then
-    # aborts instead of failing the import. Commit on demand instead (same
-    # speed and peak RSS).
+    # counts against RLIMIT_DATA (and the Windows commit charge), and a zip
+    # bomb under a data limit then aborts instead of failing the import.
+    # Commit on demand instead (same speed and peak RSS).
     set(MI_EXTRA_CPPDEFS "MI_DEFAULT_ARENA_EAGER_COMMIT=0" CACHE STRING "" FORCE)
     FetchContent_Declare(
       mimalloc
@@ -299,7 +302,9 @@ if(LIBASSIMP_NATIVE_ADDON)
     FetchContent_MakeAvailable(mimalloc)
     target_sources(libassimp-native PRIVATE src/cpp/mimalloc-new-delete.cpp)
     target_link_libraries(libassimp-native PRIVATE mimalloc-static)
-    target_link_options(libassimp-native PRIVATE -static-libstdc++ -static-libgcc)
+    if(NOT WIN32)
+      target_link_options(libassimp-native PRIVATE -static-libstdc++ -static-libgcc)
+    endif()
   endif()
   target_compile_definitions(
     libassimp-native
