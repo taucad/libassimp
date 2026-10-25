@@ -13,7 +13,7 @@
   },
   "platforms": {
     "linux-x64": {
-      "origin": "Re-recorded after the runtime change (#54) named outputs after the entry stem (grid.usdz, not result.usdz), which changes every output fingerprint and the USDZ member bytes; ratios, Wasm memory and fingerprints come from the three bench/usd.mjs reports in CI run 40084716727 (ubuntu-24.04, engine 67589a413, LightUSD 04e5bde). Peak RSS keeps the larger of that run and the previous six-report baseline (CI runs 40067343125 and 40068738298), because native peak RSS swings about 10% between runs and one run's maximum is too low a ceiling. (Node v26.12.1)",
+      "origin": "Re-recorded after the runtime change (#54) named outputs after the entry stem (grid.usdz, not result.usdz), which changes every output fingerprint and the USDZ member bytes; ratios, Wasm memory and fingerprints come from the three bench/usd.mjs reports in CI run 40084716727 (ubuntu-24.04, engine 67589a413, LightUSD 04e5bde). Peak RSS keeps the larger of that run and the previous six-report baseline (CI runs 40067343125 and 40068738298), because native peak RSS swings about 10% between runs and one run's maximum is too low a ceiling. (Node v26.12.1) Native peak RSS re-recorded for the mimalloc 3.1.6 allocator (#61, accepted at 2-10% more peak memory for 8-14% faster large conversions): each native maxRssBytes is the largest of the previous baseline and the six bench/usd.mjs reports in CI runs 40137543933 and 40142902728; ratios, Wasm memory and fingerprints are unchanged.",
       "workloads": {
         "usda-grid-to-usdz": {
           "wasm": {
@@ -32,7 +32,7 @@
           "native": {
             "ratio": 9.4295,
             "medianMs": 283.257,
-            "maxRssBytes": 539922432,
+            "maxRssBytes": 577982464,
             "outputs": [
               {
                 "name": "grid.usdz",
@@ -59,7 +59,7 @@
           "native": {
             "ratio": 9.0026,
             "medianMs": 274.126,
-            "maxRssBytes": 560062464,
+            "maxRssBytes": 577474560,
             "outputs": [
               {
                 "name": "grid.usdc",
@@ -86,7 +86,7 @@
           "native": {
             "ratio": 3.1123,
             "medianMs": 93.757,
-            "maxRssBytes": 508510208,
+            "maxRssBytes": 508854272,
             "outputs": [
               {
                 "name": "grid.glb",
@@ -113,7 +113,7 @@
           "native": {
             "ratio": 3.1331,
             "medianMs": 94.053,
-            "maxRssBytes": 498208768,
+            "maxRssBytes": 507809792,
             "outputs": [
               {
                 "name": "grid.glb",
@@ -140,7 +140,7 @@
           "native": {
             "ratio": 1.6432,
             "medianMs": 49.415,
-            "maxRssBytes": 167706624,
+            "maxRssBytes": 183054336,
             "outputs": [
               {
                 "name": "helical-gear.usdz",
@@ -167,7 +167,7 @@
           "native": {
             "ratio": 0.1122,
             "medianMs": 3.372,
-            "maxRssBytes": 151060480,
+            "maxRssBytes": 160739328,
             "outputs": [
               {
                 "name": "scene.usdz",
