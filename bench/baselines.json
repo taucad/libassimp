@@ -13,7 +13,7 @@
   },
   "platforms": {
     "linux-x64": {
-      "origin": "Re-recorded after the runtime change (#54) named outputs after the entry stem (grid.usdz, not result.usdz), which changes every output fingerprint and the USDZ member bytes; ratios, Wasm memory and fingerprints come from the three bench/usd.mjs reports in CI run 40084716727 (ubuntu-24.04, engine 67589a413, LightUSD 04e5bde). Peak RSS keeps the larger of that run and the previous six-report baseline (CI runs 40067343125 and 40068738298), because native peak RSS swings about 10% between runs and one run's maximum is too low a ceiling. (Node v26.12.1) Native peak RSS re-recorded for the mimalloc 3.1.6 allocator (#61, accepted at 2-10% more peak memory for 8-14% faster large conversions): each native maxRssBytes is the largest of the previous baseline and the six bench/usd.mjs reports in CI runs 40137543933 and 40142902728; ratios, Wasm memory and fingerprints are unchanged.",
+      "origin": "Re-recorded after the runtime change (#54) named outputs after the entry stem (grid.usdz, not result.usdz), which changes every output fingerprint and the USDZ member bytes; ratios, Wasm memory and fingerprints come from the three bench/usd.mjs reports in CI run 40084716727 (ubuntu-24.04, engine 67589a413, LightUSD 04e5bde). Peak RSS keeps the larger of that run and the previous six-report baseline (CI runs 40067343125 and 40068738298), because native peak RSS swings about 10% between runs and one run's maximum is too low a ceiling. (Node v26.12.1) Native peak RSS re-recorded for the mimalloc 3.1.6 allocator (#61, accepted at 2-10% more peak memory for 8-14% faster large conversions): each native maxRssBytes is the largest of the previous baseline and the six bench/usd.mjs reports in CI runs 40137543933 and 40142902728; ratios, Wasm memory and fingerprints are unchanged. Native time ratios and medians re-recorded for the same allocator change (#61, accepted on #66): mimalloc made the helical-gear calibration faster than the USD grid cells, so their ratios rose while their median times did not; each native ratio and medianMs is the fold of the six bench/usd.mjs reports in CI runs 40204350011 and 40206546129, whose USD code matches 67589a413; Wasm figures, peak RSS and fingerprints are unchanged.",
       "workloads": {
         "usda-grid-to-usdz": {
           "wasm": {
@@ -30,8 +30,8 @@
             ]
           },
           "native": {
-            "ratio": 9.4295,
-            "medianMs": 283.257,
+            "ratio": 10.6947,
+            "medianMs": 265.132,
             "maxRssBytes": 577982464,
             "outputs": [
               {
@@ -57,8 +57,8 @@
             ]
           },
           "native": {
-            "ratio": 9.0026,
-            "medianMs": 274.126,
+            "ratio": 10.3898,
+            "medianMs": 251.195,
             "maxRssBytes": 577474560,
             "outputs": [
               {
@@ -84,8 +84,8 @@
             ]
           },
           "native": {
-            "ratio": 3.1123,
-            "medianMs": 93.757,
+            "ratio": 3.1423,
+            "medianMs": 75.781,
             "maxRssBytes": 508854272,
             "outputs": [
               {
@@ -111,8 +111,8 @@
             ]
           },
           "native": {
-            "ratio": 3.1331,
-            "medianMs": 94.053,
+            "ratio": 3.1017,
+            "medianMs": 74.832,
             "maxRssBytes": 507809792,
             "outputs": [
               {
@@ -138,8 +138,8 @@
             ]
           },
           "native": {
-            "ratio": 1.6432,
-            "medianMs": 49.415,
+            "ratio": 1.6462,
+            "medianMs": 40.203,
             "maxRssBytes": 183054336,
             "outputs": [
               {
@@ -165,8 +165,8 @@
             ]
           },
           "native": {
-            "ratio": 0.1122,
-            "medianMs": 3.372,
+            "ratio": 0.1116,
+            "medianMs": 2.686,
             "maxRssBytes": 160739328,
             "outputs": [
               {
