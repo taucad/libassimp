@@ -6,6 +6,7 @@ import type { ExportFormat, ImportFormat } from './index.js';
 import { createNodeRuntimeLoader } from './native-backend.js';
 
 export * from './index.js';
+export { createDirectoryResolver } from './directory-resolver.js';
 
 const glueUrl = new URL('./wasm/libassimp.js', import.meta.url);
 const wasmUrl = new URL('./wasm/libassimp.wasm', import.meta.url);

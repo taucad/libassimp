@@ -96,6 +96,22 @@ describe('benchmark comparison', () => {
     expect(compareBenchmark(report(1.101), report(1)).failed).toBe(true);
   });
 
+  it('fails changed bytes unless the base revision declared another name', () => {
+    const changed = { ...report(1), outputFnv: '0123456789abcdef' };
+    expect(compareBenchmark(changed, report(1)).failed).toBe(true);
+    expect(compareBenchmark(changed, report(1), { baseName: changed.name }).failed).toBe(true);
+    const renamed = compareBenchmark(changed, report(1), { baseName: 'helical-gear-glb-to-glb-v0' });
+    expect(renamed.failed).toBe(false);
+    expect(renamed.markdown).toContain('Renamed from `helical-gear-glb-to-glb-v0`');
+  });
+
+  it('still gates time on a renamed benchmark', () => {
+    const changed = { ...report(1.101), outputFnv: '0123456789abcdef' };
+    expect(compareBenchmark(changed, report(1), { baseName: 'helical-gear-glb-to-glb-v0' }).failed).toBe(
+      true,
+    );
+  });
+
   it('accepts only an explicitly identified legacy Wasm base without backend metadata', () => {
     const base = averageBenchmarks([
       runResolverBenchmark('wasm', { exposeBackend: false, legacyWasm: true }),

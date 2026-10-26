@@ -2,4 +2,9 @@
 # [[IgnoredVulns]]
 # id = "GHSA-example"
 # reason = "No affected code path is shipped."
-# ignoreUntil = "2026-12-31"
+# ignoreUntil = 2026-12-31
+
+[[IgnoredVulns]]
+id = "CVE-2025-6140"
+reason = "spdlog scoped_padder resource use needs an attacker-chosen pattern; web-ifc, the only spdlog user, never calls set_pattern and logs fixed format strings. Bumping the pin belongs to the engine."
+ignoreUntil = 2027-01-31

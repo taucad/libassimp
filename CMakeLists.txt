@@ -30,6 +30,7 @@ option(LIBASSIMP_NATIVE_ADDON "Build the Node-API addon" OFF)
 option(LIBASSIMP_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 option(LIBASSIMP_CPP_COVERAGE "Instrument first-party C++ for LLVM source coverage" OFF)
 option(LIBASSIMP_FAST "Skip the slow optimization passes; local iteration only" OFF)
+option(LIBASSIMP_FUZZ "Build the libFuzzer harness over the Plan pipeline (Clang only)" OFF)
 
 if(NOT EMSCRIPTEN)
   # WebAssembly has no fused multiply-add instruction. Match its IEEE operation
@@ -41,6 +42,16 @@ if(NOT EMSCRIPTEN)
   endif()
 endif()
 
+if(LIBASSIMP_FUZZ)
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR EMSCRIPTEN OR MSVC)
+    message(FATAL_ERROR "LIBASSIMP_FUZZ requires host Clang")
+  endif()
+  # Coverage feedback for libFuzzer reaches every engine translation unit; only
+  # the harness links the libFuzzer driver itself.
+  add_compile_options(-fsanitize=fuzzer-no-link)
+  add_compile_definitions(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
+endif()
+
 if(LIBASSIMP_SANITIZERS)
   if(MSVC)
     add_compile_options(/fsanitize=address)
@@ -50,6 +61,25 @@ if(LIBASSIMP_SANITIZERS)
     add_link_options(-fno-omit-frame-pointer -fsanitize=address,undefined)
     # UBSan's vptr check references typeinfo for every polymorphic type, and LightUSD builds without RTTI by default.
     set(LIGHTUSD_CXX_RTTI ON CACHE BOOL "" FORCE)
+  endif()
+endif()
+
+# Native binaries parse untrusted files in-process, so every translation unit
+# (the engine included) gets the platform's standard memory-safety hardening.
+# _FORTIFY_SOURCE needs optimization and conflicts with ASan's interceptors, so
+# it applies to optimized, unsanitized configurations only. The link-side flags
+# (full RELRO, CFG) are set on the addon target below.
+if(NOT EMSCRIPTEN AND (LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON OR LIBASSIMP_FUZZ))
+  if(MSVC)
+    add_compile_options(/guard:cf /Qspectre)
+  else()
+    add_compile_options(-fstack-protector-strong)
+    if(NOT LIBASSIMP_SANITIZERS AND NOT LIBASSIMP_FUZZ)
+      add_compile_options(
+        "$<$<CONFIG:Release,RelWithDebInfo,MinSizeRel>:-U_FORTIFY_SOURCE>"
+        "$<$<CONFIG:Release,RelWithDebInfo,MinSizeRel>:-D_FORTIFY_SOURCE=2>"
+      )
+    endif()
   endif()
 endif()
 
@@ -79,15 +109,28 @@ if(EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBASSIMP_COMMON_FLAGS}")
 endif()
 
-if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON)
+if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON OR LIBASSIMP_FUZZ)
   # Public glb/gltf are glTF 2 only. These are compile definitions (not CMake
   # cache switches) in Assimp and must exist before its targets are created.
   add_compile_definitions(ASSIMP_BUILD_NO_GLTF1_IMPORTER ASSIMP_BUILD_NO_GLTF1_EXPORTER)
 endif()
 
+# Link-time optimization cuts the shipped addon from 30.5 MB to 18.8 MB at the
+# same speed (S6 spike, 31-cell matrix, byte-identical output). Coverage,
+# fuzzer and sanitizer builds keep per-unit code so their instrumentation maps
+# onto the sources. Set before assimp so the engine and its dependencies join in.
+if(LIBASSIMP_NATIVE_ADDON AND NOT EMSCRIPTEN AND NOT (LIBASSIMP_CPP_COVERAGE OR LIBASSIMP_FUZZ OR LIBASSIMP_SANITIZERS OR LIBASSIMP_FAST))
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT LIBASSIMP_IPO_SUPPORTED OUTPUT LIBASSIMP_IPO_ERROR LANGUAGES C CXX)
+  if(NOT LIBASSIMP_IPO_SUPPORTED)
+    message(FATAL_ERROR "The release addon requires link-time optimization: ${LIBASSIMP_IPO_ERROR}")
+  endif()
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
 add_subdirectory(assimp)
 
-if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON)
+if(EMSCRIPTEN OR LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON OR LIBASSIMP_FUZZ)
   # Assimp's GLTF CMake group combines v1 and v2 sources. The v1 headers honour
   # ASSIMP_BUILD_NO_GLTF1_*, but the pinned v1 exporter .cpp only checks the
   # broad GLTF guard and otherwise fails after its declarations are removed.
@@ -130,12 +173,15 @@ if(EMSCRIPTEN)
     -sMAXIMUM_MEMORY=4GB
     -sSTACK_SIZE=8MB
     -sFILESYSTEM=1 # the STEP and USD exporters go through the filesystem shim
-    -sABORTING_MALLOC=1
+    -sABORTING_MALLOC=0 # allocation failure throws std::bad_alloc, reported as LIMIT_EXCEEDED
     -sSUPPORT_LONGJMP=0
     -sEXIT_RUNTIME=0
     -sINVOKE_RUN=0
     -sWASM_BIGINT=1
-    -sERROR_ON_UNDEFINED_SYMBOLS=0
+    # A link-time undefined symbol is an error, not a runtime abort stub.
+    # host-imports.js names the one host-supplied import as the allowlist.
+    -sERROR_ON_UNDEFINED_SYMBOLS=1
+    "SHELL:--js-library ${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/host-imports.js"
     -lembind
     --no-entry
     --emit-symbol-map
@@ -143,14 +189,19 @@ if(EMSCRIPTEN)
     "SHELL:-sBINARYEN_EXTRA_PASSES=--strip-debug,--strip-producers,--skip-pass=code-folding"
   )
 
+  set_property(TARGET ${LIBASSIMP_TARGET} APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/host-imports.js")
+
   if(LIBASSIMP_FAST)
     target_link_options(${LIBASSIMP_TARGET} PRIVATE -sEVAL_CTORS=0)
   else()
-    target_link_options(${LIBASSIMP_TARGET} PRIVATE --closure=1 -sEVAL_CTORS=2 -sMALLOC=mimalloc)
+    # dlmalloc over mimalloc: 60 kB smaller, 12-52% lower linear-memory
+    # high-water on 1024^2 conversions (memory never shrinks, so that is the
+    # headroom under the 4 GiB cap) and the same speed (S6 spike).
+    target_link_options(${LIBASSIMP_TARGET} PRIVATE --closure=1 -sEVAL_CTORS=2 -sMALLOC=dlmalloc)
   endif()
 endif()
 
-if(NOT EMSCRIPTEN AND (LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON))
+if(NOT EMSCRIPTEN AND (LIBASSIMP_NATIVE_TESTS OR LIBASSIMP_NATIVE_ADDON OR LIBASSIMP_FUZZ))
   add_library(libassimp-core STATIC src/cpp/libassimp.cpp)
   target_link_libraries(libassimp-core PUBLIC assimp)
   target_include_directories(libassimp-core PUBLIC src/cpp)
@@ -220,6 +271,41 @@ if(LIBASSIMP_NATIVE_ADDON)
   add_library(libassimp-native MODULE src/cpp/node-addon.cpp ${CMAKE_JS_SRC})
   target_include_directories(libassimp-native PRIVATE ${CMAKE_JS_INC} "${NODE_ADDON_API_DIR}")
   target_link_libraries(libassimp-native PRIVATE libassimp-core Threads::Threads ${CMAKE_JS_LIB})
+  # mimalloc serves the addon's C++ allocations: large conversions run 8-14%
+  # faster than on glibc malloc for 2-4% more peak RSS (S6 spike,
+  # byte-identical output). The 2.x line from 2.2 holds about 50% more peak
+  # RSS than 3.x on the USD baselines, so stay on 3.x. libstdc++
+  # is linked statically with it, because a shared libstdc++ allocates some
+  # objects (stringstream buffers, for one) with its own operator new that the
+  # addon would then free through mimalloc. Windows already links the static
+  # CRT, so every allocation stays inside the addon there too (6-16% faster,
+  # 4-16% more peak RSS in the S6 spike). macOS stays on the system allocator:
+  # its shared libc++ splits allocations the same way and aborted on USD.
+  # Instrumented builds keep the system allocator for their tools.
+  if((CMAKE_SYSTEM_NAME STREQUAL "Linux" OR WIN32) AND NOT (LIBASSIMP_CPP_COVERAGE OR LIBASSIMP_FUZZ OR LIBASSIMP_SANITIZERS))
+    include(FetchContent)
+    set(MI_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    set(MI_BUILD_OBJECT OFF CACHE BOOL "" FORCE)
+    set(MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(MI_OVERRIDE OFF CACHE BOOL "" FORCE)
+    # 3.x commits each 1 GiB arena up front where Linux overcommits; that
+    # counts against RLIMIT_DATA (and the Windows commit charge), and a zip
+    # bomb under a data limit then aborts instead of failing the import.
+    # Commit on demand instead (same speed and peak RSS).
+    set(MI_EXTRA_CPPDEFS "MI_DEFAULT_ARENA_EAGER_COMMIT=0" CACHE STRING "" FORCE)
+    FetchContent_Declare(
+      mimalloc
+      GIT_REPOSITORY "https://github.com/microsoft/mimalloc"
+      GIT_TAG e874dbe8d7f248561dd9a65d2e07a204b93af067 # v3.1.6
+      EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(mimalloc)
+    target_sources(libassimp-native PRIVATE src/cpp/mimalloc-new-delete.cpp)
+    target_link_libraries(libassimp-native PRIVATE mimalloc-static)
+    if(NOT WIN32)
+      target_link_options(libassimp-native PRIVATE -static-libstdc++ -static-libgcc)
+    endif()
+  endif()
   target_compile_definitions(
     libassimp-native
     PRIVATE
@@ -251,10 +337,14 @@ if(LIBASSIMP_NATIVE_ADDON)
     )
   elseif(WIN32)
     target_sources(libassimp-native PRIVATE cmake/libassimp-node.def)
+    target_link_options(libassimp-native PRIVATE /guard:cf)
   else()
     target_link_options(
       libassimp-native
       PRIVATE
+        # Full RELRO: resolve every import at load, then map the GOT read-only.
+        "LINKER:-z,relro,-z,now"
+        "LINKER:-z,noexecstack"
         # LightUSD links CMAKE_DL_LIBS but calls nothing from it; drop unused NEEDED entries on old glibc.
         "LINKER:--as-needed"
         "LINKER:--exclude-libs,ALL"
@@ -262,6 +352,12 @@ if(LIBASSIMP_NATIVE_ADDON)
     )
   endif()
   libassimp_enable_coverage(libassimp-native)
+endif()
+
+if(LIBASSIMP_FUZZ)
+  add_executable(libassimp-fuzz-plan tests/fuzz/plan-fuzzer.cpp)
+  target_link_libraries(libassimp-fuzz-plan PRIVATE libassimp-core)
+  target_link_options(libassimp-fuzz-plan PRIVATE -fsanitize=fuzzer)
 endif()
 
 if(LIBASSIMP_NATIVE_TESTS AND LIBASSIMP_CPP_COVERAGE)

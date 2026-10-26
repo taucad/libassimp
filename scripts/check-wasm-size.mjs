@@ -6,14 +6,15 @@
 import { readFile } from 'node:fs/promises';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
-// Origin: production emsdk 6.0.8 build at compile/link `-O3`, standalone
-// `wasm-opt -O4`, mimalloc, explicit legacy EH, glTF 1 removed, engine
-// 0b4eac5ac with LightUSD 5d59802 (USDC writer, MaterialX, composition,
-// UsdPhysics), measured 2026-10-23 on Linux x64 Node 24; 1% headroom.
-// LightUSD replaced TinyUSDZ and added 7.37 MB raw (11,743,293 B before).
+// Origin: CI quality on PR #59, emsdk 6.0.8 at compile/link `-O3`,
+// standalone `wasm-opt -O4`, dlmalloc, explicit legacy EH, X, X3D, VRML, 3DS
+// and glTF 1 removed, engine 67589a413 with LightUSD 04e5bde (restructured
+// reconstruct/print paths, USDVOL and zstd compiled out), measured 2026-10-24
+// on Node 24; 1% headroom. dlmalloc replaced mimalloc here (-60 kB).
+// The previous ceiling was 16,036,084 B raw (mimalloc).
 // Compiling LightUSD at -Os saves 3.06 MB raw and 514 kB gzip but slows USD
 // import by up to 18%, so it stays at -O3.
-const CEILING = { raw: 19_308_675, gzip9: 4_514_854, brotli11: 2_920_798 };
+const CEILING = { raw: 16_011_232, gzip9: 4_112_056, brotli11: 2_673_850 };
 // Closure keeps every glue under 39 kB; above 50 kB it silently stopped.
 const GLUE_CEILING = 50_000;
 

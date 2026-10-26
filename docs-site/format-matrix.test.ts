@@ -23,7 +23,6 @@ describe('format matrix', () => {
 
   it('uses the exact canonical export vocabulary and option routes', () => {
     expect(matrix.export.map(({ id }) => id)).toEqual([
-      '3ds',
       '3mf',
       'assjson',
       'dae',
@@ -37,8 +36,6 @@ describe('format matrix', () => {
       'usda',
       'usdc',
       'usdz',
-      'x',
-      'x3d',
     ]);
     expect(Object.keys(matrix.export.find(({ id }) => id === 'stl')?.exportOptions ?? {})).toContain(
       'binary',
@@ -53,7 +50,7 @@ describe('format matrix', () => {
     const project = (name: 'ImportMatrix' | 'ExportMatrix') =>
       llmStringifyMdx({ attributes: [], name, type: 'mdxJsxFlowElement' });
     expect(project('ImportMatrix')).toContain('Wavefront Object: `.obj`');
-    expect(project('ExportMatrix')).toContain('`glb`: `result.glb` — glTF 2 binary container');
+    expect(project('ExportMatrix')).toContain('`glb`: `<stem>.glb` — glTF 2 binary container');
   });
 
   generatedTest('regenerates to the committed file, when the package is built', () => {

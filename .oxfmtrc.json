@@ -10,7 +10,8 @@
     "docs-site/out/**",
     "docs-site/public/demo/**",
     "docs-site/tsconfig.json",
-    "src/wasm/**"
+    "src/wasm/**",
+    "tests/fuzz/corpus/**"
   ],
   "printWidth": 110,
   "singleQuote": true,

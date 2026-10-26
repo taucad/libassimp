@@ -43,10 +43,6 @@
       "unitDefault": "the unit declared by the file",
       "axis": "z"
     },
-    "x3d": {
-      "unit": 1,
-      "axis": "y"
-    },
     "xgl": {
       "unit": 1,
       "axis": "y"
@@ -85,10 +81,6 @@
       "unit": 1,
       "axis": "y"
     },
-    "3ds": {
-      "unit": 1,
-      "axis": "z"
-    },
     "dxf": {
       "unit": 0.001,
       "axis": "y"
@@ -98,10 +90,6 @@
       "axis": "y"
     },
     "lwo": {
-      "unit": 1,
-      "axis": "y"
-    },
-    "x": {
       "unit": 1,
       "axis": "y"
     },
@@ -143,7 +131,6 @@
   ],
   "formats": {
     "order": [
-      "3ds",
       "3mf",
       "assjson",
       "dae",
@@ -156,16 +143,9 @@
       "stl",
       "usda",
       "usdc",
-      "usdz",
-      "x",
-      "x3d"
+      "usdz"
     ],
     "routes": {
-      "3ds": {
-        "extension": "3ds",
-        "description": "Autodesk 3DS (legacy)",
-        "nativeId": "3ds"
-      },
       "3mf": {
         "extension": "3mf",
         "description": "3D Manufacturing Format",
@@ -258,7 +238,7 @@
         }
       },
       "step": {
-        "extension": "stp",
+        "extension": "step",
         "description": "ISO 10303 STEP",
         "nativeId": "stp"
       },
@@ -298,16 +278,6 @@
         "extension": "usdz",
         "description": "Universal Scene Description ZIP container",
         "nativeId": "usdz"
-      },
-      "x": {
-        "extension": "x",
-        "description": "DirectX X file",
-        "nativeId": "x"
-      },
-      "x3d": {
-        "extension": "x3d",
-        "description": "Extensible 3D",
-        "nativeId": "x3d"
       }
     }
   },
@@ -324,6 +294,12 @@
       "minimum": 1,
       "maximum": 16
     },
+    "3MF_EXPORT_REQUIRE_MANIFOLD": {
+      "publicName": "requireManifold",
+      "supported": true,
+      "formats": ["3mf"],
+      "description": "Whether every mesh must be manifold and oriented, as 3MF Core requires for model objects. When false, a mesh that is not is written as an object of type other instead of failing the export."
+    },
     "3MF_EXPORT_UNIT": {
       "publicName": "unit",
       "supported": true,
@@ -338,7 +314,11 @@
       "nativeKind": "integer",
       "default": "z",
       "values": ["x", "y", "z"],
-      "nativeValues": { "x": 0, "y": 1, "z": 2 }
+      "nativeValues": {
+        "x": 0,
+        "y": 1,
+        "z": 2
+      }
     },
     "AI_CONFIG_ANDROID_JNI_ASSIMP_MANAGER_SUPPORT": {
       "publicName": "androidJniAssimpManagerSupport",
@@ -397,7 +377,6 @@
       "publicName": "pointClouds",
       "supported": true,
       "formats": [
-        "3ds",
         "3mf",
         "assjson",
         "dae",
@@ -410,15 +389,13 @@
         "stl",
         "usda",
         "usdc",
-        "usdz",
-        "x",
-        "x3d"
+        "usdz"
       ]
     },
     "EXPORT_XFILE_64BIT": {
       "publicName": "use64Bit",
-      "supported": true,
-      "formats": ["x"]
+      "supported": false,
+      "reason": "The compiled engine does not read this configuration key."
     },
     "extras": {
       "publicName": "extras",
@@ -687,6 +664,11 @@
       "publicName": "importLwsAnimStart",
       "supported": true,
       "default": 150392
+    },
+    "IMPORT_MAX_NODE_DEPTH": {
+      "publicName": "importMaxNodeDepth",
+      "supported": false,
+      "reason": "A safety cap on scene-graph nesting: raising it would let hostile files overflow the engine's stack."
     },
     "IMPORT_MD2_KEYFRAME": {
       "publicName": "importMd2Keyframe",
@@ -1201,7 +1183,8 @@
       "publicName": "dropNormals"
     },
     "aiProcess_GenBoundingBoxes": {
-      "publicName": "generateBoundingBoxes"
+      "publicName": "generateBoundingBoxes",
+      "description": "Computes an axis-aligned bounding box for each mesh."
     }
   },
   "defaultPostProcess": [

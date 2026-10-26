@@ -29,6 +29,8 @@ type NativeTarget = Readonly<{
   format: AllExportFormat;
   nativeId: string;
   properties: readonly NativeProperty[];
+  /** Primary output name: the entry file's stem plus the target's canonical extension. */
+  outputName: string;
 }>;
 
 /** Fully validated native configuration. @internal */
@@ -36,6 +38,8 @@ export type NativePlanOptions = Readonly<{
   importProperties: readonly NativeProperty[];
   postProcess: number;
   targets: readonly NativeTarget[];
+  /** Whether the engine reports progress for this conversion. */
+  progress: boolean;
 }>;
 
 type InternalDescriptor = Readonly<{
@@ -52,6 +56,7 @@ type InternalDescriptor = Readonly<{
 
 type InternalRoute = Readonly<{
   nativeId: string;
+  extension: string;
   routes?: Readonly<Record<string, Readonly<Record<string, string>>>>;
 }>;
 
@@ -242,14 +247,28 @@ const resolveRoute = (
   return nativeId;
 };
 
+/**
+ * The stem every output of a conversion is named after: the entry file's base
+ * name without its last extension (`models/chair.obj` gives `chair`), or
+ * `result` when that is empty. @internal
+ */
+const outputStem = (entryName: string): string => {
+  const base = entryName.slice(Math.max(entryName.lastIndexOf('/'), entryName.lastIndexOf('\\')) + 1);
+  const dot = base.lastIndexOf('.');
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  return stem === '' ? 'result' : stem;
+};
+
 /** Validate the entire request before the native plan copies or imports files. @internal */
 export const validatePlanOptions = (
   options: {
     readonly targets?: unknown;
     readonly importOptions?: unknown;
     readonly postProcess?: unknown;
+    readonly onProgress?: unknown;
   },
   supportedFormats: ReadonlySet<string>,
+  entryName = 'result',
 ): NativePlanOptions => {
   const errors: string[] = [];
   const imported = validateProperties({
@@ -259,6 +278,10 @@ export const validatePlanOptions = (
     errors,
   });
   const postProcess = validatePostProcess(options.postProcess, errors);
+  if (options.onProgress !== undefined && typeof options.onProgress !== 'function') {
+    errors.push('onProgress: expected a function');
+  }
+  const stem = outputStem(entryName);
   const nativeTargets: NativeTarget[] = [];
   let unsupported: { readonly formatIndex: number; readonly format: string } | undefined;
   if (!Array.isArray(options.targets) || options.targets.length === 0) {
@@ -288,6 +311,7 @@ export const validatePlanOptions = (
         format: canonical,
         nativeId: resolveRoute(canonical, exported),
         properties: nativeProperties(exported, descriptors),
+        outputName: `${stem}.${routesByFormat[canonical].extension}`,
       });
     }
   }
@@ -304,6 +328,7 @@ export const validatePlanOptions = (
     importProperties: nativeProperties(imported, importDescriptors),
     postProcess,
     targets: nativeTargets,
+    progress: options.onProgress !== undefined,
   };
 };
 

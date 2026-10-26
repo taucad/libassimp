@@ -43,23 +43,48 @@ export const elfDependencies = (text) =>
     .map((match) => match[1])
     .toSorted((left, right) => left.localeCompare(right));
 
+// The hardening CMakeLists.txt asks for, read back from the binary: full RELRO
+// (a GNU_RELRO segment plus BIND_NOW), a non-executable stack, stack-protector
+// canaries, and _FORTIFY_SOURCE's checked libc calls.
+export const elfHardening = ({ dynamic, programHeaders, symbols }) => {
+  const findings = [];
+  if (!/^\s*GNU_RELRO\b/mu.test(programHeaders)) findings.push('no GNU_RELRO segment');
+  if (!/\(FLAGS\)\s.*\bBIND_NOW\b|\(FLAGS_1\)\s.*\bNOW\b/mu.test(dynamic))
+    findings.push('lazy binding (no BIND_NOW)');
+  if (/^\s*GNU_STACK\b.*\bRWE\b/mu.test(programHeaders)) findings.push('executable stack');
+  if (!/\b__stack_chk_fail\b/u.test(symbols)) findings.push('no stack protector (__stack_chk_fail)');
+  if (!/\b__(?!stack_chk_fail)\w+_chk\b/u.test(symbols))
+    findings.push('no _FORTIFY_SOURCE checked calls (__*_chk)');
+  return findings;
+};
+
+export const peHardening = (headers) =>
+  /Control Flow Guard/u.test(headers) ? [] : ['no Control Flow Guard (/guard:cf)'];
+
+export const machoHardening = (symbols) =>
+  /\b___stack_chk_fail\b/u.test(symbols) ? [] : ['no stack protector (___stack_chk_fail)'];
+
 const inspectLinux = () => {
   const versions = run('readelf', ['--version-info', binary]);
   const glibc = maxGlibcVersion(versions);
   const glibcxx = maxGlibcxxVersion(versions);
   const cxxabi = maxCxxabiVersion(versions);
   assert(glibc, 'native addon has no versioned glibc dependency');
-  assert(glibcxx, 'native addon has no versioned libstdc++ dependency');
-  assert(cxxabi, 'native addon has no versioned C++ ABI dependency');
   assert(compareVersions(glibc, '2.17') <= 0, `native addon requires GLIBC_${glibc}, above GLIBC_2.17`);
-  assert(
-    compareVersions(glibcxx, '3.4.19') <= 0,
-    `native addon requires GLIBCXX_${glibcxx}, above GLIBCXX_3.4.19`,
-  );
-  assert(compareVersions(cxxabi, '1.3.7') <= 0, `native addon requires CXXABI_${cxxabi}, above CXXABI_1.3.7`);
-  const dependencies = elfDependencies(run('readelf', ['--dynamic', binary]));
+  // libstdc++ is linked in statically so that mimalloc serves every C++
+  // allocation the addon frees (CMakeLists.txt); a shared one would mix heaps.
+  assert.equal(glibcxx, undefined, `native addon requires GLIBCXX_${glibcxx} from a shared libstdc++`);
+  assert.equal(cxxabi, undefined, `native addon requires CXXABI_${cxxabi} from a shared libstdc++`);
+  const dynamic = run('readelf', ['--dynamic', binary]);
+  const dependencies = elfDependencies(dynamic);
   checkElfDependencies(dependencies);
-  return { cxxabi, dependencies, glibc, glibcxx };
+  const hardening = elfHardening({
+    dynamic,
+    programHeaders: run('readelf', ['--program-headers', '--wide', binary]),
+    symbols: run('readelf', ['--dyn-syms', '--wide', binary]),
+  });
+  assert.deepEqual(hardening, [], `native addon hardening: ${hardening.join(', ')}`);
+  return { dependencies, glibc, hardening: 'full RELRO, NX stack, SSP, FORTIFY', libstdcxx: 'static' };
 };
 
 export const checkElfDependencies = (dependencies) => {
@@ -72,7 +97,6 @@ export const checkElfDependencies = (dependencies) => {
     'libm.so.6',
     'libpthread.so.0',
     'librt.so.1',
-    'libstdc++.so.6',
   ]);
   assert.deepEqual(
     dependencies.filter((dependency) => !allowed.has(dependency)),
@@ -101,7 +125,9 @@ const inspectDarwin = () => {
     ),
     `unexpected Mach-O dependencies: ${dependencies.join(', ')}`,
   );
-  return { dependencies, minimum: '11.0' };
+  const hardening = machoHardening(run('nm', ['-u', binary]));
+  assert.deepEqual(hardening, [], `native addon hardening: ${hardening.join(', ')}`);
+  return { dependencies, minimum: '11.0', hardening: 'SSP' };
 };
 
 const inspectWindows = () => {
@@ -118,7 +144,9 @@ const inspectWindows = () => {
     [],
     `unexpected PE dependencies: ${dependencies.join(', ')}`,
   );
-  return { dependencies };
+  const hardening = peHardening(run('dumpbin', ['/nologo', '/headers', binary]));
+  assert.deepEqual(hardening, [], `native addon hardening: ${hardening.join(', ')}`);
+  return { dependencies, hardening: 'CFG' };
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

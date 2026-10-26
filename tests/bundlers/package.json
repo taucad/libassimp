@@ -1,0 +1,14 @@
+{
+  "name": "libassimp-bundler-fixtures",
+  "private": true,
+  "type": "module",
+  "description": "Consumer apps that install the packed libassimp tarball; scripts/test-bundlers.mjs builds and drives them.",
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "next": "16.4.2",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "vite": "8.2.4",
+    "webpack": "5.111.1"
+  }
+}

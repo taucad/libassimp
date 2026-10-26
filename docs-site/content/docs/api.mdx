@@ -3,7 +3,7 @@ title: API reference
 description: Conversion methods, generated capabilities, directional formats, typed options, lifecycle, and failures.
 ---
 
-Every public symbol is available from the single `libassimp` entry.
+Every conversion symbol is available from the `libassimp` entry. The lazy `libassimp/capabilities` subpath adds option and step descriptions, and `libassimp/wasm` is the binary.
 
 ## `convert`
 
@@ -16,7 +16,7 @@ export declare const convert: <Format extends import('libassimp').ExportFormat>(
 ) => Promise<ConvertResult>;
 ```
 
-Converts one entry file to one canonical target. The first array element is always the entry file. `ConvertOptions` contains `to`, `resolve`, `importOptions`, `postProcess`, and target-specific `exportOptions`.
+Converts one entry file to one canonical target. The first array element is the entry file; names must be unique and non-empty. `ConvertOptions` contains `to`, `resolve`, `signal`, `onProgress`, `importOptions`, `postProcess`, and target-specific `exportOptions`. Outputs are named after the entry: `chair.obj` to `step` gives `chair.step`.
 
 ## `convertFormats`
 
@@ -56,13 +56,15 @@ import type { Assimp, CreateAssimpOptions } from 'libassimp';
 export declare const createAssimp: (options?: CreateAssimpOptions) => Promise<Assimp>;
 ```
 
-An instance exposes `convert`, `convertFormats`, directional `formats`, `dispose()`, and `Symbol.dispose`. Work is FIFO-serialized per instance; create separate instances for parallel conversions.
+An instance exposes `convert`, `convertFormats`, and directional `formats`. Work is FIFO-serialized per instance; create separate instances for parallel conversions. `dispose()` resolves after queued work drains; `await using` awaits it.
 
-`CreateAssimpOptions` has only:
+`CreateAssimpOptions`:
 
+- `backend`: `'auto'` (the Node default: native addon, else Wasm with a warning), `'native'` or `'wasm'`. Browsers use Wasm.
 - `wasmUrl`: override the entry's single Wasm URL.
 - `wasmBinary`: compile supplied bytes instead of fetching that URL.
 - `onLog`: receive runtime diagnostics.
+- `recycleAboveBytes`: drop an idle Wasm runtime above this much memory (default 512 MiB); a trapped one is also replaced.
 
 ## Static generated data
 
@@ -75,11 +77,11 @@ const glbToStl = conversionEdges.find(({ from, to }) => from === 'glb' && to ===
 console.log(stl.binary.default, glbToStl, defaultPostProcess);
 ```
 
-- `assimpCapabilities` is the keyed serializable registry: directional import/export metadata, exact export-option descriptors, `ImportOptions`, and `PostProcessDescriptor` data.
+- `assimpCapabilities` is the keyed serializable registry: directional import/export metadata, exact export-option descriptors, `ImportOptions`, and `PostProcessDescriptor` data. Descriptions are left out of the root entry; `libassimp/capabilities` exports the same registry as `DescribedCapabilities`, with a `description` on each `DescribedOptionDescriptor` and `DescribedPostProcessDescriptor`.
 - `conversionEdges` is the exact import/export cross-product minus identity pairs. `ConversionEdge` remains a discriminated union of valid pairs.
 - `defaultPostProcess` is the default readonly `PostProcessStep` tuple.
 
-Importing these values does not load Wasm.
+Importing these values does not load Wasm or the native addon.
 
 ## Core types
 
@@ -93,7 +95,7 @@ Importing these values does not load Wasm.
 
 ### Options
 
-`ImportOptions` is the generated exact import configuration. `ExportOptionsByFormat` maps every canonical target to its exact options; `ExportOptionsFor<Format>` indexes that map. `ExportOptionDescriptorsFor<Format>` exposes its runtime descriptors. `OptionDescriptor` describes kind, default, bounds, enum values, applicability, and documentation. No public index signature or raw native property bag exists.
+`ImportOptions` is the generated exact import configuration. `ExportOptionsByFormat` maps every canonical target to its exact options; `ExportOptionsFor<Format>` indexes that map. `ExportOptionDescriptorsFor<Format>` exposes its runtime descriptors. `OptionDescriptor` describes kind, default, bounds and enum values. No public index signature or raw native property bag exists.
 
 ### Formats
 
@@ -101,7 +103,15 @@ Importing these values does not load Wasm.
 
 ### Requests and results
 
-`ConvertTarget`, `ConvertOptions`, `ConvertFormatsOptions`, `ConvertResult`, `ConvertedFormat`, and `ConvertFormatsResult` preserve exact target types. Empty plural target arrays are rejected by both TypeScript and runtime validation.
+`ConvertTarget`, `ConvertOptions`, `ConvertFormatsOptions`, `ConvertResult`, `ConvertedFormat`, and `ConvertFormatsResult` preserve exact target types. Empty plural target arrays are rejected by both TypeScript and runtime validation. Each `ConvertedFile` holds `Uint8Array<ArrayBuffer>` bytes that it owns.
+
+### Diagnostics
+
+Results carry a `ConversionReport`: `warnings` (`ConversionWarning`), `timings` (`ConversionTimings`, milliseconds), and `peakMemoryBytes`. `onProgress`, a `ConvertProgressListener`, receives throttled `ConvertProgress` reports per `ConversionPhase`.
+
+<auto-type-table path="./props.ts" name="ConvertProgress" />
+
+Node.js also exports `createDirectoryResolver`; see [Resolve sidecar files](/docs/guides/resolve-sidecar-files).
 
 ## Failures
 
@@ -124,7 +134,7 @@ try {
 }
 ```
 
-Codes are `NO_FILES`, `UNSUPPORTED_FORMAT`, `INVALID_OPTIONS`, `RESOLVE_FAILED`, `IMPORT_FAILED`, and `EXPORT_FAILED`. Plural output is atomic: a failed target exposes no partial result.
+Context fields that do not apply are absent. [Handle failures](/docs/guides/handle-failures) gives each code's remedy. Plural output is atomic: a failed target exposes no partial result.
 
 ## Versioning
 

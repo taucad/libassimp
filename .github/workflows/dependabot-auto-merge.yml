@@ -10,7 +10,14 @@ permissions:
 
 jobs:
   merge:
-    if: github.actor == 'dependabot[bot]'
+    # pull_request_target runs with a write token, so trust only what the
+    # event payload proves: Dependabot authored the pull request and its head
+    # branch lives in this repository. github.actor alone is the account that
+    # caused this event, which a confused-deputy push can make Dependabot.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - id: metadata

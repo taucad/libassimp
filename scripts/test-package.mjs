@@ -116,6 +116,10 @@ const watchdog = setTimeout(() => {
 }, 120_000);
 const bytes = new Uint8Array(await readFile(process.argv[2]));
 const request = [{ name: 'cube.obj', bytes }, { to: 'glb' }];
+// Timings and peak memory are measurements, not output; compare everything else.
+const comparable = (value) => Array.isArray(value)
+  ? { formats: [...value], warnings: value.warnings }
+  : { files: value.files, warnings: value.warnings };
 const glbPointCount = (contents) => {
   const view = new DataView(contents.buffer, contents.byteOffset, contents.byteLength);
   assert.equal(view.getUint32(0, true), 0x46546c67);
@@ -134,7 +138,7 @@ const wasmAssimp = await native.createAssimp({ backend: 'wasm' });
 assert.equal(nativeAssimp.backend, 'native');
 assert.equal(wasmAssimp.backend, 'wasm');
 const [nativeResult, wasmResult] = await Promise.all([nativeAssimp.convert(...request), wasmAssimp.convert(...request)]);
-assert.deepEqual(nativeResult, wasmResult, 'native/Wasm bytes differ');
+assert.deepEqual(comparable(nativeResult), comparable(wasmResult), 'native/Wasm bytes differ');
 assert.equal(Buffer.from(nativeResult.files[0].bytes.subarray(0, 4)).toString('latin1'), 'glTF');
 const materialObj = new Uint8Array(await readFile(process.argv[4]));
 const materialBytes = new Uint8Array(await readFile(process.argv[5]));
@@ -149,12 +153,12 @@ assert.equal(resolverCalls, 1);
 resolverCalls = 0;
 const wasmSidecar = await wasmAssimp.convert(...sidecarRequest);
 assert.equal(resolverCalls, 1);
-assert.deepEqual(nativeSidecar, wasmSidecar, 'sidecar native/Wasm bytes differ');
+assert.deepEqual(comparable(nativeSidecar), comparable(wasmSidecar), 'sidecar native/Wasm bytes differ');
 const missingResults = [];
 for (const backend of [nativeAssimp, wasmAssimp]) {
   const input = { name: 'cube-material.obj', bytes: materialObj };
   const synchronous = await backend.convert(input, { to: 'glb', resolve: () => materialBytes });
-  assert.deepEqual(synchronous, nativeSidecar);
+  assert.deepEqual(comparable(synchronous), comparable(nativeSidecar));
   missingResults.push(await backend.convert(input, { to: 'glb', resolve: () => undefined }));
   const failure = new Error('sidecar provider rejected');
   await assert.rejects(backend.convert(input, { to: 'glb', resolve: async () => { throw failure; } }),
@@ -185,16 +189,16 @@ for (const backend of [nativeAssimp, wasmAssimp]) {
     }), (error) => error === reason);
     assert.equal(preAbortedCalls, 0);
     const recovered = await backend.convert(...sidecarRequest);
-    assert.deepEqual(recovered, nativeSidecar, 'conversion after cancellation differs');
+    assert.deepEqual(comparable(recovered), comparable(nativeSidecar), 'conversion after cancellation differs');
   }
 }
-assert.deepEqual(missingResults[0], missingResults[1], 'missing sidecar behavior differs');
+assert.deepEqual(comparable(missingResults[0]), comparable(missingResults[1]), 'missing sidecar behavior differs');
 const targets = [{ to: 'glb' }, { to: 'stl', exportOptions: { binary: true } }, { to: 'assjson' }];
 const [nativeFormats, wasmFormats] = await Promise.all([
   nativeAssimp.convertFormats({ name: 'cube.obj', bytes }, { targets }),
   wasmAssimp.convertFormats({ name: 'cube.obj', bytes }, { targets }),
 ]);
-assert.deepEqual(nativeFormats, wasmFormats, 'multi-output native/Wasm bytes differ');
+assert.deepEqual(comparable(nativeFormats), comparable(wasmFormats), 'multi-output native/Wasm bytes differ');
 assert.deepEqual(nativeFormats.map(({ format }) => format), ['glb', 'stl', 'assjson']);
 for (const backend of [nativeAssimp, wasmAssimp]) await assert.rejects(backend.convert({ name: 'bad.obj', bytes: new Uint8Array([0]) }, { to: 'glb' }));
 const instance = await native.createAssimp({ backend: 'native' });
@@ -314,5 +318,8 @@ app.whenReady().then(() => {
   }
   process.stdout.write(`clean ${process.env['LIBASSIMP_RUNTIME'] ?? 'node'} smoke passed for ${suffix}\n`);
 } finally {
-  rmSync(work, { force: true, recursive: true });
+  // Windows holds electron.exe open for a moment after Electron exits (its
+  // crashpad handler outlives the main process), so retry instead of failing
+  // a smoke that already passed.
+  rmSync(work, { force: true, maxRetries: 10, recursive: true, retryDelay: 500 });
 }

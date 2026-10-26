@@ -3,7 +3,7 @@ title: Overview
 description: Typed, import-once 3D format conversion in Node.js, browsers, and workers.
 ---
 
-libassimp compiles the Open Asset Import Library to WebAssembly behind a typed TypeScript API. It converts files; it does not expose a retained scene graph or a Wasm handle.
+libassimp compiles the Open Asset Import Library to WebAssembly and, on Node.js, to a native Node-API addon, behind one typed TypeScript API. It converts files; it does not expose a retained scene graph or a Wasm handle.
 
 ## What it costs to ship
 
@@ -39,7 +39,7 @@ await writeFile(stl.files[0].name, stl.files[0].bytes);
 
 The source is imported and post-processed once. Results map positionally to the target tuple, exports run sequentially, and any failure rejects without exposing partial output. Use singular `convert` when only one output is needed or when you want to persist and release outputs one at a time.
 
-Typed `importOptions`, `postProcess`, and format-specific `exportOptions` reject invalid configuration before Wasm work. A Promise-returning `resolve` callback can fetch sidecars on demand on every supported host.
+Typed `importOptions`, `postProcess`, and format-specific `exportOptions` reject invalid configuration before any engine work. A Promise-returning `resolve` callback can fetch sidecars on demand on every supported host.
 
 ## Next
 

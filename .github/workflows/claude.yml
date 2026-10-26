@@ -69,7 +69,6 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
-      id-token: write
       actions: read
     steps:
       - name: Checkout repository
@@ -83,6 +82,9 @@ jobs:
         uses: anthropics/claude-code-action@833fb0f8c9f6686b33d963a8bae0a94f4936ab2a # v1.0.211
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # The workflow token replaces the OIDC exchange for an app token, so
+          # the job needs no id-token permission.
+          github_token: ${{ github.token }}
           trigger_phrase: /approve-claude
 
           # Additional permissions for Claude to read CI results on PRs
@@ -91,7 +93,7 @@ jobs:
 
           # Claude CLI arguments - model and tools configuration
           claude_args: |
-            --allowedTools "Bash(pnpm *),Bash(nx *),Bash(npm *),Bash(git *),Bash(gh *)"
+            --allowedTools "Bash(pnpm run test),Bash(pnpm run lint),Bash(pnpm run typecheck),Bash(pnpm run format:check),Bash(git status),Bash(git diff *),Bash(git log *),Bash(gh pr view *),Bash(gh pr diff *),Bash(gh pr checks *),Bash(gh run view *),Bash(gh issue view *)"
 
   # Job 3: Run Claude directly for trusted users (OWNER, MEMBER, COLLABORATOR)
   # No approval needed - runs immediately
@@ -119,9 +121,26 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
-      id-token: write
       actions: read
     steps:
+      # A label carries no author_association, and the issue body it points
+      # Claude at may come from anyone. Act only when the account that applied
+      # the label is a member or collaborator with write access or above.
+      - name: Require a trusted labeler
+        if: github.event_name == 'issues' && github.event.action == 'labeled'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LABELER: ${{ github.event.sender.login }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          permission="$(gh api "repos/$REPOSITORY/collaborators/$LABELER/permission" --jq .permission 2>/dev/null || echo none)"
+          case "$permission" in
+            admin | maintain | write) echo "$LABELER has $permission access" ;;
+            *)
+              echo "::error::$LABELER ($permission) cannot start Claude on an issue body; a member or collaborator must apply the label"
+              exit 1
+              ;;
+          esac
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -133,6 +152,9 @@ jobs:
         uses: anthropics/claude-code-action@833fb0f8c9f6686b33d963a8bae0a94f4936ab2a # v1.0.211
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # The workflow token replaces the OIDC exchange for an app token, so
+          # the job needs no id-token permission.
+          github_token: ${{ github.token }}
 
           # Additional permissions for Claude to read CI results on PRs
           additional_permissions: |
@@ -140,4 +162,4 @@ jobs:
 
           # Claude CLI arguments - model and tools configuration
           claude_args: |
-            --allowedTools "Bash(pnpm *),Bash(nx *),Bash(npm *),Bash(git *),Bash(gh *)"
+            --allowedTools "Bash(pnpm run test),Bash(pnpm run lint),Bash(pnpm run typecheck),Bash(pnpm run format:check),Bash(git status),Bash(git diff *),Bash(git log *),Bash(gh pr view *),Bash(gh pr diff *),Bash(gh pr checks *),Bash(gh run view *),Bash(gh issue view *)"

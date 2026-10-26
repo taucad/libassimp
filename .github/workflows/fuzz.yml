@@ -1,0 +1,143 @@
+name: Fuzz
+
+# libFuzzer over the C++ Plan pipeline (tests/fuzz/plan-fuzzer.cpp), built with
+# ASan and UBSan over the shipped (native preset) format set and seeded with
+# tests/fuzz/corpus. Nightly and on harness, corpus or engine changes the run
+# fails when it finds a crash; a pull request that touches the harness gets a
+# short smoke that proves the harness builds and executes, and reports what it
+# finds without failing. Every finding is uploaded as an artifact.
+
+on:
+  schedule:
+    - cron: '43 2 * * *'
+  push:
+    branches: [main, next]
+    paths:
+      - .github/workflows/fuzz.yml
+      - CMakeLists.txt
+      - assimp
+      - scripts/generate-fuzz-corpus.mjs
+      - src/cpp/**
+      - tests/adversarial-cases.mjs
+      - tests/fuzz/**
+  pull_request:
+    paths:
+      - .github/workflows/fuzz.yml
+      - scripts/generate-fuzz-corpus.mjs
+      - tests/adversarial-cases.mjs
+      - tests/fuzz/**
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Fuzzing time in seconds
+        required: false
+        default: '3600'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-24.04
+    # Origin: a cold instrumented engine build is the long pole (the sanitizer
+    # gate's cold build is the same order); the nightly fuzzes for 60 minutes.
+    timeout-minutes: 180
+    env:
+      CC: clang
+      CXX: clang++
+      # The same ccache arrangement as ci.yml's native gates, under its own key:
+      # -fsanitize=fuzzer-no-link changes every object.
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPILERCHECK: content
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 2G
+      CCACHE_NOHASHDIR: 'true'
+      # Allocation failures stay recoverable so std::bad_alloc paths run; UBSan
+      # findings stop the input so libFuzzer records them.
+      ASAN_OPTIONS: allocator_may_return_null=1:detect_leaks=1:symbolize=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:suppressions=tests/fuzz/ubsan.supp
+      SECONDS_BUDGET: ${{ github.event_name == 'pull_request' && '120' || github.event_name == 'push' && '600' || inputs.seconds || '3600' }}
+      STRICT: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '26'
+      - name: Require the checked-in corpus to match its generator
+        run: node scripts/generate-fuzz-corpus.mjs --check
+      - run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends ccache ninja-build
+      - name: Record the engine submodule commit
+        id: engine
+        run: echo "sha=$(git -C assimp rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .ccache
+          key: ccache-v1-fuzz-${{ steps.engine.outputs.sha }}
+          restore-keys: ccache-v1-fuzz-
+      - name: Build the instrumented harness
+        run: |
+          ccache --zero-stats
+          cmake --preset native -B build/fuzz \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DLIBASSIMP_FUZZ=ON -DLIBASSIMP_SANITIZERS=ON \
+            -DLIBASSIMP_NATIVE_ADDON=OFF -DLIBASSIMP_NATIVE_TESTS=OFF
+          cmake --build build/fuzz --target libassimp-fuzz-plan --parallel
+          ccache --show-stats
+      - name: Fuzz the Plan pipeline
+        id: fuzz
+        run: |
+          mkdir -p fuzz-corpus fuzz-artifacts
+          started="$(date +%s)"
+          # Fork mode keeps going after a finding, so one run collects every
+          # crash, leak, out-of-memory and timeout it reaches.
+          set +e
+          build/fuzz/libassimp-fuzz-plan \
+            -fork=2 -ignore_crashes=1 -ignore_ooms=1 -ignore_timeouts=1 \
+            -max_total_time="$SECONDS_BUDGET" -timeout=30 -rss_limit_mb=4096 -max_len=65536 \
+            -artifact_prefix=fuzz-artifacts/ \
+            fuzz-corpus tests/fuzz/corpus 2>&1 | tee fuzz.log
+          status="${PIPESTATUS[0]}"
+          set -e
+          crashes="$(find fuzz-artifacts -name 'crash-*' | wc -l)"
+          leaks="$(find fuzz-artifacts -name 'leak-*' | wc -l)"
+          ooms="$(find fuzz-artifacts -name 'oom-*' | wc -l)"
+          timeouts="$(find fuzz-artifacts -name 'timeout-*' | wc -l)"
+          executions="$(grep -oE 'exec/s: [0-9]+' fuzz.log | tail -n 1 || true)"
+          {
+            echo "### Fuzz (${SECONDS_BUDGET} s budget, $(( $(date +%s) - started )) s fuzzing)"
+            echo
+            echo "| crashes | leaks | out-of-memory | timeouts | corpus | last rate |"
+            echo "| --- | --- | --- | --- | --- | --- |"
+            echo "| $crashes | $leaks | $ooms | $timeouts | $(find fuzz-corpus -type f | wc -l) | ${executions:-none} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "crashes=$((crashes + leaks))" >> "$GITHUB_OUTPUT"
+          # A harness that never executed is broken, whatever the event.
+          # Fork mode reports '#<job>: cov: ...'; a single process reports INITED.
+          if ! grep -qE '#[0-9]+(: cov:|.*INITED)' fuzz.log; then
+            echo "::error::the fuzzer did not execute (exit $status)"
+            exit 1
+          fi
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-findings
+          path: |
+            fuzz-artifacts/
+            fuzz.log
+          if-no-files-found: ignore
+      - name: Fail on crashes and leaks
+        if: steps.fuzz.outputs.crashes != '0'
+        run: |
+          if [[ "$STRICT" == true ]]; then
+            echo "::error::libFuzzer found ${{ steps.fuzz.outputs.crashes }} crash or leak inputs; see the fuzz-findings artifact"
+            exit 1
+          fi
+          echo "::warning::libFuzzer found ${{ steps.fuzz.outputs.crashes }} crash or leak inputs in the smoke; see the fuzz-findings artifact"

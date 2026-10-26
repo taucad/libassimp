@@ -5,6 +5,8 @@ import {
   assimpCapabilities,
   convertFormats,
   type ConversionEdge,
+  type ConversionReport,
+  type ConversionWarning,
   type ConvertFormatsOptions,
   type ConvertOptions,
   type ConvertTarget,
@@ -23,8 +25,14 @@ test('format union and positional tuple inference remain exact', () => {
     { targets: [{ to: 'glb' }, { to: 'stl', exportOptions: { binary: true } }, { to: 'glb' }] },
   );
   expectTypeOf(result).toEqualTypeOf<
-    Promise<readonly [ConvertedFormat<'glb'>, ConvertedFormat<'stl'>, ConvertedFormat<'glb'>]>
+    Promise<
+      readonly [ConvertedFormat<'glb'>, ConvertedFormat<'stl'>, ConvertedFormat<'glb'>] & ConversionReport
+    >
   >();
+  expectTypeOf<Awaited<typeof result>[1]['files'][number]['bytes']>().toEqualTypeOf<
+    Uint8Array<ArrayBuffer>
+  >();
+  expectTypeOf<Awaited<typeof result>['warnings'][number]>().toEqualTypeOf<ConversionWarning>();
 });
 
 test('format options are correlated and native escape hatches do not exist', () => {

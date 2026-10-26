@@ -4,6 +4,7 @@ export type {
   AssimpFailureCode,
   AssimpFile,
   ConversionEdge,
+  ConvertProgress,
   ConvertFormatsOptions,
   ConvertFormatsResult,
   ConvertOptions,

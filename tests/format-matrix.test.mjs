@@ -3,15 +3,18 @@
 // the exporters honour. Every primary
 // output is fingerprinted in `determinism.json`, so an engine or flag change
 // that alters bytes fails here instead of downstream. Re-record deliberate
-// changes with LIBASSIMP_RECORD_DETERMINISM=1 (see CONTRIBUTING.md).
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+// changes with LIBASSIMP_RECORD_DETERMINISM=1 (see CONTRIBUTING.md). The same
+// suite runs once per backend (`tests/backend.mjs`): native output must match
+// the Wasm fingerprints, except the entries in `PARITY_EXCEPTIONS`.
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createAssimp } from '../src/index.ts';
+import { backend, createTestAssimp } from './backend.mjs';
+import { IMPORTS, TIMESTAMPED } from './format-fixtures.mjs';
 import { fnv64 } from './fnv64.mjs';
 
 const MODELS = fileURLToPath(new URL('../assimp/test/models/', import.meta.url));
@@ -26,71 +29,6 @@ const glbJson = (bytes) => {
   expect(view.getUint32(16, true)).toBe(0x4e4f_534a);
   return JSON.parse(text(bytes.subarray(20, 20 + view.getUint32(12, true))));
 };
-
-// One representative fixture per importer the reference suite exercised.
-// `error` marks the formats `assimp-builds.json` disables and the fixtures assimp
-// itself refuses.
-const IMPORTS = [
-  ['3D', ['3D/box.uc', '3D/box_a.3d', '3D/box_d.3d']],
-  ['3DS', ['3DS/test1.3ds']],
-  ['3MF', ['3MF/box.3mf']],
-  ['AC', ['AC/SphereWithLight.ac']],
-  ['AMF', ['AMF/test1.amf']],
-  ['ASE', ['ASE/ThreeCubesGreen.ASE']],
-  ['B3D', ['B3D/WusonBlitz.b3d']],
-  ['BLEND', ['BLEND/box.blend']],
-  ['BVH', ['BVH/Boxing_Toes.bvh']],
-  ['COB', ['COB/molecule.cob']],
-  ['COLLADA', ['Collada/duck.dae']],
-  ['CSM', ['CSM/ThomasFechten.csm']],
-  ['DXF', ['DXF/PinkEggFromLW.dxf']],
-  ['FBX', ['FBX/box.fbx']],
-  ['FBX ascii', ['FBX/embedded_ascii/box.FBX']],
-  ['glTF2', ['glTF2/BoxTextured-glTF-Binary/BoxTextured.glb']],
-  ['HMP', ['HMP/terrain.hmp']],
-  ['IFC', ['IFC/cube-blender-ifc4.ifc']],
-  ['IQM', ['IQM/mrfixit.iqm']],
-  ['LWO', ['LWO/LWO2/hierarchy.lwo']],
-  ['LWS', ['LWS/move_x.lws']],
-  ['MD2', ['MD2/faerie.md2']],
-  ['MD3', ['../models-nonbsd/MD3/watercan.md3']],
-  ['MD5', ['MD5/SimpleCube.md5mesh']],
-  ['MDC', ['MDC/spider.mdc']],
-  ['MDL HL1', ['MDL/MDL (HL1)/chrome_sphere.mdl']],
-  ['MDL3', ['MDL/MDL3 (3DGS A4)/minigun.MDL']],
-  ['MDL5', ['MDL/MDL5 (3DGS A5)/minigun_mdl5.mdl']],
-  ['MDL7', ['MDL/MDL7 (3DGS A7)/Sphere_DiffPinkBlueSpec_Alpha90.mdl']],
-  ['MS3D', ['MS3D/twospheres.ms3d']],
-  ['NFF', ['NFF/cylinder.nff']],
-  ['OBJ', ['OBJ/cube_usemtl.obj', 'OBJ/cube_usemtl.mtl']],
-  ['OFF', ['OFF/Cube.off']],
-  ['Ogre', ['Ogre/TheThing/Mesh.mesh.xml', 'Ogre/TheThing/BlockMat.material']],
-  ['OpenGEX', ['OpenGEX/Example.ogex']],
-  ['PLY', ['PLY/cube.ply']],
-  ['PLY binary', ['PLY/cube_binary.ply']],
-  ['Q3D', ['Q3D/earth.q3o']],
-  ['SIB', ['SIB/heffalump.sib']],
-  ['SMD', ['SMD/triangle.smd']],
-  ['STL ascii', ['STL/Spider_ascii.stl']],
-  ['STL binary', ['STL/Spider_binary.stl']],
-  ['USDA', ['../models-nonbsd/USD/usda/texturedcube.usda']],
-  ['USDC', ['../models-nonbsd/USD/usdc/texturedcube.usdc']],
-  ['USDZ', ['../models-nonbsd/USD/usdz/damaged-helmet-gltf.usdz']],
-  ['VRML', ['WRL/Wuson.wrl']],
-  ['X', ['X/test_cube_text.x']],
-  ['X binary', ['X/test_cube_binary.x']],
-  ['X3D', ['X3D/HelloWorld.x3d']],
-  // Assimp recognizes the extension but has no binary X3D decoder.
-  ['X3DB', ['X3DB/HelloWorld.x3db'], 'error'],
-  ['XGL', ['XGL/sample_official.xgl']],
-  ['IRR', ['IRR/box.irr'], 'error'],
-  ['IRRMesh', ['IRRMesh/spider.irrmesh'], 'error'],
-  ['M3D', ['M3D/cube_usemtl.m3d'], 'error'],
-  ['RAW', ['RAW/WithColor.raw'], 'error'],
-  ['TERRAGEN', ['TER/RealisticTerrain.ter'], 'error'],
-  ['glTF2 Draco', ['glTF2/draco/robot.glb'], 'error'],
-  ['not a model', ['3DS/test.png'], 'error'],
-];
 
 it('names every fixture path with exact case', () => {
   for (const [, files] of IMPORTS) {
@@ -112,21 +50,69 @@ it('names every fixture path with exact case', () => {
 const EXPORT_SOURCE = 'glTF2/simple_skin/quad_skin.glb';
 const TEXTURED_SOURCE = 'glTF2/BoxTextured-glTF-Binary/BoxTextured.glb';
 
-// Exporters that stamp the wall-clock time into their output: their bytes are
-// never equal twice, so the matrix asserts their shape instead of a hash.
-const TIMESTAMPED = new Set(['3mf', 'dae', 'fbx', 'step']);
-
 const fingerprints = fileURLToPath(new URL('./determinism.json', import.meta.url));
 const recorded = JSON.parse(readFileSync(fingerprints, 'utf8'));
-const recording = process.env['LIBASSIMP_RECORD_DETERMINISM'] === '1';
+// Wasm is the recording backend; native is checked against what it recorded.
+const recording = backend === 'wasm' && process.env['LIBASSIMP_RECORD_DETERMINISM'] === '1';
 const observed = {};
+// CI uploads this directory: every observed fingerprint, plus each output that
+// differs from determinism.json, so a parity difference can be diffed offline.
+const report = process.env['LIBASSIMP_FINGERPRINTS_OUT'];
+if (report) mkdirSync(report, { recursive: true });
+
+// Fingerprints native may not share with Wasm, each with the cause. An entry
+// must still differ on the platforms it names, so a fixed difference fails
+// until its entry is removed. All causes are in the engine (taucad/assimp and
+// its LightUSD), not in libassimp's bridge.
+const LIBM =
+  'The values come from std::sin, std::cos, std::atan2 or std::asin. Wasm links musl libm and each native ' +
+  'platform its own libm; they differ in the last ulp, which the assjson text shows.';
+const USD_ROOT_ORDER =
+  "LightUSD's Layer::primspecs() is an std::unordered_map and LayerToStage adds root prims in its " +
+  "iteration order (its own TODO: follow primChildren), so root children follow each standard library's " +
+  'string hash instead of the authored order. Engine bug, reported to the engine workstream.';
+const FBX_RAW_ORDER =
+  "FBXConverter's SetShadingPropertiesRaw copies the `$raw.*` material properties in the iteration order " +
+  "of an fbx_unordered_map, so they follow each standard library's string hash (MSVC's differs). Engine bug.";
+const PARITY_EXCEPTIONS = {
+  'import ASE': {
+    platforms: ['linux'],
+    reason:
+      'SGSpatialSort sorts vertices with std::sort on plane distance alone; each standard library orders ' +
+      'ties differently, so smoothing-group normals sum in a different order (last-ulp float32 difference).',
+  },
+  'import BVH': {
+    platforms: ['darwin', 'linux', 'win32'],
+    reason: `Euler channels become quaternions. ${LIBM}`,
+  },
+  'import FBX': { platforms: ['win32'], reason: FBX_RAW_ORDER },
+  'import FBX ascii': { platforms: ['win32'], reason: FBX_RAW_ORDER },
+  'import MDC': {
+    platforms: ['darwin', 'linux', 'win32'],
+    reason: `MD3::LatLngNormalToVec3 decodes the normals. ${LIBM}`,
+  },
+  'import MDL HL1': { platforms: ['linux'], reason: `Bone Euler angles become quaternions. ${LIBM}` },
+  'import NFF': {
+    platforms: ['darwin', 'win32'],
+    reason: `aiProcess_GenUVCoords maps the shapes' UVs. ${LIBM}`,
+  },
+  'import USDA': { platforms: ['darwin', 'linux', 'win32'], reason: USD_ROOT_ORDER },
+  'import USDC': { platforms: ['darwin', 'linux', 'win32'], reason: USD_ROOT_ORDER },
+};
 
 /** Pin one primary output's fingerprint, or record it when re-recording. */
 const pin = (id, bytes) => {
   const hash = fnv64(bytes);
   observed[id] = hash;
   if (recording) return;
-  expect(hash, `${id} output bytes changed; re-record deliberately`).toBe(recorded[id]);
+  // Keep each output that differs from the recording, to diff against Wasm.
+  if (report && hash !== recorded[id]) writeFileSync(join(report, `${id.replaceAll(' ', '-')}.out`), bytes);
+  const exception = backend === 'native' ? PARITY_EXCEPTIONS[id] : undefined;
+  if (exception?.platforms.includes(process.platform)) {
+    expect.soft(hash, `${id} now matches Wasm; remove its parity exception`).not.toBe(recorded[id]);
+    return;
+  }
+  expect.soft(hash, `${id} ${backend} output bytes differ from determinism.json`).toBe(recorded[id]);
 };
 
 /** Read `3D/3dmodel.model` out of a 3MF, which is a ZIP of local file entries. */
@@ -157,11 +143,18 @@ const maxVertexDigits = (xml) =>
 let assimp;
 
 beforeAll(async () => {
-  assimp = await createAssimp();
+  assimp = await createTestAssimp();
 });
 
 afterAll(() => {
   assimp?.dispose();
+  // CI uploads each backend's observed fingerprints to diagnose a parity failure.
+  if (report) {
+    writeFileSync(
+      join(report, 'fingerprints.json'),
+      `${JSON.stringify({ backend, platform: process.platform, observed }, null, 2)}\n`,
+    );
+  }
   if (recording) {
     const sorted = Object.fromEntries(
       Object.entries(observed).sort(([left], [right]) => (left < right ? -1 : 1)),
@@ -210,6 +203,36 @@ describe('importers', () => {
     pin(`import ${id}`, outputs[0].bytes);
   });
 
+  it('drops faces without indices when splitting by primitive type', async () => {
+    const ply = [
+      'ply',
+      'format ascii 1.0',
+      'element vertex 4',
+      'property float x',
+      'property float y',
+      'property float z',
+      'element face 3',
+      'property list uchar int vertex_indices',
+      'end_header',
+      '0 0 0',
+      '1 0 0',
+      '1 1 0',
+      '0 1 0',
+      '3 0 1 2',
+      '4 0 1 2 3',
+      '0',
+      '',
+    ].join('\n');
+    const { files } = await assimp.convert(
+      { name: 'empty-face.ply', bytes: new TextEncoder().encode(ply) },
+      { to: 'assjson', postProcess: ['sortByPrimitiveType'] },
+    );
+    const faces = JSON.parse(text(files[0].bytes)).meshes.map((mesh) =>
+      mesh.faces.map((face) => face.length),
+    );
+    expect(faces).toEqual([[3], [4]]);
+  });
+
   it('takes the entry file from the first element, whatever the order', async () => {
     const obj = load('OBJ/cube_usemtl.obj');
     const mtl = load('OBJ/cube_usemtl.mtl');
@@ -243,7 +266,7 @@ describe('exporters', () => {
       const input = id === '3mf' ? load(TEXTURED_SOURCE) : source;
       const { files } = await assimp.convert(input, { to: id });
       const [plural] = await assimp.convertFormats(input, { targets: [{ to: id }] });
-      expect(files[0].name, `${id} output name`).toBe(`result.${extension}`);
+      expect(files[0].name, `${id} output name`).toBe(`${input.name.replace(/\.[^.]+$/u, '')}.${extension}`);
       if (TIMESTAMPED.has(id)) {
         expect(
           plural.files.map(({ name, bytes }) => ({ name, size: bytes.byteLength })),
@@ -259,11 +282,104 @@ describe('exporters', () => {
   it('returns the sidecars each exporter writes beside the primary output', async () => {
     const source = load(EXPORT_SOURCE);
     const obj = await assimp.convert(source, { to: 'obj' });
-    expect(obj.files.map(({ name }) => name)).toEqual(['result.obj', 'result.mtl']);
+    expect(obj.files.map(({ name }) => name)).toEqual(['quad_skin.obj', 'quad_skin.mtl']);
     const gltf = await assimp.convert(source, { to: 'gltf' });
-    expect(gltf.files.map(({ name }) => name)).toEqual(['result.gltf', 'result.bin']);
+    expect(gltf.files.map(({ name }) => name)).toEqual(['quad_skin.gltf', 'quad_skin.bin']);
     const dae = await assimp.convert(load(TEXTURED_SOURCE), { to: 'dae' });
-    expect(dae.files.map(({ name }) => name)).toEqual(['result.dae', 'result.dae/result_texture_0001.png']);
+    expect(dae.files.map(({ name }) => name)).toEqual([
+      'BoxTextured.dae',
+      'BoxTextured.dae/BoxTextured_texture_0001.png',
+    ]);
+  });
+});
+
+describe('export pipeline', () => {
+  /** Sum of POSITION counts over every GLB primitive, and whether all are indexed. */
+  const glbVertices = (bytes) => {
+    const json = glbJson(bytes);
+    const primitives = json.meshes.flatMap((mesh) => mesh.primitives);
+    return {
+      count: primitives.reduce(
+        (sum, primitive) => sum + json.accessors[primitive.attributes.POSITION].count,
+        0,
+      ),
+      indexed: primitives.every((primitive) => primitive.indices !== undefined),
+    };
+  };
+
+  it('keeps a joined scene indexed when exporting GLB', async () => {
+    // The import joins identical vertices; the export used to un-index them
+    // again (MakeVerboseFormat) and re-join only some, inflating the GLB.
+    const source = load('Collada/duck.dae');
+    const [json, glb] = await assimp.convertFormats(source, { targets: [{ to: 'assjson' }, { to: 'glb' }] });
+    const imported = JSON.parse(text(json.files[0].bytes)).meshes;
+    const vertices = glbVertices(glb.files[0].bytes);
+    expect(vertices.indexed).toBe(true);
+    expect(vertices.count).toBe(imported.reduce((sum, mesh) => sum + mesh.vertices.length / 3, 0));
+  });
+
+  it('leaves the imported scene untouched for every exporter in one plan', async () => {
+    // Read-only exporters share the imported scene instead of copying it, so
+    // a later target must see exactly what an earlier one saw.
+    const source = load(TEXTURED_SOURCE);
+    const ids = assimp.formats.export.map(({ id }) => id);
+    const targets = [{ to: 'assjson' }, ...ids.map((to) => ({ to })), { to: 'assjson' }];
+    const results = await assimp.convertFormats(source, { targets });
+    expect(results.at(-1).files).toEqual(results[0].files);
+    for (const [index, id] of ids.entries()) {
+      if (TIMESTAMPED.has(id)) continue;
+      const { files } = await assimp.convert(source, { to: id });
+      expect(results[index + 1].files, `${id} after the other exporters`).toEqual(files);
+    }
+  });
+
+  it('writes mirrored, instanced, normal-less meshes to STL with outward facet normals', async () => {
+    // One four-triangle mesh without normals, instanced plainly, mirrored in
+    // X, and under a rotated parent with a negative Y scale.
+    const positions = new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1]);
+    const indices = new Uint16Array([0, 1, 2, 0, 2, 3, 0, 1, 4, 1, 5, 4]);
+    const buffer = Buffer.concat([Buffer.from(positions.buffer), Buffer.from(indices.buffer)]);
+    const gltf = {
+      asset: { version: '2.0' },
+      scene: 0,
+      scenes: [{ nodes: [0, 1, 2] }],
+      nodes: [
+        { mesh: 0, name: 'plain' },
+        { mesh: 0, name: 'mirrored', scale: [-1, 1, 1], translation: [3, 0, 0] },
+        { name: 'parent', rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2], children: [3] },
+        { mesh: 0, name: 'child', translation: [0, 2, 0], scale: [1, -2, 1] },
+      ],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1 }] }],
+      accessors: [
+        { bufferView: 0, componentType: 5126, count: 6, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 1] },
+        { bufferView: 1, componentType: 5123, count: 12, type: 'SCALAR' },
+      ],
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: 72 },
+        { buffer: 0, byteOffset: 72, byteLength: 24 },
+      ],
+      buffers: [{ byteLength: 96, uri: `data:application/octet-stream;base64,${buffer.toString('base64')}` }],
+    };
+    const input = { name: 'instances.gltf', bytes: new TextEncoder().encode(JSON.stringify(gltf)) };
+    const [ascii, binary] = await assimp.convertFormats(input, {
+      targets: [{ to: 'stl' }, { to: 'stl', exportOptions: { binary: true } }],
+    });
+    const facets = [
+      ...text(ascii.files[0].bytes).matchAll(
+        /facet normal (\S+) (\S+) (\S+)\s+outer loop\s+vertex (\S+) (\S+) (\S+)\s+vertex (\S+) (\S+) (\S+)\s+vertex (\S+) (\S+) (\S+)/gu,
+      ),
+    ].map((match) => match.slice(1).map(Number));
+    expect(facets).toHaveLength(12);
+    for (const [nx, ny, nz, ax, ay, az, bx, by, bz, cx, cy, cz] of facets) {
+      const [ux, uy, uz, vx, vy, vz] = [bx - ax, by - ay, bz - az, cx - ax, cy - ay, cz - az];
+      const cross = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+      const length = Math.hypot(...cross);
+      expect(
+        [nx, ny, nz].map((value, axis) => value - cross[axis] / length).every((d) => Math.abs(d) < 1e-4),
+      ).toBe(true);
+    }
+    const view = new DataView(binary.files[0].bytes.buffer, binary.files[0].bytes.byteOffset);
+    expect(view.getUint32(80, true)).toBe(12);
   });
 });
 
@@ -281,13 +397,6 @@ describe('export properties', () => {
     expect(JSON.parse(text(pretty.files[0].bytes))).toEqual(JSON.parse(text(compact.files[0].bytes)));
   });
 
-  it('switches the X file header with EXPORT_XFILE_64BIT', async () => {
-    const plain = await assimp.convert(source(), { to: 'x' });
-    const wide = await assimp.convert(source(), { to: 'x', exportOptions: { use64Bit: true } });
-    expect(text(plain.files[0].bytes)).toContain('xof 0303txt 0032');
-    expect(text(wide.files[0].bytes)).toContain('xof 0303txt 0064');
-  });
-
   it('rejects unknown export options before native work', async () => {
     await expect(
       assimp.convert(source(), {
@@ -295,6 +404,20 @@ describe('export properties', () => {
         exportOptions: { nonexistent: true },
       }),
     ).rejects.toMatchObject({ code: 'INVALID_OPTIONS' });
+  });
+
+  it('writes an open surface to 3MF only when 3MF_EXPORT_REQUIRE_MANIFOLD is false', async () => {
+    const plane = {
+      name: 'plane.obj',
+      bytes: new TextEncoder().encode('v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3\nf 1 3 4\n'),
+    };
+    const strict = assimp.convert(plane, { to: '3mf' });
+    await expect(strict).rejects.toMatchObject({ code: 'EXPORT_FAILED' });
+    await expect(strict).rejects.toThrow('3MF_EXPORT_REQUIRE_MANIFOLD');
+    const { files } = await assimp.convert(plane, { to: '3mf', exportOptions: { requireManifold: false } });
+    const xml = modelXml(files[0].bytes);
+    expect(xml).toMatch(/<object\b[^>]*\btype="other"/u);
+    expect(xml.match(/<triangle\b/gu)).toHaveLength(2);
   });
 
   it('defaults 3MF to millimeter and takes the unit from 3MF_EXPORT_UNIT', async () => {

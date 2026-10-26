@@ -65,4 +65,4 @@ const { files } = await convert(
 console.log(files.map(({ name }) => name));
 ```
 
-Supplying `postProcess` replaces the default list; an empty array deliberately requests no steps. glTF output returns `result.gltf` followed by its sidecars. Every byte array is an owned copy.
+Supplying `postProcess` replaces the default list; an empty array deliberately requests no steps. glTF output from `cube.obj` returns `cube.gltf` followed by its sidecars. Every byte array is an owned copy.

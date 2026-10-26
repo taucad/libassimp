@@ -4,7 +4,7 @@ import * as browser from './index.js';
 import * as node from './index.node.js';
 
 test('Node and browser entries expose one public type surface', () => {
-  expectTypeOf<keyof typeof node>().toEqualTypeOf<keyof typeof browser>();
+  expectTypeOf<keyof typeof node>().toEqualTypeOf<keyof typeof browser | 'createDirectoryResolver'>();
   expectTypeOf(node.convert).toEqualTypeOf<typeof browser.convert>();
   expectTypeOf(node.convertFormats).toEqualTypeOf<typeof browser.convertFormats>();
   expectTypeOf(node.createAssimp).toEqualTypeOf<typeof browser.createAssimp>();

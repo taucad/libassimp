@@ -229,9 +229,14 @@ if (!fast) {
     if (!compileFlags.includes(flag)) throw new Error(`${target} compile flags omit ${flag}`);
     if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
   }
-  for (const flag of ['--closure=1', '-sEVAL_CTORS=2', '-sMALLOC=mimalloc', '-sWASM_LEGACY_EXCEPTIONS=1']) {
+  for (const flag of ['--closure=1', '-sEVAL_CTORS=2', '-sMALLOC=dlmalloc', '-sWASM_LEGACY_EXCEPTIONS=1']) {
     if (!linkFlags.includes(flag)) throw new Error(`${target} link flags omit ${flag}`);
   }
+}
+// An undefined symbol must fail the link: with the setting off, Emscripten
+// emits an abort stub that fires only when a conversion reaches it.
+if (!linkFlags.includes('-sERROR_ON_UNDEFINED_SYMBOLS=1')) {
+  throw new Error(`${target} link flags omit -sERROR_ON_UNDEFINED_SYMBOLS=1`);
 }
 const forbiddenFlags = [...compileFlags, ...linkFlags, ...wasmOptFlags].filter((flag) =>
   /(?:ASYNCIFY|JSPI)/u.test(flag),

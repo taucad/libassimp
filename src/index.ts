@@ -26,7 +26,18 @@ import type {
 
 export { AssimpError } from './assimp-error.js';
 export type { AssimpErrorContext, AssimpFailureCode } from './assimp-error.js';
-export type { AssimpFile, ConvertResult, ResolveFile } from './convert.js';
+export type {
+  AssimpFile,
+  ConversionPhase,
+  ConversionReport,
+  ConversionTimings,
+  ConversionWarning,
+  ConvertedFile,
+  ConvertProgress,
+  ConvertProgressListener,
+  ConvertResult,
+  ResolveFile,
+} from './convert.js';
 export type { CreateAssimpOptions } from './create-assimp.js';
 export type {
   ExportOptionDescriptorsFor,
