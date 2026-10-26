@@ -41,7 +41,6 @@
 ### ❤️ Thank You
 
 - Claude
-- Claude Opus 5.5 (1M context)
 - Richard Fontein @rifont
 
 ## 0.3.0 (2026-09-05)
