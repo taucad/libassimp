@@ -13,3 +13,7 @@ disabled purging, pinned memory and preload guards are unchanged. The added
 The backport excludes unrelated option renames, new APIs and build changes.
 
 Remove this patch when adopting an upstream version containing the fix.
+
+CMake applies the patch through `cmake/apply-patch.cmake`, which skips a
+source tree that already carries it, because FetchContent repeats the patch
+step on every reconfigure.

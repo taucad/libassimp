@@ -19,7 +19,7 @@
 +#ifndef MI_DEFAULT_ARENA_PURGE_IMMEDIATE_SIZE
 +#define MI_DEFAULT_ARENA_PURGE_IMMEDIATE_SIZE (MI_LARGE_PAGE_SIZE / MI_KiB)
  #endif
-
+ 
  // Static options
 @@ -185,12 +189,15 @@
    { MI_DEFAULT_ALLOW_THP,
@@ -28,21 +28,21 @@
 +  { MI_DEFAULT_ARENA_PURGE_IMMEDIATE_SIZE,
 +         MI_OPTION_UNINIT, MI_OPTION(arena_purge_immediate_size) },
  };
-
+ 
  static void mi_option_init(mi_option_desc_t* desc);
-
+ 
  static bool mi_option_has_size_in_kib(mi_option_t option) {
 -  return (option == mi_option_reserve_os_memory || option == mi_option_arena_reserve || option == mi_option_minimal_purge_size );
 +  return (option == mi_option_reserve_os_memory || option == mi_option_arena_reserve || option == mi_option_minimal_purge_size ||
 +          option == mi_option_arena_purge_immediate_size );
  }
-
+ 
  void _mi_options_init(void) {
 --- a/src/arena.c
 +++ b/src/arena.c
 @@ -1731,7 +1731,7 @@
    if (arena->memid.is_pinned || delay < 0 || _mi_preloading()) return;  // is purging allowed at all?
-
+ 
    mi_assert_internal(mi_bbitmap_is_clearN(arena->slices_free, slice_index, slice_count));
 -  if (delay == 0) {
 +  if (delay == 0 || mi_size_of_slices(slice_count) >= mi_option_get_size(mi_option_arena_purge_immediate_size)) {
