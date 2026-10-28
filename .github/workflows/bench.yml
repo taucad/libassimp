@@ -19,12 +19,22 @@ jobs:
         run: |
           mkdir -p .diagnostic
           cd .diagnostic
+          node -e 'require("fs").writeFileSync("package.json", JSON.stringify({name:"usda-allocator-probe",private:true}))'
           npm install --ignore-scripts --no-audit --no-fund libassimp@0.4.0 node-addon-api@8.9.2
           cp -r "$(dirname "$(dirname "$(which node)")")/include/node" node-headers
           cp ../bench/fixtures/helical-gear.glb gear.glb
           cp ../bench/allocator-probe.mjs probe.mjs
+      - name: Probe published allocator policy first
+        run: |
+          cd .diagnostic
+          for iteration in 1 2 3 4 5; do
+            for delay in 1000 100 10 1 0; do
+              VARIANT="release-delay$delay" MIMALLOC_PURGE_DELAY="$delay" MIMALLOC_SHOW_STATS=1 node --expose-gc probe.mjs >> policy-results.jsonl 2>> policy-stats.log
+            done
+          done
       - name: Build allocator pair with identical static runtime and engine
         run: |
+          set -euo pipefail
           docker run --rm -v "$PWD:/src" -v "$PWD/.diagnostic:/evidence" -w /src quay.io/pypa/manylinux2014_x86_64@sha256:f6077fab327d7823d7cee287b93ef63efe3af0e234add7503121247c1475ebec bash -lc '
             set -e
             cmake --preset native -G "Unix Makefiles" -B /evidence/build -DNODE_ADDON_API_DIR=/evidence/node_modules/node-addon-api -DCMAKE_JS_INC=/evidence/node-headers -DCMAKE_JS_LIB= -DCMAKE_JS_SRC= -DCMAKE_JS_OUTPUT_DIR=/evidence/on -DLIBASSIMP_NATIVE_BUILD_IDENTITY=linux-x64-napi8 -DLIBASSIMP_NATIVE_TESTS=OFF -DLIBASSIMP_NATIVE_ADDON=ON
