@@ -2,12 +2,17 @@ name: USDA allocator investigation
 on:
   workflow_dispatch:
     inputs:
+      artifact_run:
+        type: string
+        default: ""
+        description: Reuse a completed selective-purge build for broader probes
       policy_only:
         type: boolean
         default: false
         description: Run released-addon policy probes without rebuilding
 permissions:
   contents: read
+  actions: read
 jobs:
   compare:
     runs-on: ubuntu-24.04
@@ -29,8 +34,9 @@ jobs:
           cp -r "$(dirname "$(dirname "$(which node)")")/include/node" node-headers
           cp ../bench/fixtures/helical-gear.glb gear.glb
           cp ../bench/allocator-probe.mjs probe.mjs
+          cp ../bench/allocator-broad-probe.mjs broad-probe.mjs
       - name: Build allocator pair with identical static runtime and engine
-        if: ${{ !inputs.policy_only }}
+        if: ${{ !inputs.policy_only && !inputs.artifact_run }}
         run: |
           set -euo pipefail
           docker run --rm -v "$PWD:/src" -v "$PWD/.diagnostic:/evidence" -w /src quay.io/pypa/manylinux2014_x86_64@sha256:f6077fab327d7823d7cee287b93ef63efe3af0e234add7503121247c1475ebec bash -lc '
@@ -41,7 +47,7 @@ jobs:
             cmake --build /evidence/build --parallel 4
           ' 2>&1 | tee .diagnostic/build.log
       - name: Interleaved isolated-process probes
-        if: ${{ !inputs.policy_only }}
+        if: ${{ !inputs.policy_only && !inputs.artifact_run }}
         run: |
           cd .diagnostic
           node --version > environment.txt
@@ -56,6 +62,27 @@ jobs:
               if [ "$variant" = disabled ]; then export NAPI_RS_NATIVE_LIBRARY_PATH="$PWD/on/libassimp.node"; fi
               if [ "$variant" = purge0 ]; then export MIMALLOC_PURGE_DELAY=0; else unset MIMALLOC_PURGE_DELAY; fi
               VARIANT="$variant" MIMALLOC_SHOW_STATS=1 node --expose-gc probe.mjs >> results.jsonl 2>> allocator-stats.log
+            done
+          done
+      - name: Reuse native build
+        if: ${{ inputs.artifact_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN: ${{ inputs.artifact_run }}
+        run: gh run download "$BUILD_RUN" --name usda-allocator-evidence --dir .diagnostic --repo taucad/libassimp
+      - name: Broader native comparisons and round trips
+        if: ${{ inputs.artifact_run }}
+        run: |
+          node --input-type=module -e "import {GENERATED} from './bench/matrix-inputs.mjs'; GENERATED.glb.write('.diagnostic',1024); GENERATED.usda.write('.diagnostic',1024);"
+          cd .diagnostic
+          for iteration in $(seq 1 9); do
+            for cell in gear.glb:usda grid.glb:usda grid.glb:glb grid.usda:usdz; do
+              for variant in release on disabled; do
+                unset NAPI_RS_NATIVE_LIBRARY_PATH MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE
+                if [ "$variant" != release ]; then export NAPI_RS_NATIVE_LIBRARY_PATH="$PWD/on/libassimp.node"; fi
+                if [ "$variant" = disabled ]; then export MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE=1T; fi
+                VARIANT="$variant" INPUT="${cell%:*}" TARGET="${cell#*:}" node --expose-gc broad-probe.mjs >> broad-results.jsonl
+              done
             done
           done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
