@@ -31,7 +31,7 @@ jobs:
             cmake --build /evidence/build --parallel 4
             cmake -S /src -B /evidence/build -DLIBASSIMP_DIAG_SYSTEM_ALLOCATOR=ON -DCMAKE_JS_OUTPUT_DIR=/evidence/off
             cmake --build /evidence/build --parallel 4
-          ' > .diagnostic/build.log 2>&1
+          ' 2>&1 | tee .diagnostic/build.log
       - name: Interleaved isolated-process probes
         run: |
           cd .diagnostic
@@ -50,6 +50,7 @@ jobs:
         if: always()
         with:
           name: usda-allocator-evidence
+          include-hidden-files: true
           path: |
             .diagnostic/*.log
             .diagnostic/*.jsonl
