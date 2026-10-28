@@ -1,95 +1,58 @@
-name: Benchmark drift
-
+name: USDA allocator investigation
 on:
-  schedule:
-    - cron: '17 4 1 * *' # Origin: monthly exploratory cadence from picovoxel.
   workflow_dispatch:
-
 permissions:
   contents: read
-  issues: write
-
 jobs:
-  # Exploratory runs need the same artifact `ci.yml` gates, and wasm is never
-  # committed. The benchmark measures the root entry and its sole binary.
-  build-wasm:
+  compare:
     runs-on: ubuntu-24.04
-    # Origin: about 3x the measured cold job after the -O2 link: compile takes
-    # roughly 25 minutes on 4 vCPU and link takes less than 1 minute. The prior
-    # 180-minute ceiling matched the -O3 link.
     timeout-minutes: 90
-    container:
-      image: emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           submodules: true
           persist-credentials: false
-      - name: Install the build tools the emsdk image omits
-        run: apt-get update && apt-get install -y --no-install-recommends ccache ninja-build
-      - name: Record the engine submodule commit
-        id: engine
-        run: echo "sha=$(git -C assimp rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: .ccache
-          key: ccache-${{ runner.os }}-${{ hashFiles('emsdk-image.txt', 'assimp-builds.json', 'CMakeLists.txt', 'CMakePresets.json', 'src/cpp/**', '.gitmodules') }}-${{ steps.engine.outputs.sha }}
-      - name: Build libassimp.wasm
-        env:
-          LIBASSIMP_EMSDK: host
-        run: node scripts/build-wasm.mjs
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: wasm
-          path: src/wasm/libassimp.*
-          if-no-files-found: error
-
-  drift:
-    needs: build-wasm
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '26'
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: wasm
-          path: src/wasm
-      - id: benchmark
-        continue-on-error: true # Origin: exploratory drift opens an issue; PR gate remains fail-closed in ci.yml.
-        env:
-          # Origin: two de72965 exact-head runs on ubuntu-24.04/Node 26 measured
-          # 1.113-3.274 ms conversion and 67.883-68.856 ms initialization.
-          # The fail-closed same-runner comparison remains in `ci.yml`.
-          MAX_MEDIAN_MS: '5'
-          MAX_INIT_MS: '100'
+      - name: Prepare pinned facade and headers
         run: |
-          pnpm run build
-          pnpm run benchmark
-      # The drift job has no native addon, so it checks the Wasm baselines only.
-      # Baselines are recorded from the CI benchmark job's artifact, which
-      # measures both backends on the gating runner class.
-      - id: usd
-        continue-on-error: true # Origin: exploratory drift opens an issue; PR gate remains fail-closed in ci.yml.
+          mkdir -p .diagnostic
+          cd .diagnostic
+          npm install --ignore-scripts --no-audit --no-fund libassimp@0.4.0 node-addon-api@8.9.2
+          cp -r "$(dirname "$(dirname "$(which node)")")/include/node" node-headers
+          cp ../bench/fixtures/helical-gear.glb gear.glb
+          cp ../bench/allocator-probe.mjs probe.mjs
+      - name: Build allocator pair with identical static runtime and engine
         run: |
-          for run in 1 2 3; do
-            LIBASSIMP_BENCH_ENTRY=dist/index.mjs node bench/usd.mjs --backend wasm --output "/tmp/usd-benchmark-$run.json" > /dev/null
+          docker run --rm -v "$PWD:/src" -v "$PWD/.diagnostic:/evidence" -w /src quay.io/pypa/manylinux2014_x86_64@sha256:f6077fab327d7823d7cee287b93ef63efe3af0e234add7503121247c1475ebec bash -lc '
+            set -e
+            cmake --preset native -G "Unix Makefiles" -B /evidence/build -DNODE_ADDON_API_DIR=/evidence/node_modules/node-addon-api -DCMAKE_JS_INC=/evidence/node-headers -DCMAKE_JS_LIB= -DCMAKE_JS_SRC= -DCMAKE_JS_OUTPUT_DIR=/evidence/on -DLIBASSIMP_NATIVE_BUILD_IDENTITY=linux-x64-napi8 -DLIBASSIMP_NATIVE_TESTS=OFF -DLIBASSIMP_NATIVE_ADDON=ON
+            cmake --build /evidence/build --parallel 4
+            cmake -S /src -B /evidence/build -DLIBASSIMP_DIAG_SYSTEM_ALLOCATOR=ON -DCMAKE_JS_OUTPUT_DIR=/evidence/off
+            cmake --build /evidence/build --parallel 4
+          ' > .diagnostic/build.log 2>&1
+      - name: Interleaved isolated-process probes
+        run: |
+          cd .diagnostic
+          node --version > environment.txt
+          uname -a >> environment.txt
+          ldd on/libassimp.node >> environment.txt
+          ldd off/libassimp.node >> environment.txt
+          for iteration in 1 2 3 4 5; do
+            for variant in on off purge0 release; do
+              if [ "$variant" = release ]; then unset NAPI_RS_NATIVE_LIBRARY_PATH; else export NAPI_RS_NATIVE_LIBRARY_PATH="$PWD/${variant/purge0/on}/libassimp.node"; fi
+              if [ "$variant" = purge0 ]; then export MIMALLOC_PURGE_DELAY=0; else unset MIMALLOC_PURGE_DELAY; fi
+              VARIANT="$variant" MIMALLOC_SHOW_STATS=1 node --expose-gc probe.mjs >> results.jsonl 2>> allocator-stats.log
+            done
           done
-          node scripts/compare-baselines.mjs \
-            /tmp/usd-benchmark-1.json,/tmp/usd-benchmark-2.json,/tmp/usd-benchmark-3.json \
-            bench/baselines.json /tmp/usd-benchmark.md
-      - if: steps.benchmark.outcome == 'failure' || steps.usd.outcome == 'failure'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh label create claude \
-            --color 5319E7 \
-            --description 'Picked up by Claude automation' \
-            --force
-          gh issue create \
-            --title 'Benchmark drift detected' \
-            --body "Monthly benchmark drift failed in ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}." \
-            --label claude
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: usda-allocator-evidence
+          path: |
+            .diagnostic/*.log
+            .diagnostic/*.jsonl
+            .diagnostic/environment.txt
+            .diagnostic/on/libassimp.node
+            .diagnostic/off/libassimp.node

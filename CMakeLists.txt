@@ -300,8 +300,11 @@ if(LIBASSIMP_NATIVE_ADDON)
       EXCLUDE_FROM_ALL
     )
     FetchContent_MakeAvailable(mimalloc)
-    target_sources(libassimp-native PRIVATE src/cpp/mimalloc-new-delete.cpp)
-    target_link_libraries(libassimp-native PRIVATE mimalloc-static)
+    # Investigation-only allocator toggle; static runtime linkage remains identical.
+    if(NOT LIBASSIMP_DIAG_SYSTEM_ALLOCATOR)
+      target_sources(libassimp-native PRIVATE src/cpp/mimalloc-new-delete.cpp)
+      target_link_libraries(libassimp-native PRIVATE mimalloc-static)
+    endif()
     if(NOT WIN32)
       target_link_options(libassimp-native PRIVATE -static-libstdc++ -static-libgcc)
     endif()
