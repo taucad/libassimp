@@ -29,30 +29,6 @@ jobs:
           cp -r "$(dirname "$(dirname "$(which node)")")/include/node" node-headers
           cp ../bench/fixtures/helical-gear.glb gear.glb
           cp ../bench/allocator-probe.mjs probe.mjs
-      - name: Probe published allocator policy first
-        run: |
-          cd .diagnostic
-          for iteration in 1 2 3 4 5; do
-            for delay in 1000 100 10 1 0; do
-              VARIANT="release-delay$delay" MIMALLOC_PURGE_DELAY="$delay" MIMALLOC_SHOW_STATS=1 node --expose-gc probe.mjs >> policy-results.jsonl 2>> policy-stats.log
-            done
-          done
-      - name: Probe narrower published allocator controls
-        run: |
-          cd .diagnostic
-          for iteration in 1 2 3 4 5; do
-            for variant in default no-thp no-arena demand-commit eager0 collect1; do
-              options=()
-              case "$variant" in
-                no-thp) options+=(MIMALLOC_ALLOW_THP=0) ;;
-                no-arena) options+=(MIMALLOC_DISALLOW_ARENA_ALLOC=1) ;;
-                demand-commit) options+=(MIMALLOC_PAGE_COMMIT_ON_DEMAND=1) ;;
-                eager0) options+=(MIMALLOC_EAGER_COMMIT=0) ;;
-                collect1) options+=(MIMALLOC_PURGE_DELAY=10 MIMALLOC_GENERIC_COLLECT=1) ;;
-              esac
-              env "${options[@]}" VARIANT="$variant" MIMALLOC_SHOW_STATS=1 node --expose-gc probe.mjs >> narrow-results.jsonl 2>> narrow-stats.log
-            done
-          done
       - name: Build allocator pair with identical static runtime and engine
         if: ${{ !inputs.policy_only }}
         run: |
@@ -72,9 +48,12 @@ jobs:
           uname -a >> environment.txt
           ldd on/libassimp.node >> environment.txt
           ldd off/libassimp.node >> environment.txt
-          for iteration in 1 2 3 4 5; do
-            for variant in on off purge0 release; do
+          for iteration in $(seq 1 15); do
+            for variant in on disabled release off purge0; do
+              unset MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE
+              if [ "$variant" = disabled ]; then export MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE=1T; fi
               if [ "$variant" = release ]; then unset NAPI_RS_NATIVE_LIBRARY_PATH; else export NAPI_RS_NATIVE_LIBRARY_PATH="$PWD/${variant/purge0/on}/libassimp.node"; fi
+              if [ "$variant" = disabled ]; then export NAPI_RS_NATIVE_LIBRARY_PATH="$PWD/on/libassimp.node"; fi
               if [ "$variant" = purge0 ]; then export MIMALLOC_PURGE_DELAY=0; else unset MIMALLOC_PURGE_DELAY; fi
               VARIANT="$variant" MIMALLOC_SHOW_STATS=1 node --expose-gc probe.mjs >> results.jsonl 2>> allocator-stats.log
             done
