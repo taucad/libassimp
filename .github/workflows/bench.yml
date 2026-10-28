@@ -1,6 +1,11 @@
 name: USDA allocator investigation
 on:
   workflow_dispatch:
+    inputs:
+      policy_only:
+        type: boolean
+        default: false
+        description: Run released-addon policy probes without rebuilding
 permissions:
   contents: read
 jobs:
@@ -33,6 +38,7 @@ jobs:
             done
           done
       - name: Build allocator pair with identical static runtime and engine
+        if: ${{ !inputs.policy_only }}
         run: |
           set -euo pipefail
           docker run --rm -v "$PWD:/src" -v "$PWD/.diagnostic:/evidence" -w /src quay.io/pypa/manylinux2014_x86_64@sha256:f6077fab327d7823d7cee287b93ef63efe3af0e234add7503121247c1475ebec bash -lc '
@@ -43,6 +49,7 @@ jobs:
             cmake --build /evidence/build --parallel 4
           ' 2>&1 | tee .diagnostic/build.log
       - name: Interleaved isolated-process probes
+        if: ${{ !inputs.policy_only }}
         run: |
           cd .diagnostic
           node --version > environment.txt
