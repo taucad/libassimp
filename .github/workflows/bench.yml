@@ -6,6 +6,10 @@ on:
         type: string
         default: ""
         description: Reuse a completed selective-purge build for broader probes
+      thresholds:
+        type: string
+        default: ""
+        description: Sweep MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE values on a reused build instead of the broad probe
       policy_only:
         type: boolean
         default: false
@@ -70,8 +74,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BUILD_RUN: ${{ inputs.artifact_run }}
         run: gh run download "$BUILD_RUN" --name usda-allocator-evidence --dir .diagnostic --repo taucad/libassimp
+      - name: Selective purge threshold sweep
+        if: ${{ inputs.artifact_run && inputs.thresholds != '' }}
+        env:
+          THRESHOLDS: ${{ inputs.thresholds }}
+        run: |
+          cd .diagnostic
+          for iteration in $(seq 1 15); do
+            for variant in release $THRESHOLDS; do
+              unset NAPI_RS_NATIVE_LIBRARY_PATH MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE
+              if [ "$variant" != release ]; then
+                export NAPI_RS_NATIVE_LIBRARY_PATH="$PWD/on/libassimp.node" MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE="$variant"
+              fi
+              VARIANT="$variant" node --expose-gc probe.mjs >> sweep-results.jsonl
+            done
+          done
       - name: Broader native comparisons and round trips
-        if: ${{ inputs.artifact_run }}
+        if: ${{ inputs.artifact_run && inputs.thresholds == '' }}
         run: |
           node --input-type=module -e "import {GENERATED} from './bench/matrix-inputs.mjs'; GENERATED.glb.write('.diagnostic',1024); GENERATED.usda.write('.diagnostic',1024);"
           cd .diagnostic
