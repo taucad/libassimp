@@ -82,9 +82,12 @@ jobs:
           cd .diagnostic
           for iteration in $(seq 1 15); do
             for variant in release $THRESHOLDS; do
-              unset NAPI_RS_NATIVE_LIBRARY_PATH MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE
-              if [ "$variant" != release ]; then
-                export NAPI_RS_NATIVE_LIBRARY_PATH="$PWD/on/libassimp.node" MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE="$variant"
+              unset NAPI_RS_NATIVE_LIBRARY_PATH MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE MIMALLOC_ALLOW_THP
+              # A "/thp0" suffix also turns off transparent huge pages for that variant.
+              threshold="${variant%/thp0}"
+              if [ "$threshold" != "$variant" ]; then export MIMALLOC_ALLOW_THP=0; fi
+              if [ "$threshold" != release ]; then
+                export NAPI_RS_NATIVE_LIBRARY_PATH="$PWD/on/libassimp.node" MIMALLOC_ARENA_PURGE_IMMEDIATE_SIZE="$threshold"
               fi
               VARIANT="$variant" node --expose-gc probe.mjs >> sweep-results.jsonl
             done
