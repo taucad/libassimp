@@ -37,6 +37,22 @@ jobs:
               VARIANT="release-delay$delay" MIMALLOC_PURGE_DELAY="$delay" MIMALLOC_SHOW_STATS=1 node --expose-gc probe.mjs >> policy-results.jsonl 2>> policy-stats.log
             done
           done
+      - name: Probe narrower published allocator controls
+        run: |
+          cd .diagnostic
+          for iteration in 1 2 3 4 5; do
+            for variant in default no-thp no-arena demand-commit eager0 collect1; do
+              options=()
+              case "$variant" in
+                no-thp) options+=(MIMALLOC_ALLOW_THP=0) ;;
+                no-arena) options+=(MIMALLOC_DISALLOW_ARENA_ALLOC=1) ;;
+                demand-commit) options+=(MIMALLOC_PAGE_COMMIT_ON_DEMAND=1) ;;
+                eager0) options+=(MIMALLOC_EAGER_COMMIT=0) ;;
+                collect1) options+=(MIMALLOC_PURGE_DELAY=10 MIMALLOC_GENERIC_COLLECT=1) ;;
+              esac
+              env "${options[@]}" VARIANT="$variant" MIMALLOC_SHOW_STATS=1 node --expose-gc probe.mjs >> narrow-results.jsonl 2>> narrow-stats.log
+            done
+          done
       - name: Build allocator pair with identical static runtime and engine
         if: ${{ !inputs.policy_only }}
         run: |
