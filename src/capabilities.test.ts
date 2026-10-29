@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import { assimpCapabilities as described } from './capabilities.js';
@@ -27,6 +29,33 @@ describe('libassimp/capabilities', () => {
       }
     }
     expect(described.import).toBe(root.import);
+  });
+
+  it('publishes every export option description exactly as authored in the override ledger', () => {
+    type Authored = { publicName: string; supported?: boolean; formats?: string[]; description?: string };
+    const ledger = JSON.parse(
+      readFileSync(new URL('../scripts/assimp-capability-overrides.json', import.meta.url), 'utf8'),
+    ) as {
+      properties: Record<string, Authored>;
+      formats: { routes: Record<string, { options?: Authored[] }> };
+    };
+    const authored = new Map<string, string | undefined>();
+    for (const option of Object.values(ledger.properties)) {
+      if (option.supported === false) continue;
+      for (const format of option.formats ?? [])
+        authored.set(`${format}.${option.publicName}`, option.description);
+    }
+    for (const [format, route] of Object.entries(ledger.formats.routes)) {
+      for (const option of route.options ?? [])
+        authored.set(`${format}.${option.publicName}`, option.description);
+    }
+    for (const [format, info] of Object.entries(described.export)) {
+      for (const [name, descriptor] of Object.entries(info.exportOptions)) {
+        const key = `${format}.${name}`;
+        expect(authored.get(key), key).toBeDefined();
+        expect((descriptor as { description: string }).description, key).toBe(authored.get(key));
+      }
+    }
   });
 
   it('keeps prose out of the root registry', () => {

@@ -633,12 +633,14 @@ const descriptorFor = (evidence, override, descriptions) => {
     owners: override.owners ?? evidence.owners,
     formats: override.formats ?? [],
     phases: override.phases ?? evidence.phases,
-    description: conciseDescription(
+    // An authored description is kept verbatim; only Assimp's Doxygen prose is condensed.
+    description:
       override.description ??
+      conciseDescription(
         evidence.symbols.map((symbol) => descriptions.get(symbol)).find(Boolean) ??
-        evidence.symbols[0] ??
-        evidence.nativeName,
-    ),
+          evidence.symbols[0] ??
+          evidence.nativeName,
+      ),
     source: override.source ?? evidence.sources[0],
   };
 };
@@ -729,9 +731,18 @@ const renderGenerated = (evidence, overrides) => {
   const supported = allProperties
     .filter(({ override }) => override.supported !== false)
     .flatMap(({ evidence: item, override }) =>
-      (override.variants ?? [override]).map((variant) =>
-        descriptorFor(item, { ...override, ...variant }, propertyDescriptions),
-      ),
+      (override.variants ?? [override]).map((variant) => {
+        const merged = { ...override, ...variant };
+        const descriptor = descriptorFor(item, merged, propertyDescriptions);
+        // Export options are help text in consumer forms, so their prose is authored in the override
+        // ledger rather than taken from Assimp's Doxygen, which a submodule bump could silently change.
+        if (descriptor.phases.includes('export') && merged.description === undefined) {
+          throw new Error(
+            `The export option ${descriptor.publicName} (${item.nativeName}) needs an authored description in ${basename(overridesPath)}.`,
+          );
+        }
+        return descriptor;
+      }),
     );
   const importOptions = supported
     .filter((descriptor) => descriptor.phases.includes('import'))
