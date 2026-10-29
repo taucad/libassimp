@@ -32,7 +32,13 @@ describe('libassimp/capabilities', () => {
   });
 
   it('publishes every export option description exactly as authored in the override ledger', () => {
-    type Authored = { publicName: string; supported?: boolean; formats?: string[]; description?: string };
+    type Authored = {
+      publicName: string;
+      supported?: boolean;
+      formats?: string[];
+      description?: string;
+      variants?: Array<Partial<Authored>>;
+    };
     const ledger = JSON.parse(
       readFileSync(new URL('../scripts/assimp-capability-overrides.json', import.meta.url), 'utf8'),
     ) as {
@@ -42,8 +48,10 @@ describe('libassimp/capabilities', () => {
     const authored = new Map<string, string | undefined>();
     for (const option of Object.values(ledger.properties)) {
       if (option.supported === false) continue;
-      for (const format of option.formats ?? [])
-        authored.set(`${format}.${option.publicName}`, option.description);
+      for (const variant of option.variants ?? [{}]) {
+        const { publicName, formats, description } = { ...option, ...variant };
+        for (const format of formats ?? []) authored.set(`${format}.${publicName}`, description);
+      }
     }
     for (const [format, route] of Object.entries(ledger.formats.routes)) {
       for (const option of route.options ?? [])

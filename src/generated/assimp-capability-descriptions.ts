@@ -265,7 +265,7 @@ export const exportOptionDescriptions = {
   stl: {
     binary: 'Write binary STL. When off, writes ASCII STL.',
     pointClouds:
-      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
+      'Export the vertices as a point cloud. ASCII STL then writes points instead of triangles, even for meshes with faces, and binary STL fails. Leave it off for ordinary models.',
   },
   usda: {
     animationIndex:

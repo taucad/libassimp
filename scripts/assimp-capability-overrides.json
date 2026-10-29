@@ -383,22 +383,30 @@
     "EXPORT_POINT_CLOUDS": {
       "publicName": "pointClouds",
       "supported": true,
-      "formats": [
-        "3mf",
-        "assjson",
-        "dae",
-        "fbx",
-        "glb",
-        "gltf",
-        "obj",
-        "ply",
-        "step",
-        "stl",
-        "usda",
-        "usdc",
-        "usdz"
-      ],
-      "description": "Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces."
+      "variants": [
+        {
+          "formats": [
+            "3mf",
+            "assjson",
+            "dae",
+            "fbx",
+            "glb",
+            "gltf",
+            "obj",
+            "ply",
+            "step",
+            "usda",
+            "usdc",
+            "usdz"
+          ],
+          "description": "Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces."
+        },
+        {
+          "formats": ["stl"],
+          "description": "Export the vertices as a point cloud. ASCII STL then writes points instead of triangles, even for meshes with faces, and binary STL fails. Leave it off for ordinary models.",
+          "phases": ["export"]
+        }
+      ]
     },
     "EXPORT_XFILE_64BIT": {
       "publicName": "use64Bit",

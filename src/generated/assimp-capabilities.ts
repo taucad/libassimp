@@ -389,7 +389,7 @@ type FormatStepExportOptions = {
 type FormatStlExportOptions = {
   /** Write binary STL. When off, writes ASCII STL. Default: false. */
   readonly binary?: boolean;
-  /** Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces. Default: false. */
+  /** Export the vertices as a point cloud. ASCII STL then writes points instead of triangles, even for meshes with faces, and binary STL fails. Leave it off for ordinary models. Default: false. */
   readonly pointClouds?: boolean;
 };
 
