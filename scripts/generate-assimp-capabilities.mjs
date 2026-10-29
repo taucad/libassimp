@@ -783,6 +783,14 @@ const renderGenerated = (evidence, overrides) => {
       `${format} export option`,
       descriptors.map(({ publicName: name }) => name),
     );
+    // Export options are help text in consumer forms, so a bare config key such as `3MF_EXPORT_UNIT.` needs prose.
+    for (const { publicName: name, description } of descriptors) {
+      if (/^\w+\.?$/u.test(description)) {
+        throw new Error(
+          `The ${format} export option ${name} needs a prose description, not ${quote(description)}.`,
+        );
+      }
+    }
   }
   const stepNames = new Set(steps.map(({ publicName: name }) => name));
   for (const name of overrides.defaultPostProcess) {

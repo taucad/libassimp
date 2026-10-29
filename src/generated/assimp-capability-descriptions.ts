@@ -131,7 +131,7 @@ export const importOptionDescriptions = {
   plyUnitScaleToMeters: 'Meters represented by one PLY source unit.',
   plyUpAxis: 'The PLY source up axis.',
   pointClouds:
-    'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+    'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
   ppCtMaxSmoothingAngle:
     'Specifies the maximum angle that may be between two vertex tangents that their tangents and bi-tangents are smoothed. This applies to the CalcTangentSpace-Step. The angle is specified in degrees. The maximum value is 175.',
   ppCtTextureChannelIndex: 'AI_CONFIG_PP_CT_TEXTURE_CHANNEL_INDEX.',
@@ -188,121 +188,128 @@ export const importOptionDescriptions = {
 /** Export option prose per canonical target, keyed by public name. @internal */
 export const exportOptionDescriptions = {
   '3mf': {
-    application: '3MF_EXPORT_APPLICATION.',
-    decimalPrecision: '3MF_EXPORT_DECIMAL_PRECISION.',
+    application:
+      'Name of the application that created the file, stored in the 3MF Application metadata. Leave empty to omit it.',
+    decimalPrecision:
+      'Digits written after the decimal point for each vertex coordinate. The default keeps full single-precision accuracy. Fewer digits give a smaller file but can open tiny gaps between meshes.',
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
     requireManifold:
-      'Whether every mesh must be manifold and oriented, as 3MF Core requires for model objects. When false, a mesh that is not is written as an object of type other instead of failing the export.',
-    unit: '3MF_EXPORT_UNIT.',
-    upAxis: '3MF_EXPORT_UPAXIS.',
+      'Fail the export when a mesh is not manifold and oriented, as 3MF Core requires for printable model objects. When off, such a mesh is written as an object of type other instead.',
+    unit: 'Length unit the 3MF file declares. When the source records its unit, coordinates are converted to this unit; otherwise they are written unchanged.',
+    upAxis:
+      'Axis that points up in the 3MF file. 3MF uses Z. When the source records its up axis, the model is rotated to match; otherwise it is written unchanged.',
   },
   assjson: {
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
-    skipWhitespaces: 'JSON_SKIP_WHITESPACES.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
+    skipWhitespaces: 'Write compact JSON with no indentation or line breaks.',
   },
   dae: {
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
   },
   fbx: {
-    binary: 'Write binary FBX when true and ASCII FBX when false.',
-    joinIdenticalVertices: 'bJoinIdenticalVertices.',
+    binary: 'Write binary FBX. When off, writes ASCII FBX.',
+    joinIdenticalVertices:
+      'Share one vertex between faces that use the same position instead of writing a copy for each face. Gives a smaller file.',
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
     transparencyFactorRefersToOpacity:
-      'Specifies whether to write the value referenced to opacity in TransparencyFactor of each material. When this flag is not defined, the TransparencyFactor value of each meterial is 1.0. By enabling this flag, the value is 1.0 - opacity;.',
+      "Write each material's TransparencyFactor as 1 minus its opacity. When off, TransparencyFactor is always 1.",
   },
   glb: {
     identityMatrixEpsilon:
-      'Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code.',
-    includeTargetNames: 'GLTF2_TARGETNAMES_EXP.',
-    includeTargetNormals: 'GLTF2_TARGET_NORMAL_EXP.',
+      'Tolerance for treating a node transform as the identity. A node whose matrix is within this distance of the identity is written without a matrix.',
+    includeTargetNames: "Write morph target names to each mesh's extras.targetNames.",
+    includeTargetNormals: 'Write vertex normals for morph targets in addition to positions.',
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
-    sparseAccessors: 'GLTF2_SPARSE_ACCESSOR_EXP.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
+    sparseAccessors:
+      'Store morph target offsets in sparse accessors, which write only the vertices a target moves. Smaller for targets that change few vertices.',
     unlimitedSkinningBonesPerVertex:
-      'Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…',
+      'Write every bone weight for each vertex. When off, each vertex keeps its four largest weights, the most glTF requires readers to support. Weights are not renormalized.',
     useGltfPbrSpecularGlossiness:
-      'Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec.',
+      'Write specular materials with the deprecated KHR_materials_pbrSpecularGlossiness extension instead of KHR_materials_specular. Only KHR_materials_unlit can be combined with it.',
   },
   gltf: {
     identityMatrixEpsilon:
-      'Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code.',
-    includeTargetNames: 'GLTF2_TARGETNAMES_EXP.',
-    includeTargetNormals: 'GLTF2_TARGET_NORMAL_EXP.',
+      'Tolerance for treating a node transform as the identity. A node whose matrix is within this distance of the identity is written without a matrix.',
+    includeTargetNames: "Write morph target names to each mesh's extras.targetNames.",
+    includeTargetNormals: 'Write vertex normals for morph targets in addition to positions.',
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
-    sparseAccessors: 'GLTF2_SPARSE_ACCESSOR_EXP.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
+    sparseAccessors:
+      'Store morph target offsets in sparse accessors, which write only the vertices a target moves. Smaller for targets that change few vertices.',
     unlimitedSkinningBonesPerVertex:
-      'Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights…',
+      'Write every bone weight for each vertex. When off, each vertex keeps its four largest weights, the most glTF requires readers to support. Weights are not renormalized.',
     useGltfPbrSpecularGlossiness:
-      'Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec.',
+      'Write specular materials with the deprecated KHR_materials_pbrSpecularGlossiness extension instead of KHR_materials_specular. Only KHR_materials_unlit can be combined with it.',
   },
   obj: {
-    joinIdenticalVertices: 'bJoinIdenticalVertices.',
-    materials: 'Write an MTL sidecar when the scene has materials.',
+    joinIdenticalVertices:
+      'Share one vertex between faces that use the same position instead of writing a copy for each face. Gives a smaller file.',
+    materials: 'Write an MTL material file next to the OBJ when the scene has materials.',
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
   },
   ply: {
-    binary: 'Write binary PLY when true and ASCII PLY when false.',
+    binary: 'Write binary PLY. When off, writes ASCII PLY.',
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
   },
   step: {
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
   },
   stl: {
-    binary: 'Write binary STL when true and ASCII STL when false.',
+    binary: 'Write binary STL. When off, writes ASCII STL.',
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
   },
   usda: {
     animationIndex:
-      "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage.",
-    animations: 'USD exporters (usda, usdc, usdz): export animations.',
-    clearcoat: 'USD exporters: map clearcoat factors and textures to UsdPreviewSurface.',
+      'Which animation to export, counting from 0, when several animations drive the same channels. USD has one timeline per stage, so animations on separate channels are merged instead.',
+    animations: 'Export animations.',
+    clearcoat: 'Map clearcoat factors and textures to the UsdPreviewSurface clearcoat inputs.',
     maxFileSizeMb:
-      'USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten).',
+      'Largest binary USDC layer the writer may produce, in MiB. 0 uses the platform default: no limit natively, 2048 in WebAssembly. USDA output ignores it.',
     maxMemoryMb:
-      'USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten).',
+      'Memory the binary USDC writer may use, in MiB. 0 uses the platform default: no limit natively, 2048 in WebAssembly. USDA output ignores it.',
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
   },
   usdc: {
     animationIndex:
-      "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage.",
-    animations: 'USD exporters (usda, usdc, usdz): export animations.',
-    clearcoat: 'USD exporters: map clearcoat factors and textures to UsdPreviewSurface.',
+      'Which animation to export, counting from 0, when several animations drive the same channels. USD has one timeline per stage, so animations on separate channels are merged instead.',
+    animations: 'Export animations.',
+    clearcoat: 'Map clearcoat factors and textures to the UsdPreviewSurface clearcoat inputs.',
     compressFloatArrays:
-      "USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays).",
+      "Use OpenUSD's lossless compression for integer-valued and low-cardinality float arrays in the binary USDC data.",
     maxFileSizeMb:
-      'USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten).',
+      'Largest binary USDC layer the writer may produce, in MiB. 0 uses the platform default: no limit natively, 2048 in WebAssembly. USDA output ignores it.',
     maxMemoryMb:
-      'USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten).',
+      'Memory the binary USDC writer may use, in MiB. 0 uses the platform default: no limit natively, 2048 in WebAssembly. USDA output ignores it.',
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
   },
   usdz: {
     animationIndex:
-      "USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage.",
-    animations: 'USD exporters (usda, usdc, usdz): export animations.',
-    clearcoat: 'USD exporters: map clearcoat factors and textures to UsdPreviewSurface.',
+      'Which animation to export, counting from 0, when several animations drive the same channels. USD has one timeline per stage, so animations on separate channels are merged instead.',
+    animations: 'Export animations.',
+    clearcoat: 'Map clearcoat factors and textures to the UsdPreviewSurface clearcoat inputs.',
     compressFloatArrays:
-      "USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays).",
+      "Use OpenUSD's lossless compression for integer-valued and low-cardinality float arrays in the binary USDC data.",
     lights:
-      'USDZ exporter: keep lights. ARKit allows no UsdLux prims, so USDZ packages drop lights unless this is set. USDA and USDC always keep them.',
+      'Keep lights in the USDZ package. ARKit allows no UsdLux prims, so lights are dropped unless this is on.',
     maxFileSizeMb:
-      'USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten).',
+      'Largest binary USDC layer the writer may produce, in MiB. 0 uses the platform default: no limit natively, 2048 in WebAssembly. USDA output ignores it.',
     maxMemoryMb:
-      'USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten).',
+      'Memory the binary USDC writer may use, in MiB. 0 uses the platform default: no limit natively, 2048 in WebAssembly. USDA output ignores it.',
     physicsJoints:
-      'USDZ exporter: keep UsdPhysics joint prims. ARKit allows no joint prim types, so USDZ packages export joint nodes as plain Xforms unless this is set. USDA and USDC always keep them.',
+      'Keep UsdPhysics joint prims in the USDZ package. ARKit allows no joint prims, so joints are written as plain Xforms unless this is on.',
     pointClouds:
-      'Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds.',
+      'Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces.',
   },
 } as const;
 /** Post-process step prose, keyed by public name. @internal */

@@ -20,7 +20,10 @@ describe('libassimp/capabilities', () => {
       expect(info.id).toBe(rootInfo.id);
       expect(Object.keys(info.exportOptions)).toEqual(Object.keys(rootInfo.exportOptions));
       for (const [name, descriptor] of Object.entries(info.exportOptions)) {
-        expect((descriptor as { description: string }).description, `${format}.${name}`).not.toBe('');
+        const { description } = descriptor as { description: string };
+        expect(description, `${format}.${name}`).not.toBe('');
+        // Forms show these as help text, so each one is prose rather than an Assimp config key.
+        expect(description, `${format}.${name}`).not.toMatch(/^\w+\.?$/u);
       }
     }
     expect(described.import).toBe(root.import);
