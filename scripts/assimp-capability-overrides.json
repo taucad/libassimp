@@ -172,7 +172,6 @@
             "kind": "boolean",
             "default": true,
             "owners": ["FBX"],
-            "description": "Write binary FBX when true and ASCII FBX when false.",
             "source": "assimp/code/Common/Exporter.cpp"
           }
         ],
@@ -204,7 +203,6 @@
             "kind": "boolean",
             "default": true,
             "owners": ["Obj"],
-            "description": "Write an MTL sidecar when the scene has materials.",
             "source": "assimp/code/Common/Exporter.cpp"
           }
         ],
@@ -226,7 +224,6 @@
             "kind": "boolean",
             "default": false,
             "owners": ["Ply"],
-            "description": "Write binary PLY when true and ASCII PLY when false.",
             "source": "assimp/code/Common/Exporter.cpp"
           }
         ],
@@ -253,7 +250,6 @@
             "kind": "boolean",
             "default": false,
             "owners": ["STL"],
-            "description": "Write binary STL when true and ASCII STL when false.",
             "source": "assimp/code/Common/Exporter.cpp"
           }
         ],
@@ -297,8 +293,7 @@
     "3MF_EXPORT_REQUIRE_MANIFOLD": {
       "publicName": "requireManifold",
       "supported": true,
-      "formats": ["3mf"],
-      "description": "Whether every mesh must be manifold and oriented, as 3MF Core requires for model objects. When false, a mesh that is not is written as an object of type other instead of failing the export."
+      "formats": ["3mf"]
     },
     "3MF_EXPORT_UNIT": {
       "publicName": "unit",

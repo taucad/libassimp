@@ -26,223 +26,223 @@ export type PostProcessDescriptor = Readonly<{
 }>;
 
 export type ImportOptions = {
-  /** Meters represented by one 3MF source unit. Default: null. */
+  /** Length of one 3MF file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: null. */
   readonly '3mfUnitScaleToMeters'?: number;
-  /** The 3MF source up axis. Default: "z". */
+  /** Axis that points up in 3MF files. Exports rotate the model from it to the target format's up axis. Default: "z". */
   readonly '3mfUpAxis'?: 'x' | 'y' | 'z';
-  /** Meters represented by one AC source unit. Default: 1. */
+  /** Length of one AC3D file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly acUnitScaleToMeters?: number;
-  /** The AC source up axis. Default: "y". */
+  /** Axis that points up in AC3D files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly acUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one AMF source unit. Default: null. */
+  /** Length of one AMF file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: null. */
   readonly amfUnitScaleToMeters?: number;
-  /** The AMF source up axis. Default: "z". */
+  /** Axis that points up in AMF files. Exports rotate the model from it to the target format's up axis. Default: "z". */
   readonly amfUpAxis?: 'x' | 'y' | 'z';
-  /** AI_CONFIG_APP_SCALE_KEY. Default: 1. */
+  /** Has no effect: every import replaces it with the file's own unit scale. Use globalScaleFactorKey to scale the scene. Default: 1. */
   readonly appScaleKey?: number;
-  /** Meters represented by one ASE source unit. Default: 1. */
+  /** Length of one ASE file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly aseUnitScaleToMeters?: number;
-  /** The ASE source up axis. Default: "y". */
+  /** Axis that points up in ASE files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly aseUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one BVH source unit. Default: 1. */
+  /** Length of one BVH file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly bvhUnitScaleToMeters?: number;
-  /** The BVH source up axis. Default: "y". */
+  /** Axis that points up in BVH files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly bvhUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one COB source unit. Default: null. */
+  /** Length of one COB file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: null. */
   readonly cobUnitScaleToMeters?: number;
-  /** The COB source up axis. Default: "y". */
+  /** Axis that points up in COB files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly cobUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one COLLADA source unit. Default: 1. */
+  /** Length of one COLLADA file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly colladaUnitScaleToMeters?: number;
-  /** The COLLADA source up axis. Default: "y". */
+  /** Axis that points up in COLLADA files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly colladaUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one DXF source unit. Default: 0.001. */
+  /** Length of one DXF file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 0.001. */
   readonly dxfUnitScaleToMeters?: number;
-  /** The DXF source up axis. Default: "y". */
+  /** Axis that points up in DXF files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly dxfUpAxis?: 'x' | 'y' | 'z';
-  /** A hint to assimp to favour speed against import quality. Enabling this option may result in faster loading, but it needn't. It represents only a hint to loaders and post-processing steps to use faster code paths, if possible. This property is expected to be an integer, != 0 stands for true. Default: false. */
+  /** Trade accuracy for speed where an importer or post-process step has a faster path, such as findInstances skipping its bone and face comparisons and LightWave objects skipping smoothing-angle normals. Default: false. */
   readonly favourSpeed?: boolean;
-  /** Set wether the FBX importer shall convert the unit from cm to m. Default: false. */
+  /** Has no effect. FBX files are converted from centimeters to meters only by the globalScale post-process step. Default: false. */
   readonly fbxConvertToM?: boolean;
-  /** Will enable the skeleton struct to store bone data. This will decouple the bone coupling to the mesh. This feature is experimental. Default: false. */
+  /** Store FBX skin weights in a separate skeleton instead of as bones on each mesh. No exporter reads that skeleton, so exports lose the skinning. Experimental. Default: false. */
   readonly fbxUseSkeletonBoneContainer?: boolean;
-  /** Specifies a global key factor for scale, float value. Default: 1. */
+  /** Uniform scale applied to the whole scene, including animation. Used by the globalScale post-process step, which also applies FBX unit conversion. Default: 1. */
   readonly globalScaleFactorKey?: number;
-  /** Enables time measurements. If enabled, measures the time needed for each part of the loading process (i.e. IO time, importing, postprocessing, ..) and dumps these timings to the DefaultLogger. See the @link perf Performance Page@endlink for more information on this topic. Default: false. */
+  /** Log how long each import phase takes. The log is discarded, so this has no visible effect; every result reports timings anyway. Default: false. */
   readonly globMeasureTime?: boolean;
-  /** Meters represented by one IFC source unit. Default: 1. */
+  /** Length of one IFC file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly ifcUnitScaleToMeters?: number;
-  /** The IFC source up axis. Default: "z". */
+  /** Axis that points up in IFC files. Exports rotate the model from it to the target format's up axis. Default: "z". */
   readonly ifcUpAxis?: 'x' | 'y' | 'z';
-  /** Configures whether the AC loader evaluates subdivision surfaces ( indicated by the presence of the 'subdiv' attribute in the file). By default, Assimp performs the subdivision using the standard Catmull-Clark algorithm. Default: true. */
+  /** Subdivide AC3D surfaces that declare a subdivision level, using Catmull-Clark. Off, the coarse control mesh is imported. Default: true. */
   readonly importAcEvalSubdivision?: boolean;
-  /** Configures the AC loader to collect all surfaces which have the "Backface cull" flag set in separate meshes. Default: true. */
+  /** Put AC3D surfaces that have the backface-culling flag into separate meshes from the rest. Default: true. */
   readonly importAcSeparateBfcull?: boolean;
-  /** Configures the ASE loader to always reconstruct normal vectors basing on the smoothing groups loaded from the file. Some ASE files have carry invalid normals, other don't. Default: true. */
+  /** Rebuild ASE normals from the file's smoothing groups instead of using the stored normals, which are often invalid. Default: true. */
   readonly importAseReconstructNormals?: boolean;
-  /** Specifies whether the Collada loader will ignore the provided unit size. If this property is set to true, the unit size provided in the file header will be ignored and the file will be loaded without scaling the assets. Default: false. */
+  /** Ignore the unit declared in the COLLADA header and keep coordinates as stored. Default: false. */
   readonly importColladaIgnoreUnitSize?: boolean;
-  /** Specifies whether the Collada loader will ignore the provided up direction. If this property is set to true, the up direction provided in the file header will be ignored and the file will be loaded as is. Default: false. */
+  /** Ignore the up axis declared in the COLLADA header and keep the scene as stored. Default: false. */
   readonly importColladaIgnoreUpDirection?: boolean;
-  /** Specifies whether the Collada loader should use Collada names. If this property is set to true, the Collada names will be used as the node and mesh names. The default is to use the id tag (resp. sid tag, if no id tag is present) instead. Default: false. */
+  /** Name nodes and meshes after their COLLADA name attribute instead of their id, or their sid when there is no id. Default: false. */
   readonly importColladaUseColladaNames?: boolean;
-  /** Set whether the fbx importer will use the legacy embedded texture naming. Default: false. */
+  /** Reference embedded FBX textures by index, such as *0, instead of by file name. Default: false. */
   readonly importFbxEmbeddedTexturesLegacyNaming?: boolean;
-  /** Set whether the FBX importer shall ignore the provided axis configuration If this property is set to true, the axis directions provided in the FBX file will be ignored and the file will be loaded as is. Set to true for Assimp 5.3.x and earlier behavior Equivalent to AI_CONFIG_IMPORT_COLLADA_IGNORE_UP_DIRECTION. Default: false. */
+  /** Ignore the axes declared in the FBX file and keep the scene as stored, without rotating it. Default: false. */
   readonly importFbxIgnoreUpDirection?: boolean;
-  /** Specifies whether the importer will drop empty animation curves or animation curves which match the bind pose transformation over their entire defined range. Default: true. */
+  /** Drop FBX animation curves that are empty or match the bind pose over their whole range. Default: true. */
   readonly importFbxOptimizeEmptyAnimationCurves?: boolean;
-  /** Set whether the fbx importer will preserve pivot points for transformations (as extra nodes). If set to false, pivots and offsets will be evaluated whenever possible. Default: true. */
+  /** Keep FBX pivot and offset transforms as extra helper nodes. Off, they are folded into each node's transform where possible. Default: true. */
   readonly importFbxPreservePivots?: boolean;
-  /** Set whether the fbx importer will merge all geometry layers present in the source file or take only the first. Default: true. */
+  /** Merge every geometry layer in an FBX file. Off, only the first layer is read. Default: true. */
   readonly importFbxReadAllGeometryLayers?: boolean;
-  /** Set whether the fbx importer will read all materials present in the source file or take only the referenced materials. This is void unless IMPORT_FBX_READ_MATERIALS=1. Default: false. */
+  /** Import every FBX material, including ones no mesh uses. Default: false. */
   readonly importFbxReadAllMaterials?: boolean;
-  /** Set whether the fbx importer will read animations. Default: true. */
+  /** Default: true. */
   readonly importFbxReadAnimations?: boolean;
-  /** Set whether the fbx importer will read cameras. Default: true. */
+  /** Default: true. */
   readonly importFbxReadCameras?: boolean;
-  /** Set whether the fbx importer will read light sources. Default: true. */
+  /** Default: true. */
   readonly importFbxReadLights?: boolean;
-  /** Set whether the fbx importer will read materials. Default: true. */
+  /** Default: true. */
   readonly importFbxReadMaterials?: boolean;
-  /** Set whether the fbx importer will read embedded textures. Default: true. */
+  /** Default: true. */
   readonly importFbxReadTextures?: boolean;
-  /** Set whether the fbx importer will read weights. Default: true. */
+  /** Import the skin weights that bind FBX meshes to bones. Default: true. */
   readonly importFbxReadWeights?: boolean;
-  /** Set whether the fbx importer will act in strict mode in which only FBX 2013 is supported and any other sub formats are rejected. FBX 2013 is the primary target for the importer, so this format is best supported and well-tested. Default: false. */
+  /** Reject FBX files newer than version 7.4 and fail on a malformed object instead of skipping it with a warning. Default: false. */
   readonly importFbxStrictMode?: boolean;
-  /** Set the vertex animation keyframe to be imported ASSIMP does not support vertex keyframes (only bone animation is supported). The library reads only one frame of models with vertex animations. By default this is the first frame. \note This option applies to all importers. However, it is also possible to override the global setting for a specific loader. You can use the AI_CONFIG_IMPORT_XXX_KEYFRAME options (where XXX is a placeholder for the file format for which you want to override the global setting). Default: 0. */
+  /** Frame to import from animated MD2, MD3, MDC, MDL, SMD and Unreal models, counting from 0, since only one frame is kept. Each format's own keyframe option overrides it. Default: 0. */
   readonly importGlobalKeyframe?: number;
-  /** Configures the LWO loader to load only one layer from the model. LWO files consist of layers and in some cases it could be useful to load only one of them. This property can be either a string - which specifies the name of the layer - or an integer - the index of the layer. If the property is not set the whole LWO model is loaded. Loading fails if the requested layer is not available. The layer index is zero-based and the layer name may not be empty. Default: 2147483647. */
+  /** Import only the LightWave layer at this position, counting from 1. The import fails when there is no such layer. Default: 2147483647. */
   readonly importLwoLayerIndex?: number;
-  /** Configures the LWO loader to load only one layer from the model. LWO files consist of layers and in some cases it could be useful to load only one of them. This property can be either a string - which specifies the name of the layer - or an integer - the index of the layer. If the property is not set the whole LWO model is loaded. Loading fails if the requested layer is not available. The layer index is zero-based and the layer name may not be empty. Default: "". */
+  /** Import only the LightWave layer with this name. The import fails when no layer has it. Default: "". */
   readonly importLwoLayerName?: string;
-  /** AI_CONFIG_IMPORT_LWS_ANIM_END. Default: 150392. */
+  /** Last frame of the LightWave scene animation to import, counting from 0. The default keeps the end the file declares. Default: 150392. */
   readonly importLwsAnimEnd?: number;
-  /** Defines the begin of the time range for which the LWS loader evaluates animations and computes aiNodeAnim's. Assimp provides full conversion of LightWave's envelope system, including pre and post conditions. The loader computes linearly subsampled animation chanels with the frame rate given in the LWS file. This property defines the start time. Note: animation channels are only generated if a node has at least one envelope with more tan one key assigned. This property. is given in frames, '0' is the first frame. By default, if this property is not… Default: 150392. */
+  /** First frame of the LightWave scene animation to import, counting from 0. The default keeps the start the file declares. Default: 150392. */
   readonly importLwsAnimStart?: number;
-  /** AI_CONFIG_IMPORT_MD2_KEYFRAME. Default: -1. */
+  /** Frame to import from an animated MD2 model, counting from 0. -1 uses importGlobalKeyframe. Default: -1. */
   readonly importMd2Keyframe?: number;
-  /** Configures the M3D loader to detect and process multi-part Quake player models. These models usually consist of 3 files, lower.md3, upper.md3 and head.md3. If this property is set to true, Assimp will try to load and combine all three files if one of them is loaded. Default: true. */
+  /** Load the lower, upper and head parts of a Quake 3 player model together when one of them is imported. Default: true. */
   readonly importMd3HandleMultipart?: boolean;
-  /** AI_CONFIG_IMPORT_MD3_KEYFRAME. Default: -1. */
+  /** Frame to import from an animated MD3 model, counting from 0. -1 uses importGlobalKeyframe. Default: -1. */
   readonly importMd3Keyframe?: number;
-  /** Specify if to try load Quake 3 shader files. This also controls original surface name handling: when disabled it will be used unchanged. Default: true. */
+  /** Read Quake 3 shader files to resolve MD3 texture paths. Off, texture paths are used as stored. Default: true. */
   readonly importMd3LoadShaders?: boolean;
-  /** Specify the Quake 3 shader file to be used for a particular MD3 file. This can also be a search path. By default Assimp's behaviour is as follows: If a MD3 file any_path/models/any_q3_subdir/model_name/file_name.md3 is loaded, the library tries to locate the corresponding shader file in any_path/scripts/model_name.shader . This property overrides this behaviour. It can either specify a full path to the shader to be loaded or alternatively the path (relative or absolute) to the directory where the shaders for all MD3s to be loaded reside. Assimp attempts to open IMPORT_MD3_SHADER_SRC/model_name.shader… Default: "". */
+  /** Quake 3 shader file for MD3 materials, or a directory that holds a shader file named after the model. Empty searches the scripts directory three levels above the model. Default: "". */
   readonly importMd3ShaderSrc?: string;
-  /** Tells the MD3 loader which skin files to load. When loading MD3 files, Assimp checks whether a file [md3_file_name]_[skin_name].skin is existing. These files are used by Quake III to be able to assign different skins (e.g. red and blue team) to models. 'default', 'red', 'blue' are typical skin names. Default: "default". */
+  /** Skin to apply to MD3 models, such as red or blue, read from the model's matching .skin file. Default: "default". */
   readonly importMd3SkinName?: string;
-  /** Configures the MD5 loader to not load the MD5ANIM file for a MD5MESH file automatically. The default strategy is to look for a file with the same name but the MD5ANIM extension in the same directory. If it is found, it is loaded and combined with the MD5MESH file. This configuration option can be used for disable this behaviour. Default: false. */
+  /** Skip loading the MD5ANIM file that shares an MD5MESH file's name and directory. Default: false. */
   readonly importMd5NoAnimAutoload?: boolean;
-  /** AI_CONFIG_IMPORT_MDC_KEYFRAME. Default: -1. */
+  /** Frame to import from an animated MDC model, counting from 0. -1 uses importGlobalKeyframe. Default: -1. */
   readonly importMdcKeyframe?: number;
-  /** Sets the colormap (= palette) to be used for decode embedded textures in MDL (Quake or 3DGS) files. This must be a valid path to a file. The file is 768 (256*3) bytes large and contains RGB triplets for each of the 256 palette entries. The default value is colormap.lmp. If the file is not found, a default palette (from Quake 1) is used. Default: "colormap.lmp". */
+  /** Palette file for textures embedded in Quake 1 and 3D GameStudio MDL files: 256 RGB triplets in 768 bytes. When it is missing, the Quake 1 palette is used. Default: "colormap.lmp". */
   readonly importMdlColormap?: string;
-  /** Set whether the MDL (HL1) importer will read animation events. \note This property requires AI_CONFIG_IMPORT_MDL_HL1_READ_ANIMATIONS to be set to true. Default: true. */
+  /** Import animation events of Half-Life models. Needs importMdlHl1ReadAnimations. Default: true. */
   readonly importMdlHl1ReadAnimationEvents?: boolean;
-  /** Set whether the MDL (HL1) importer will read animations. Default: true. */
+  /** Default: true. */
   readonly importMdlHl1ReadAnimations?: boolean;
-  /** Set whether the MDL (HL1) importer will read attachments info. Default: true. */
+  /** Default: true. */
   readonly importMdlHl1ReadAttachments?: boolean;
-  /** Set whether the MDL (HL1) importer will read blend controllers. \note This property requires AI_CONFIG_IMPORT_MDL_HL1_READ_ANIMATIONS to be set to true. Default: true. */
+  /** Import blend controllers of Half-Life models. Needs importMdlHl1ReadAnimations. Default: true. */
   readonly importMdlHl1ReadBlendControllers?: boolean;
-  /** Set whether the MDL (HL1) importer will read bone controllers info. Default: true. */
+  /** Default: true. */
   readonly importMdlHl1ReadBoneControllers?: boolean;
-  /** Set whether the MDL (HL1) importer will read hitboxes info. Default: true. */
+  /** Default: true. */
   readonly importMdlHl1ReadHitboxes?: boolean;
-  /** Set whether the MDL (HL1) importer will read miscellaneous global model info. Default: true. */
+  /** Import a Half-Life model's eye position and its hull and collision bounds as scene metadata. Default: true. */
   readonly importMdlHl1ReadMiscGlobalInfo?: boolean;
-  /** Set whether the MDL (HL1) importer will read sequence transition graph. \note This property requires AI_CONFIG_IMPORT_MDL_HL1_READ_ANIMATIONS to be set to true. Default: true. */
+  /** Import the sequence transition graph of Half-Life models. Needs importMdlHl1ReadAnimations. Default: true. */
   readonly importMdlHl1ReadSequenceTransitions?: boolean;
-  /** Set whether you want to convert the HS1 coordinate system in a special way. Default: false. */
+  /** Rotate Half-Life models about the Z and X axes into the Y-up frame. Off, they get the single 90-degree X rotation used for other MDL files. Default: false. */
   readonly importMdlHl1TransformCoordSystem?: boolean;
-  /** AI_CONFIG_IMPORT_MDL_KEYFRAME. Default: -1. */
+  /** Frame to import from an animated MDL model, counting from 0. -1 uses importGlobalKeyframe. Default: -1. */
   readonly importMdlKeyframe?: number;
-  /** AI_CONFIG_IMPORT_NO_SKELETON_MESHES. Default: false. */
+  /** Skip the placeholder mesh built from the skeleton when a file has bones but no geometry, such as a BVH motion file. Default: false. */
   readonly importNoSkeletonMeshes?: boolean;
-  /** Ogre Importer will try to find referenced materials from this file. Ogre meshes reference with material names, this does not tell Assimp the file where it is located in. Assimp will try to find the source file in the following order: .material, .material and lastly the material name defined by this config property. Default: "Scene.material". */
+  /** Material file to search last when an Ogre material is in neither its own .material file nor the one named after the mesh. Default: "Scene.material". */
   readonly importOgreMaterialFile?: string;
-  /** Ogre Importer detect the texture usage from its filename. Ogre material texture units do not define texture type, the textures usage depends on the used shader or Ogre's fixed pipeline. If this config property is true Assimp will try to detect the type from the textures filename postfix: _n, _nrm, _nrml, _normal, _normals and _normalmap for normal map, _s, _spec, _specular and _specularmap for specular map, _l, _light, _lightmap, _occ and _occlusion for light map, _disp and _displacement for displacement map. The matching is case insensitive. Post fix is taken… Default: false. */
+  /** Infer Ogre texture roles from file name suffixes: _n or _normal for normal maps, _s or _spec for specular, _l or _occ for light maps, and _disp for displacement. Default: false. */
   readonly importOgreTexturetypeFromFilename?: boolean;
-  /** Set wether the importer shall not remove empty bones. Empty bone are often used for define connections for other models. Default: true. */
+  /** Remove bones that influence no vertex. Applies to COLLADA files and the limitBoneWeights post-process step; turn off to keep bones that only mark attachment points. Default: true. */
   readonly importRemoveEmptyBones?: boolean;
-  /** AI_CONFIG_IMPORT_SMD_KEYFRAME. Default: -1. */
+  /** Frame to import from an animated SMD model, counting from 0. -1 uses importGlobalKeyframe. Default: -1. */
   readonly importSmdKeyframe?: number;
-  /** Smd load multiple animations. Default: true. */
+  /** Also load the animations listed in the _animation.txt file named after an SMD model. Default: true. */
   readonly importSmdLoadAnimationList?: boolean;
-  /** Configures the UNREAL 3D loader to separate faces with different surface flags (e.g. two-sided vs. single-sided). Default: true. */
+  /** Put Unreal faces with different surface flags, such as two-sided and one-sided, into separate meshes. Default: true. */
   readonly importUnrealHandleFlags?: boolean;
-  /** AI_CONFIG_IMPORT_UNREAL_KEYFRAME. Default: -1. */
+  /** Frame to import from an animated Unreal model, counting from 0. -1 uses importGlobalKeyframe. Default: -1. */
   readonly importUnrealKeyframe?: number;
-  /** USD memory budget in MiB. Upper bound handed to LightUSD for parsing, composition and the Tydra conversion of one USD file (including every composed layer). Raise it for very large scenes; lower it to reject oversized input early. Default: 16384. */
+  /** Memory budget, in MiB, for reading one USD file and every layer it composes. Raise it for very large scenes; lower it to reject oversized files early. Default: 16384. */
   readonly importUsdMaxMemoryMb?: number;
-  /** Meters represented by one LWO source unit. Default: 1. */
+  /** Length of one LightWave file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly lwoUnitScaleToMeters?: number;
-  /** The LWO source up axis. Default: "y". */
+  /** Axis that points up in LightWave files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly lwoUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one MD5 source unit. Default: 1. */
+  /** Length of one MD5 file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly md5UnitScaleToMeters?: number;
-  /** The MD5 source up axis. Default: "y". */
+  /** Axis that points up in MD5 files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly md5UpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one NFF source unit. Default: 1. */
+  /** Length of one NFF file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly nffUnitScaleToMeters?: number;
-  /** The NFF source up axis. Default: "y". */
+  /** Axis that points up in NFF files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly nffUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one OBJ source unit. Default: 1. */
+  /** Length of one OBJ file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly objUnitScaleToMeters?: number;
-  /** The OBJ source up axis. Default: "y". */
+  /** Axis that points up in OBJ files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly objUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one OFF source unit. Default: 1. */
+  /** Length of one OFF file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly offUnitScaleToMeters?: number;
-  /** The OFF source up axis. Default: "y". */
+  /** Axis that points up in OFF files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly offUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one OGEX source unit. Default: null. */
+  /** Length of one OpenGEX file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: null. */
   readonly ogexUnitScaleToMeters?: number;
-  /** The OGEX source up axis. Default: "z". */
+  /** Axis that points up in OpenGEX files. Exports rotate the model from it to the target format's up axis. Default: "z". */
   readonly ogexUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one OGRE source unit. Default: 1. */
+  /** Length of one Ogre file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly ogreUnitScaleToMeters?: number;
-  /** The OGRE source up axis. Default: "y". */
+  /** Axis that points up in Ogre files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly ogreUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one PLY source unit. Default: 1. */
+  /** Length of one PLY file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly plyUnitScaleToMeters?: number;
-  /** The PLY source up axis. Default: "y". */
+  /** Axis that points up in PLY files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly plyUpAxis?: 'x' | 'y' | 'z';
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on import; set the export option of the same name to keep point clouds. Default: false. */
   readonly pointClouds?: boolean;
-  /** Specifies the maximum angle that may be between two vertex tangents that their tangents and bi-tangents are smoothed. This applies to the CalcTangentSpace-Step. The angle is specified in degrees. The maximum value is 175. Default: 45. */
+  /** Largest angle, in degrees, between tangents that are still smoothed together, up to 45. Used by the calcTangentSpace post-process step. Default: 45. */
   readonly ppCtMaxSmoothingAngle?: number;
-  /** AI_CONFIG_PP_CT_TEXTURE_CHANNEL_INDEX. Default: 0. */
+  /** Texture coordinate set that tangents are derived from, counting from 0. Used by the calcTangentSpace post-process step. Default: 0. */
   readonly ppCtTextureChannelIndex?: number;
-  /** Require all bones qualify for deboning before removing any This is used by the aiProcess_Debone PostProcess-Step. Default: false. */
+  /** Remove bones only when every bone in a mesh can go, otherwise keep them all. Used by the debone post-process step. Default: false. */
   readonly ppDbAllOrNone?: boolean;
-  /** Lower the deboning threshold in order to remove more bones. This is used by the aiProcess_Debone PostProcess-Step. Default: 1. */
+  /** Smallest weight at which a vertex counts as rigidly bound to one bone; lower it to remove more bones. Used by the debone post-process step. Default: 1. */
   readonly ppDbThreshold?: number;
-  /** Configures the aiProcess_FindDegenerates to check the area of a triangle to be greater than e-6. If this is not the case the triangle will be removed if AI_CONFIG_PP_FD_REMOVE is set to true. Default: true. */
+  /** Also treat triangles with almost no area as degenerate. Used by the findDegenerates post-process step. Default: true. */
   readonly ppFdCheckarea?: boolean;
-  /** Configures the aiProcess_FindDegenerates step to remove degenerated primitives from the import - immediately. The default behaviour converts degenerated triangles to lines and degenerated lines to points. See the documentation to the aiProcess_FindDegenerates step for a detailed example of the various ways to get rid of these lines and points if you don't want them. Default: false. */
+  /** Delete degenerate faces instead of turning them into lines and points. Used by the findDegenerates post-process step. Default: false. */
   readonly ppFdRemove?: boolean;
-  /** Input parameter to the aiProcess_FindInvalidData step: Specifies the floating-point accuracy for animation values. The step checks for animation tracks where all frame values are absolutely equal and removes them. This tweakable controls the epsilon for floating-point comparisons - two keys are considered equal if the invariant abs(n0-n1)>epsilon holds true for all vector respectively quaternion components. The default value is 0.f - comparisons are exact then. Default: 0. */
+  /** Tolerance for treating animation keys as equal when dropping tracks that never change. 0 compares exactly, and any larger value acts as a tolerance of 1. Used by the findInvalidData post-process step. Default: 0. */
   readonly ppFidAnimAccuracy?: number;
-  /** Input parameter to the aiProcess_FindInvalidData step: Set to true to ignore texture coordinates. This may be useful if you have to assign different kind of textures like one for the summer or one for the winter. Default: false. */
+  /** Skip the texture coordinate check, which removes coordinate sets that are all equal or hold invalid numbers. Used by the findInvalidData post-process step. Default: false. */
   readonly ppFidIgnoreTexturecoords?: boolean;
-  /** Specifies the maximum angle that may be between two face normals at the same vertex position that their are smoothed together. Sometimes referred to as 'crease angle'. This applies to the GenSmoothNormals-Step. The angle is specified in degrees, so 180 is PI. degrees (all vertex normals are smoothed). The maximum value is 175, too. Warning: setting this option may cause a severe loss of performance. The performance is unaffected if the AI_CONFIG_FAVOUR_SPEED flag is set but the output quality may be reduced. Default: 175. */
+  /** Largest angle, in degrees, between face normals that are still smoothed together, up to 175; sharper edges get a hard seam. Used by the generateSmoothNormals post-process step. Default: 175. */
   readonly ppGsnMaxSmoothingAngle?: number;
-  /** Set the size of the post-transform vertex cache to optimize the vertices for. This configures the aiProcess_ImproveCacheLocality step. The size is given in vertices. Of course you can't know how the vertex format will exactly look like after the import returns, but you can still guess what your meshes will probably have. The default value is PP_ICL_PTCACHE_SIZE. That results in slight performance improvements for most nVidia/AMD cards since 2002. Default: 12. */
+  /** Vertex cache size, in vertices, that triangles are reordered for. Used by the improveCacheLocality post-process step. Default: 12. */
   readonly ppIclPtcacheSize?: number;
-  /** Set the maximum number of bones affecting a single vertex This is used by the aiProcess_LimitBoneWeights PostProcess-Step. Default: 4. */
+  /** Most bones that may influence one vertex; the weakest extra weights are dropped and the rest renormalized. Used by the limitBoneWeights post-process step. Default: 4. */
   readonly ppLbwMaxWeights?: number;
-  /** Configures the aiProcess_OptimizeGraph step to preserve nodes matching a name in a given list. This is a list of 1 to n strings, ' ' serves as delimiter character. Identifiers containing whitespaces must be enclosed in *single* quotation marks. For example: "keep-me and_me_to anotherNodeToBeKept \'name with whitespace\'" . If a node matches on of these names, it will not be modified or removed by the postprocessing step. This option might be useful if you are using some magic node names to pass additional semantics through the content pipeline. This ensures… Default: "". */
+  /** Node names to keep unchanged, separated by spaces; wrap a name that contains spaces in single quotes. Used by the optimizeGraph post-process step. Default: "". */
   readonly ppOgExcludeList?: string;
-  /** Configures the aiProcess_PreTransformVertices step to use a users defined matrix as the scene root node transformation before transforming vertices. Default: false. */
+  /** Apply ppPtvRootTransformation to the scene root before transforms are baked. Used by the preTransformVertices post-process step. Default: false. */
   readonly ppPtvAddRootTransformation?: boolean;
-  /** Configures the aiProcess_PreTransformVertices step to keep the scene hierarchy. Meshes are moved to worldspace, but no optimization is performed (read: meshes with equal materials are not joined. The total number of meshes won't change). This option could be of use for you if the scene hierarchy contains important additional information which you intend to parse. For rendering, you can still render all meshes in the scene without any transformations. Default: false. */
+  /** Keep the node hierarchy: meshes move to world space but are not merged. Used by the preTransformVertices post-process step. Default: false. */
   readonly ppPtvKeepHierarchy?: boolean;
-  /** Configures the aiProcess_PreTransformVertices step to normalize all vertex components into the [-1,1] range. That is, a bounding box for the whole scene is computed, the maximum component is taken and all meshes are scaled appropriately (uniformly of course!). This might be useful if you don't know the spatial dimension of the input data. Default: false. */
+  /** Scale the scene uniformly to fit the -1 to 1 range. Used by the preTransformVertices post-process step. Default: false. */
   readonly ppPtvNormalize?: boolean;
-  /** Configures the aiProcess_PreTransformVertices step to use a users defined matrix as the scene root node transformation before transforming vertices. This property correspond to the 'a1' component of the transformation matrix. Default: [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]. */
+  /** Root transform applied when ppPtvAddRootTransformation is on, as 16 numbers in row-major order. Used by the preTransformVertices post-process step. Default: [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]. */
   readonly ppPtvRootTransformation?: readonly [
     number,
     number,
@@ -261,188 +261,188 @@ export type ImportOptions = {
     number,
     number,
   ];
-  /** Configures the aiProcess_RemoveRedundantMaterials step to keep materials matching a name in a given list. This is a list of 1 to n strings, ' ' serves as delimiter character. Identifiers containing whitespaces must be enclosed in *single* quotation marks. For example: "keep-me and_me_to anotherMaterialToBeKept \'name with whitespace\'" . If a material matches on of these names, it will not be modified or removed by the postprocessing step nor will other materials be replaced by a reference to it. This option might be useful if you are using some magic material… Default: "". */
+  /** Material names to keep even when they duplicate another material, separated by spaces; wrap a name that contains spaces in single quotes. Used by the removeRedundantMaterials post-process step. Default: "". */
   readonly ppRrmExcludeList?: string;
-  /** Input parameter to the aiProcess_RemoveComponent step: Specifies the parts of the data structure to be removed. See the documentation to this step for further details. The property is expected to be an integer, a bitwise combination of the aiComponent flags defined above in this header. Important: if no valid mesh is remaining after the step has been executed (e.g you thought it was funny to specify ALL of the flags defined above) the import FAILS. Mainly because there is no data to work on anymore ... Default: 0. */
+  /** Components to remove, as a sum of flags: 2 normals, 4 tangents, 8 colors, 16 texture coordinates, 32 bone weights, 64 animations, 128 textures, 256 lights, 512 cameras, 1024 meshes, 2048 materials. Used by the removeComponent post-process step. Default: 0. */
   readonly ppRvcFlags?: number;
-  /** AI_CONFIG_PP_SBBC_MAX_BONES. Default: 60. */
+  /** Most bones one mesh may use before it is split. Used by the splitByBoneCount post-process step. Default: 60. */
   readonly ppSbbcMaxBones?: number;
-  /** Input parameter to the aiProcess_SortByPType step: Specifies which primitive types are removed by the step. This is a bitwise combination of the aiPrimitiveType flags. Specifying all of them is illegal, of course. A typical use would be to exclude all line and point meshes from the import. This is an integer property. Default: 0. */
+  /** Primitive types to remove, as a sum of flags: 1 points, 2 lines, 4 triangles, 8 polygons. Used by the sortByPrimitiveType post-process step. Default: 0. */
   readonly ppSbpRemove?: number;
-  /** Set the maximum number of triangles in a mesh. This is used by the "SplitLargeMeshes" PostProcess-Step to determine whether a mesh must be split or not. Default: 1000000. */
+  /** Most triangles one mesh may have before it is split. Used by the splitLargeMeshes post-process step, and optimizeMeshes stays below it when merging. Default: 1000000. */
   readonly ppSlmTriangleLimit?: number;
-  /** Set the maximum number of vertices in a mesh. This is used by the "SplitLargeMeshes" PostProcess-Step to determine whether a mesh must be split or not. Default: 1000000. */
+  /** Most vertices one mesh may have before it is split. Used by the splitLargeMeshes post-process step, and optimizeMeshes stays below it when merging. Default: 1000000. */
   readonly ppSlmVertexLimit?: number;
-  /** Input parameter to the aiProcess_TransformUVCoords step: Specifies which UV transformations are evaluated. This is a bitwise combination of the AI_UVTRAFO_XXX flags (integer property, of course). By default all transformations are enabled (AI_UVTRAFO_ALL). Default: 1. */
+  /** Texture transforms to bake into texture coordinates, as a sum of flags: 1 scaling, 2 rotation, 4 translation. Used by the transformUvCoords post-process step. Default: 1. */
   readonly ppTuvEvaluate?: number;
-  /** Meters represented by one SMD source unit. Default: 1. */
+  /** Length of one SMD file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly smdUnitScaleToMeters?: number;
-  /** The SMD source up axis. Default: "z". */
+  /** Axis that points up in SMD files. Exports rotate the model from it to the target format's up axis. Default: "z". */
   readonly smdUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one STL source unit. Default: 0.001. */
+  /** Length of one STL file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 0.001. */
   readonly stlUnitScaleToMeters?: number;
-  /** The STL source up axis. Default: "z". */
+  /** Axis that points up in STL files. Exports rotate the model from it to the target format's up axis. Default: "z". */
   readonly stlUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one USD source unit. Default: 1. */
+  /** Length of one USD file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly usdUnitScaleToMeters?: number;
-  /** The USD source up axis. Default: "y". */
+  /** Axis that points up in USD files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly usdUpAxis?: 'x' | 'y' | 'z';
-  /** Meters represented by one XGL source unit. Default: 1. */
+  /** Length of one XGL file unit in meters, for example 0.001 for millimeters. Exports convert from it to the target format's unit. Default: 1. */
   readonly xglUnitScaleToMeters?: number;
-  /** The XGL source up axis. Default: "y". */
+  /** Axis that points up in XGL files. Exports rotate the model from it to the target format's up axis. Default: "y". */
   readonly xglUpAxis?: 'x' | 'y' | 'z';
 };
 
 type Format3mfExportOptions = {
-  /** 3MF_EXPORT_APPLICATION. Default: "". */
+  /** Application name written to the file's metadata. Empty writes none. Default: "". */
   readonly application?: string;
-  /** 3MF_EXPORT_DECIMAL_PRECISION. Default: 9. */
+  /** Digits written after the decimal point for each coordinate. Fewer digits make a smaller file but can open hairline gaps between objects in slicers. Default: 9. */
   readonly decimalPrecision?: number;
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
-  /** Whether every mesh must be manifold and oriented, as 3MF Core requires for model objects. When false, a mesh that is not is written as an object of type other instead of failing the export. Default: true. */
+  /** Fail the export when a mesh is not closed and consistently oriented, as 3MF requires for printable objects. Off, such a mesh is written as an object of type other instead. Default: true. */
   readonly requireManifold?: boolean;
-  /** 3MF_EXPORT_UNIT. Default: "millimeter". */
+  /** Unit the file declares. Geometry is rescaled into it when the source unit is known; otherwise coordinates are written unchanged. Default: "millimeter". */
   readonly unit?: 'micron' | 'millimeter' | 'centimeter' | 'inch' | 'foot' | 'meter';
-  /** 3MF_EXPORT_UPAXIS. Default: "z". */
+  /** Axis that points up in the file. The model is rotated into it when the source up axis is known. Default: "z". */
   readonly upAxis?: 'x' | 'y' | 'z';
 };
 
 type FormatAssjsonExportOptions = {
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
-  /** JSON_SKIP_WHITESPACES. Default: true. */
+  /** Write compact JSON without indentation or line breaks. Default: true. */
   readonly skipWhitespaces?: boolean;
 };
 
 type FormatDaeExportOptions = {
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
 };
 
 type FormatFbxExportOptions = {
-  /** Write binary FBX when true and ASCII FBX when false. Default: true. */
+  /** Default: true. */
   readonly binary?: boolean;
-  /** bJoinIdenticalVertices. Default: true. */
+  /** Write identical vertices once and share them between faces. Off, every face corner gets its own vertex, which makes a larger file. Default: true. */
   readonly joinIdenticalVertices?: boolean;
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
-  /** Specifies whether to write the value referenced to opacity in TransparencyFactor of each material. When this flag is not defined, the TransparencyFactor value of each meterial is 1.0. By enabling this flag, the value is 1.0 - opacity;. Default: false. */
+  /** Write each material's TransparencyFactor as 1 minus its opacity. Off, it is written as 1 and readers such as Maya and Blender take transparency from the Opacity property. Default: false. */
   readonly transparencyFactorRefersToOpacity?: boolean;
 };
 
 type FormatGlbExportOptions = {
-  /** Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code. Default: 0.00999999977. */
+  /** Tolerance within which a node transform counts as identity and is left out of the file. Default: 0.00999999977. */
   readonly identityMatrixEpsilon?: number;
-  /** GLTF2_TARGETNAMES_EXP. Default: false. */
+  /** Write morph target names to each mesh's extras.targetNames. Default: false. */
   readonly includeTargetNames?: boolean;
-  /** GLTF2_TARGET_NORMAL_EXP. Default: false. */
+  /** Write normals for morph targets as well as positions. Default: false. */
   readonly includeTargetNormals?: boolean;
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
-  /** GLTF2_SPARSE_ACCESSOR_EXP. Default: false. */
+  /** Store morph target data in sparse accessors, which keeps files small when a target moves few vertices. Default: false. */
   readonly sparseAccessors?: boolean;
-  /** Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights… Default: false. */
+  /** Write every bone influence per vertex in extra JOINTS and WEIGHTS sets. Off, only the four strongest are kept, the limit every glTF viewer supports. Default: false. */
   readonly unlimitedSkinningBonesPerVertex?: boolean;
-  /** Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec. Default: false. */
+  /** Write specular materials with the deprecated KHR_materials_pbrSpecularGlossiness extension instead of KHR_materials_specular. Those materials then also lose sheen, clearcoat and other material extensions. Default: false. */
   readonly useGltfPbrSpecularGlossiness?: boolean;
 };
 
 type FormatGltfExportOptions = {
-  /** Set epsilon to check the identity of the matrix 4x4. This is used by aiMatrix4x4t ::IsIdentity(const TReal epsilon). The default value is 10e-3f for backward compatibility of legacy code. Default: 0.00999999977. */
+  /** Tolerance within which a node transform counts as identity and is left out of the file. Default: 0.00999999977. */
   readonly identityMatrixEpsilon?: number;
-  /** GLTF2_TARGETNAMES_EXP. Default: false. */
+  /** Write morph target names to each mesh's extras.targetNames. Default: false. */
   readonly includeTargetNames?: boolean;
-  /** GLTF2_TARGET_NORMAL_EXP. Default: false. */
+  /** Write normals for morph targets as well as positions. Default: false. */
   readonly includeTargetNormals?: boolean;
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
-  /** GLTF2_SPARSE_ACCESSOR_EXP. Default: false. */
+  /** Store morph target data in sparse accessors, which keeps files small when a target moves few vertices. Default: false. */
   readonly sparseAccessors?: boolean;
-  /** Specifies whether to apply a limit on the number of four bones per vertex in skinning When this flag is not defined, all bone weights and indices are limited to a maximum of four bones for each vertex (attributes JOINT_0 and WEIGHT_0 only). By enabling this flag, the number of bones per vertex is unlimited. In both cases, indices and bone weights are sorted by weight in descending order. In the case of the limit of up to four bones, a maximum of the four largest values are exported. Weights… Default: false. */
+  /** Write every bone influence per vertex in extra JOINTS and WEIGHTS sets. Off, only the four strongest are kept, the limit every glTF viewer supports. Default: false. */
   readonly unlimitedSkinningBonesPerVertex?: boolean;
-  /** Specifies whether to use the deprecated KHR_materials_pbrSpecularGlossiness extension When this flag is undefined any material with specularity will use the new KHR_materials_specular extension. Enabling this flag will revert to the deprecated extension. Note that exporting KHR_materials_pbrSpecularGlossiness with extensions other than KHR_materials_unlit is unsupported, including the basic pbrMetallicRoughness spec. Default: false. */
+  /** Write specular materials with the deprecated KHR_materials_pbrSpecularGlossiness extension instead of KHR_materials_specular. Those materials then also lose sheen, clearcoat and other material extensions. Default: false. */
   readonly useGltfPbrSpecularGlossiness?: boolean;
 };
 
 type FormatObjExportOptions = {
-  /** bJoinIdenticalVertices. Default: true. */
+  /** Write identical vertices once and share them between faces. Off, every face corner gets its own vertex, which makes a larger file. Default: true. */
   readonly joinIdenticalVertices?: boolean;
-  /** Write an MTL sidecar when the scene has materials. Default: true. */
+  /** Write materials to an MTL file next to the OBJ. Off, the OBJ holds geometry only. Default: true. */
   readonly materials?: boolean;
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
 };
 
 type FormatPlyExportOptions = {
-  /** Write binary PLY when true and ASCII PLY when false. Default: false. */
+  /** Default: false. */
   readonly binary?: boolean;
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Keep vertices that no face uses, such as a point cloud. Node transforms are then not baked into the written vertices. Default: false. */
   readonly pointClouds?: boolean;
 };
 
 type FormatStepExportOptions = {
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
 };
 
 type FormatStlExportOptions = {
-  /** Write binary STL when true and ASCII STL when false. Default: false. */
+  /** Default: false. */
   readonly binary?: boolean;
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
 };
 
 type FormatUsdaExportOptions = {
-  /** USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Default: 0. */
+  /** Animation to export, counting from 0, when several animations drive the same nodes. USD has one timeline, so animations on separate nodes are merged and this is ignored. Default: 0. */
   readonly animationIndex?: number;
-  /** USD exporters (usda, usdc, usdz): export animations. Default: true. */
+  /** Default: true. */
   readonly animations?: boolean;
-  /** USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Default: true. */
+  /** Write material clearcoat strength and roughness, including their textures. Default: true. */
   readonly clearcoat?: boolean;
-  /** USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Default: 0. */
+  /** Has no effect on USDA, which is written as text without a size limit. Default: 0. */
   readonly maxFileSizeMb?: number;
-  /** USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Default: 0. */
+  /** Has no effect on USDA, which is written as text without a memory limit. Default: 0. */
   readonly maxMemoryMb?: number;
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
 };
 
 type FormatUsdcExportOptions = {
-  /** USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Default: 0. */
+  /** Animation to export, counting from 0, when several animations drive the same nodes. USD has one timeline, so animations on separate nodes are merged and this is ignored. Default: 0. */
   readonly animationIndex?: number;
-  /** USD exporters (usda, usdc, usdz): export animations. Default: true. */
+  /** Default: true. */
   readonly animations?: boolean;
-  /** USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Default: true. */
+  /** Write material clearcoat strength and roughness, including their textures. Default: true. */
   readonly clearcoat?: boolean;
-  /** USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays). Default: true. */
+  /** Losslessly compress float arrays that hold whole numbers or few distinct values, which makes the USDC data smaller. Default: true. */
   readonly compressFloatArrays?: boolean;
-  /** USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Default: 0. */
+  /** Largest file the export may write, in MiB; a larger scene fails. 0 uses 2048 MiB in WebAssembly and no limit natively. Default: 0. */
   readonly maxFileSizeMb?: number;
-  /** USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Default: 0. */
+  /** Memory the USDC writer may use, in MiB; a larger scene fails. 0 uses 2048 MiB in WebAssembly and no limit natively. Default: 0. */
   readonly maxMemoryMb?: number;
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
 };
 
 type FormatUsdzExportOptions = {
-  /** USD exporters: index of the animation to export when the scene's animations target the same channels. Animations that target disjoint channels are merged onto one timeline; USD has a single timeline per stage. Default: 0. */
+  /** Animation to export, counting from 0, when several animations drive the same nodes. USD has one timeline, so animations on separate nodes are merged and this is ignored. Default: 0. */
   readonly animationIndex?: number;
-  /** USD exporters (usda, usdc, usdz): export animations. Default: true. */
+  /** Default: true. */
   readonly animations?: boolean;
-  /** USD exporters: map clearcoat factors and textures to UsdPreviewSurface. Default: true. */
+  /** Write material clearcoat strength and roughness, including their textures. Default: true. */
   readonly clearcoat?: boolean;
-  /** USD exporters: use OpenUSD's lossless float-array compression in USDC layers (integer-valued and low-cardinality float arrays). Default: true. */
+  /** Losslessly compress float arrays that hold whole numbers or few distinct values, which makes the USDC data smaller. Default: true. */
   readonly compressFloatArrays?: boolean;
-  /** USDZ exporter: keep lights. ARKit allows no UsdLux prims, so USDZ packages drop lights unless this is set. USDA and USDC always keep them. Default: false. */
+  /** Keep lights in the package. ARKit's USDZ profile forbids them, so they are dropped by default. Default: false. */
   readonly lights?: boolean;
-  /** USD exporters: largest USDC layer the writer may produce, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Default: 0. */
+  /** Largest USDC layer the package may hold, in MiB; a larger scene fails. 0 uses 2048 MiB in WebAssembly and no limit natively. Default: 0. */
   readonly maxFileSizeMb?: number;
-  /** USD exporters: memory budget of the USDC writer, in MiB. 0 selects the platform default (unlimited natively, 2048 under Emscripten). Default: 0. */
+  /** Memory the USDC writer may use, in MiB; a larger scene fails. 0 uses 2048 MiB in WebAssembly and no limit natively. Default: 0. */
   readonly maxMemoryMb?: number;
-  /** USDZ exporter: keep UsdPhysics joint prims. ARKit allows no joint prim types, so USDZ packages export joint nodes as plain Xforms unless this is set. USDA and USDC always keep them. Default: false. */
+  /** Keep physics joints in the package. ARKit's USDZ profile forbids them, so by default joint nodes are written as plain transforms. Default: false. */
   readonly physicsJoints?: boolean;
-  /** Specifies whether the assimp export shall be able to export point clouds When this flag is not defined the render data has to contain valid faces. Point clouds are only a collection of vertices which have nor spatial organization by a face and the validation process will remove them. Enabling this feature will switch off the flag and enable the functionality to export pure point clouds. Default: false. */
+  /** Has no effect on this format; only PLY export uses it. Default: false. */
   readonly pointClouds?: boolean;
 };
 

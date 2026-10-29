@@ -77,7 +77,7 @@ const glbToStl = conversionEdges.find(({ from, to }) => from === 'glb' && to ===
 console.log(stl.binary.default, glbToStl, defaultPostProcess);
 ```
 
-- `assimpCapabilities` is the keyed serializable registry: directional import/export metadata, exact export-option descriptors, `ImportOptions`, and `PostProcessDescriptor` data. Descriptions are left out of the root entry; `libassimp/capabilities` exports the same registry as `DescribedCapabilities`, with a `description` on each `DescribedOptionDescriptor` and `DescribedPostProcessDescriptor`.
+- `assimpCapabilities` is the keyed serializable registry: directional import/export metadata, exact export-option descriptors, `ImportOptions`, and `PostProcessDescriptor` data. Descriptions are left out of the root entry; `libassimp/capabilities` exports the same registry as `DescribedCapabilities`, with a `description` on every `DescribedPostProcessDescriptor` and on `DescribedOptionDescriptor`s that need one.
 - `conversionEdges` is the exact import/export cross-product minus identity pairs. `ConversionEdge` remains a discriminated union of valid pairs.
 - `defaultPostProcess` is the default readonly `PostProcessStep` tuple.
 
