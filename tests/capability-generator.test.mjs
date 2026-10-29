@@ -21,6 +21,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   normalizeSourceText,
+  resolveOptionDescriptions,
+  validateOptionDescription,
   validateOverrideCoverage,
   validateSourceEvidence,
 } from '../scripts/generate-assimp-capabilities.mjs';
@@ -29,6 +31,8 @@ import { internalExportOptionDescriptors } from '../src/generated/assimp-capabil
 const root = fileURLToPath(new URL('../', import.meta.url));
 const evidence = JSON.parse(readFileSync(`${root}scripts/assimp-capability-evidence.json`, 'utf8'));
 const overrides = JSON.parse(readFileSync(`${root}scripts/assimp-capability-overrides.json`, 'utf8'));
+const prose = JSON.parse(readFileSync(`${root}scripts/assimp-option-descriptions.json`, 'utf8'));
+const proseFamilies = { formatNames: { stl: 'STL' }, UpAxis: 'Axis that points up in {format} files.' };
 
 describe('capability generator', () => {
   it('hashes Windows and POSIX text identically', () => {
@@ -72,5 +76,63 @@ describe('capability generator', () => {
       expect(descriptor.nativeKind, format).toBe(descriptor.kind);
       expect(Object.keys(descriptor)).not.toContain('formats');
     }
+  });
+
+  it('takes option prose only from the handwritten source', () => {
+    const resolved = resolveOptionDescriptions(
+      {
+        families: proseFamilies,
+        import: { favourSpeed: 'Trade accuracy for speed.', importFbxReadCameras: null },
+        export: { binary: null, pointClouds: { '*': 'Has no effect.', ply: 'Keep vertices.' } },
+      },
+      [{ publicName: 'favourSpeed' }, { publicName: 'importFbxReadCameras' }, { publicName: 'stlUpAxis' }],
+      {
+        ply: [{ publicName: 'binary' }, { publicName: 'pointClouds' }],
+        stl: [{ publicName: 'binary' }, { publicName: 'pointClouds' }],
+      },
+    );
+    expect(resolved).toEqual({
+      import: { favourSpeed: 'Trade accuracy for speed.', stlUpAxis: 'Axis that points up in STL files.' },
+      export: { ply: { pointClouds: 'Keep vertices.' }, stl: { pointClouds: 'Has no effect.' } },
+    });
+  });
+
+  it('names a missing or unknown option description', () => {
+    const exportOptions = { stl: [{ publicName: 'binary' }] };
+    const families = { ...proseFamilies, formatNames: {} };
+    expect(() => resolveOptionDescriptions({ families, import: {}, export: {} }, [], exportOptions)).toThrow(
+      'Missing description for stl export option binary',
+    );
+    expect(() =>
+      resolveOptionDescriptions(
+        { families, import: { gone: null }, export: { binary: null } },
+        [],
+        exportOptions,
+      ),
+    ).toThrow('Unused description for unknown import option gone');
+    expect(() =>
+      resolveOptionDescriptions(
+        { families, import: {}, export: { binary: { ply: null } } },
+        [],
+        exportOptions,
+      ),
+    ).toThrow('Missing stl description for export option binary');
+  });
+
+  it('rejects prose that names engine internals or breaks sentence style', () => {
+    expect(() => validateOptionDescription('x', 'AI_CONFIG_APP_SCALE_KEY.')).toThrow('engine internals');
+    expect(() => validateOptionDescription('x', '3MF_EXPORT_UNIT.')).toThrow('engine internals');
+    expect(() => validateOptionDescription('x', 'Specifies whether the assimp export shall.')).toThrow(
+      'engine internals',
+    );
+    expect(() => validateOptionDescription('x', 'See the @link perf page.')).toThrow('engine internals');
+    expect(() => validateOptionDescription('x', 'write binary files')).toThrow('capital letter');
+    expect(() => validateOptionDescription('x', 'Write binary files')).toThrow('full stop');
+    expect(() => validateOptionDescription('x', 'Write KHR_materials_specular data.')).not.toThrow();
+  });
+
+  it('describes every compiled option in the handwritten source', () => {
+    expect(Object.keys(prose.import).length + Object.keys(prose.export).length).toBeGreaterThan(100);
+    expect(JSON.stringify(overrides.properties)).not.toContain('"description"');
   });
 });

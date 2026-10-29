@@ -16,8 +16,8 @@
  */
 
 /**
- * Generates the public capability registry from checked compiler evidence and
- * a semantic override ledger. `--refresh-evidence` is the only mode that runs
+ * Generates the public capability registry from checked compiler evidence, a
+ * semantic override ledger and handwritten option prose. `--refresh-evidence` is the only mode that runs
  * Clang; ordinary generation and CI checks are deterministic Node-only work.
  */
 
@@ -27,9 +27,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { SLOP, TEMPORAL_CLAIMS, countWords, firstMatch } from '../tools/eslint-plugin/prose-rules.js';
+
 const root = fileURLToPath(new URL('../', import.meta.url));
 const evidencePath = `${root}scripts/assimp-capability-evidence.json`;
 const overridesPath = `${root}scripts/assimp-capability-overrides.json`;
+const optionDescriptionsPath = `${root}scripts/assimp-option-descriptions.json`;
 const outputPath = `${root}src/generated/assimp-capabilities.ts`;
 const descriptionsPath = `${root}src/generated/assimp-capability-descriptions.ts`;
 const matrixPath = `${root}docs-site/content/docs/format-matrix.json`;
@@ -83,9 +86,9 @@ const doxygenDescriptions = (path, symbolPattern) => {
   return descriptions;
 };
 
-// `kind` and `default` carry the type and default as data, and the JSDoc appends
-// `Default: …` once. Assimp's prose repeats both, sometimes wrongly (one option
-// says "The default value is true" over a false default), so it is dropped.
+// Post-process step prose still comes from the engine header. `kind` and
+// `default` carry the type and default as data, and the header prose repeats
+// both, sometimes wrongly, so it is dropped.
 const withoutRestatedDefaults = (description) =>
   description
     .replace(/,\s*its default value is \d+\./gu, '.')
@@ -601,7 +604,7 @@ const tsType = (descriptor) => {
   throw new Error(`Unsupported public property kind ${descriptor.kind}.`);
 };
 
-const descriptorFor = (evidence, override, descriptions) => {
+const descriptorFor = (evidence, override) => {
   const nativeKind = override.nativeKind ?? (evidence.kinds.length === 1 ? evidence.kinds[0] : undefined);
   const kind = override.kind ?? nativeKind;
   const hasOverrideDefault = Object.hasOwn(override, 'default');
@@ -633,12 +636,6 @@ const descriptorFor = (evidence, override, descriptions) => {
     owners: override.owners ?? evidence.owners,
     formats: override.formats ?? [],
     phases: override.phases ?? evidence.phases,
-    description: conciseDescription(
-      override.description ??
-        evidence.symbols.map((symbol) => descriptions.get(symbol)).find(Boolean) ??
-        evidence.symbols[0] ??
-        evidence.nativeName,
-    ),
     source: override.source ?? evidence.sources[0],
   };
 };
@@ -680,7 +677,6 @@ const effectiveOverride = (property, overrides) => {
       default: contract.unit,
       defaultDescription: contract.unitDefault,
       minimum: 0,
-      description: `Meters represented by one ${format.toUpperCase()} source unit.`,
       owners: [rawFormat],
     };
   }
@@ -694,18 +690,20 @@ const effectiveOverride = (property, overrides) => {
     default: contract.axis,
     values: ['x', 'y', 'z'],
     nativeValues: { x: 0, y: 1, z: 2 },
-    description: `The ${format.toUpperCase()} source up axis.`,
     owners: [rawFormat],
   };
 };
 
-const renderInterface = (name, descriptors, exported = true) => {
+const renderInterface = (name, descriptors, { descriptions, exported = true }) => {
   const fields = descriptors
-    .map(
-      (descriptor) =>
-        `  /** ${descriptor.description.replaceAll('*/', '* /')} Default: ${JSON.stringify(descriptor.default)}. */\n` +
-        `  readonly ${quote(descriptor.publicName)}?: ${tsType(descriptor)};`,
-    )
+    .map((descriptor) => {
+      const description = descriptions[descriptor.publicName];
+      const prose = description === undefined ? '' : `${description.replaceAll('*/', '* /')} `;
+      return (
+        `  /** ${prose}Default: ${JSON.stringify(descriptor.default)}. */\n` +
+        `  readonly ${quote(descriptor.publicName)}?: ${tsType(descriptor)};`
+      );
+    })
     .join('\n');
   return `${exported ? 'export ' : ''}type ${name} = {\n${fields}\n};`;
 };
@@ -713,11 +711,141 @@ const renderInterface = (name, descriptors, exported = true) => {
 const exportOptionsTypeName = (format) =>
   `Format${format.replace(/(^|[^A-Za-z0-9])([A-Za-z0-9])/gu, (_, _prefix, character) => character.toUpperCase())}ExportOptions`;
 
-const renderGenerated = (evidence, overrides) => {
-  const propertyDescriptions = doxygenDescriptions(
-    `${root}assimp/include/assimp/config.h.in`,
-    '#define\\s+(AI_CONFIG_[A-Z0-9_]+)',
-  );
+const MAX_OPTION_DESCRIPTION_WORDS = 60;
+
+// Option prose is shown verbatim as help text, so it names behaviour in plain
+// sentences and never the engine, its macros, config keys or markup.
+const ENGINE_REFERENCES = [
+  /\bassimp\b/iu,
+  /\bAI_[A-Z0-9_]+/u,
+  /\baiProcess_\w+/u,
+  /\b[A-Z0-9]+_[A-Z0-9_]+\b/u,
+  /@\w+/u,
+  /\\\w+/u,
+  /\bDefault(?: value)?:/iu,
+];
+
+/**
+ * Rejects option prose that a help pane cannot show as written.
+ *
+ * @param {string} label - Option path for the error message.
+ * @param {unknown} description - Candidate prose.
+ * @returns {void}
+ */
+const validateOptionDescription = (label, description) => {
+  if (typeof description !== 'string') throw new Error(`${label}: description must be a string or null.`);
+  const problems = [];
+  if (description.trim() !== description || /\s{2}/u.test(description)) problems.push('stray whitespace');
+  if (!/^[A-Z0-9-]/u.test(description)) problems.push('must start with a capital letter or number');
+  if (!description.endsWith('.')) problems.push('must end with a full stop');
+  const reference = firstMatch(ENGINE_REFERENCES, description);
+  if (reference !== undefined) problems.push(`names engine internals "${reference}"`);
+  const filler = firstMatch([...SLOP, ...TEMPORAL_CLAIMS], description);
+  if (filler !== undefined) problems.push(`uses filler "${filler}"`);
+  const words = countWords(description);
+  if (words > MAX_OPTION_DESCRIPTION_WORDS)
+    problems.push(`${words} words exceed ${MAX_OPTION_DESCRIPTION_WORDS}`);
+  if (problems.length > 0) throw new Error(`${label}: ${problems.join('; ')}.`);
+};
+
+/**
+ * Resolves the handwritten description of every public option. Each option
+ * needs exactly one entry, a string or `null` for no description, and an
+ * entry that matches no option is an error.
+ *
+ * @param {object} source - Parsed `assimp-option-descriptions.json`.
+ * @param {readonly { publicName: string }[]} importOptions - Public import options.
+ * @param {Readonly<Record<string, readonly { publicName: string }[]>>} exportOptions - Public export options per target.
+ * @returns {{ import: Record<string, string>, export: Record<string, Record<string, string>> }} Prose keyed by public name; omitted options are absent.
+ */
+const resolveOptionDescriptions = (source, importOptions, exportOptions) => {
+  const file = 'scripts/assimp-option-descriptions.json';
+  const { formatNames, ...templates } = source.families;
+  const resolvedImport = {};
+  const usedImport = new Set();
+  const usedFormats = new Set();
+  for (const { publicName } of importOptions) {
+    let description;
+    if (Object.hasOwn(source.import, publicName)) {
+      description = source.import[publicName];
+      usedImport.add(publicName);
+    } else {
+      const family = Object.keys(templates).find((suffix) => publicName.endsWith(suffix));
+      const format = family === undefined ? undefined : publicName.slice(0, -family.length);
+      if (format === undefined || !Object.hasOwn(formatNames, format)) {
+        throw new Error(`Missing description for import option ${publicName} in ${file}.`);
+      }
+      usedFormats.add(format);
+      description = templates[family].replaceAll('{format}', formatNames[format]);
+    }
+    if (description === null) continue;
+    validateOptionDescription(`import option ${publicName}`, description);
+    resolvedImport[publicName] = description;
+  }
+  for (const name of Object.keys(source.import)) {
+    if (!usedImport.has(name))
+      throw new Error(`Unused description for unknown import option ${name} in ${file}.`);
+  }
+  for (const format of Object.keys(formatNames)) {
+    if (!usedFormats.has(format)) throw new Error(`Unused family format name ${format} in ${file}.`);
+  }
+
+  const resolvedExport = {};
+  const usedExport = new Map();
+  for (const [format, descriptors] of Object.entries(exportOptions)) {
+    resolvedExport[format] = {};
+    for (const { publicName } of descriptors) {
+      if (!Object.hasOwn(source.export, publicName)) {
+        throw new Error(`Missing description for ${format} export option ${publicName} in ${file}.`);
+      }
+      const entry = source.export[publicName];
+      const byFormat = entry !== null && typeof entry === 'object';
+      const key = byFormat ? (Object.hasOwn(entry, format) ? format : '*') : undefined;
+      if (byFormat && !Object.hasOwn(entry, key)) {
+        throw new Error(`Missing ${format} description for export option ${publicName} in ${file}.`);
+      }
+      const description = byFormat ? entry[key] : entry;
+      const used = usedExport.get(publicName) ?? new Set();
+      if (key !== undefined) used.add(key);
+      usedExport.set(publicName, used);
+      if (description === null) continue;
+      validateOptionDescription(`${format} export option ${publicName}`, description);
+      resolvedExport[format][publicName] = description;
+    }
+  }
+  for (const [name, entry] of Object.entries(source.export)) {
+    const used = usedExport.get(name);
+    if (used === undefined)
+      throw new Error(`Unused description for unknown export option ${name} in ${file}.`);
+    if (entry === null || typeof entry !== 'object') continue;
+    for (const key of Object.keys(entry)) {
+      if (!used.has(key)) throw new Error(`Unused ${key} description for export option ${name} in ${file}.`);
+    }
+  }
+  return { import: resolvedImport, export: resolvedExport };
+};
+
+// The override ledger carries semantics only; prose has one source.
+const assertNoOverrideProse = (overrides) => {
+  const carriers = [
+    ...Object.entries(overrides.properties).flatMap(([name, override]) => [
+      [name, override],
+      ...(override.variants ?? []).map((variant) => [name, variant]),
+    ]),
+    ...Object.entries(overrides.formats.routes).flatMap(([format, route]) =>
+      (route.options ?? []).map((option) => [`${format}.${option.publicName}`, option]),
+    ),
+  ];
+  for (const [name, carrier] of carriers) {
+    if (Object.hasOwn(carrier, 'description')) {
+      throw new Error(
+        `Option ${name} carries a description in scripts/assimp-capability-overrides.json; write it in scripts/assimp-option-descriptions.json.`,
+      );
+    }
+  }
+};
+
+const renderGenerated = (evidence, overrides, optionDescriptions) => {
   const postProcessDescriptions = doxygenDescriptions(
     `${root}assimp/include/assimp/postprocess.h`,
     '(aiProcess_[A-Za-z0-9_]+)\\s*=',
@@ -729,9 +857,7 @@ const renderGenerated = (evidence, overrides) => {
   const supported = allProperties
     .filter(({ override }) => override.supported !== false)
     .flatMap(({ evidence: item, override }) =>
-      (override.variants ?? [override]).map((variant) =>
-        descriptorFor(item, { ...override, ...variant }, propertyDescriptions),
-      ),
+      (override.variants ?? [override]).map((variant) => descriptorFor(item, { ...override, ...variant })),
     );
   const importOptions = supported
     .filter((descriptor) => descriptor.phases.includes('import'))
@@ -752,6 +878,8 @@ const renderGenerated = (evidence, overrides) => {
     }
     exportOptions[format].sort((one, two) => one.publicName.localeCompare(two.publicName));
   }
+  assertNoOverrideProse(overrides);
+  const prose = resolveOptionDescriptions(optionDescriptions, importOptions, exportOptions);
 
   const steps = evidence.postProcess.map((step) => ({
     ...step,
@@ -792,7 +920,12 @@ const renderGenerated = (evidence, overrides) => {
   const formatValues = (formats) => JSON.stringify(formats, undefined, 2);
   const formatType = (formats) => formats.map(({ id }) => quote(id)).join(' | ');
   const optionTypes = overrides.formats.order
-    .map((format) => renderInterface(exportOptionsTypeName(format), exportOptions[format], false))
+    .map((format) =>
+      renderInterface(exportOptionsTypeName(format), exportOptions[format], {
+        descriptions: prose.export[format],
+        exported: false,
+      }),
+    )
     .join('\n\n');
   const exportMapFields = overrides.formats.order
     .map((format) => `  readonly ${quote(format)}: ${exportOptionsTypeName(format)};`)
@@ -832,8 +965,6 @@ const renderGenerated = (evidence, overrides) => {
   ]);
   const publicDescriptor = (descriptor) =>
     Object.fromEntries(Object.entries(descriptor).filter(([name]) => publicDescriptorFields.has(name)));
-  const descriptionsOf = (descriptors) =>
-    Object.fromEntries(descriptors.map((descriptor) => [descriptor.publicName, descriptor.description]));
   const publicDescriptorsByFormat = Object.fromEntries(
     overrides.formats.order.map((format) => [
       format,
@@ -868,13 +999,11 @@ const renderGenerated = (evidence, overrides) => {
   }));
   const descriptions = `/* This file is generated by scripts/generate-assimp-capabilities.mjs. Do not edit. */
 
-/** Import option prose, keyed by public name. @internal */
-export const importOptionDescriptions = ${JSON.stringify(descriptionsOf(importOptions), undefined, 2)} as const;
-/** Export option prose per canonical target, keyed by public name. @internal */
+/** Import option prose, keyed by public name. An option without prose is absent. @internal */
+export const importOptionDescriptions = ${JSON.stringify(prose.import, undefined, 2)} as const;
+/** Export option prose per canonical target, keyed by public name. An option without prose is absent. @internal */
 export const exportOptionDescriptions = ${JSON.stringify(
-    Object.fromEntries(
-      overrides.formats.order.map((format) => [format, descriptionsOf(exportOptions[format])]),
-    ),
+    Object.fromEntries(overrides.formats.order.map((format) => [format, prose.export[format]])),
     undefined,
     2,
   )} as const;
@@ -913,7 +1042,7 @@ export type PostProcessDescriptor = Readonly<{
   conflicts: readonly string[];
 }>;
 
-${renderInterface('ImportOptions', importOptions)}
+${renderInterface('ImportOptions', importOptions, { descriptions: prose.import })}
 
 ${optionTypes}
 
@@ -988,7 +1117,7 @@ const generate = (check) => {
   const evidence = readJson(evidencePath);
   const overrides = readJson(overridesPath);
   validateEvidence(evidence, overrides);
-  const rendered = renderGenerated(evidence, overrides);
+  const rendered = renderGenerated(evidence, overrides, readJson(optionDescriptionsPath));
   const outputs = [
     [outputPath, formatTypescript(rendered.capabilities)],
     [descriptionsPath, formatTypescript(rendered.descriptions)],
@@ -1017,4 +1146,10 @@ if (isMain) {
   else generate(args.has('--check'));
 }
 
-export { normalizeSourceText, validateOverrideCoverage, validateSourceEvidence };
+export {
+  normalizeSourceText,
+  resolveOptionDescriptions,
+  validateOptionDescription,
+  validateOverrideCoverage,
+  validateSourceEvidence,
+};

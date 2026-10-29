@@ -25,7 +25,7 @@ import { conversionEdges } from 'libassimp';
 console.log(conversionEdges.some(({ from, to }) => from === 'glb' && to === 'stl'));
 ```
 
-This import reads static JavaScript data and does not fetch or compile Wasm. Option and post-process descriptions for help text live in the lazy `libassimp/capabilities` subpath, so the root entry does not carry them:
+This import reads static JavaScript data and does not fetch or compile Wasm. Option and post-process descriptions for help text live in the lazy `libassimp/capabilities` subpath, so the root entry does not carry them. An option whose name says what it does, such as `binary`, has no `description`:
 
 ```typescript
 import type { DescribedCapabilities } from 'libassimp/capabilities';
@@ -33,7 +33,7 @@ import type { DescribedCapabilities } from 'libassimp/capabilities';
 const loadHelp = async (): Promise<DescribedCapabilities> =>
   (await import('libassimp/capabilities')).assimpCapabilities;
 
-console.log((await loadHelp()).export.stl.exportOptions.binary.description);
+console.log((await loadHelp()).export.glb.exportOptions.sparseAccessors.description);
 ```
 
 ## Loading

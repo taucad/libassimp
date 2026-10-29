@@ -2,6 +2,11 @@
 
 Before 1.0, a minor version may break the API. Each section lists what breaks in that release, relative to the one before it. Tau and other callers pinned with `^0.x` do not pick up a new minor automatically.
 
+## 0.5.0 (unreleased)
+
+- `DescribedOptionDescriptor.description` from `libassimp/capabilities` is optional. Every option description is handwritten, and an option whose name already says what it does, such as `binary` or `animations`, has no `description` key. Show the option name alone when it is absent. Post-process step descriptions stay required.
+- Option prose no longer quotes engine documentation, so every option description string differs from 0.4.
+
 ## 0.4.0 (unreleased)
 
 - USD export options follow the LightUSD exporter: `materialX`, `subdivision`, `volumes` and `optimizeForMobile` are gone, and passing one rejects with `INVALID_OPTIONS` (the exporter writes UsdPreviewSurface materials, never subdivides, and always applies the ARKit profile to USDZ). New: `animationIndex`, `maxFileSizeMb` and `maxMemoryMb` on every USD target, `compressFloatArrays` on `usdc` and `usdz`, and `lights` and `physicsJoints` on `usdz`. A new `usdc` target writes binary USD.
