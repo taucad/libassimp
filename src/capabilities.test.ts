@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import { assimpCapabilities as described } from './capabilities.js';
@@ -20,10 +22,48 @@ describe('libassimp/capabilities', () => {
       expect(info.id).toBe(rootInfo.id);
       expect(Object.keys(info.exportOptions)).toEqual(Object.keys(rootInfo.exportOptions));
       for (const [name, descriptor] of Object.entries(info.exportOptions)) {
-        expect((descriptor as { description: string }).description, `${format}.${name}`).not.toBe('');
+        const { description } = descriptor as { description: string };
+        expect(description, `${format}.${name}`).not.toBe('');
+        // Forms show these as help text, so each one is prose rather than an Assimp config key.
+        expect(description, `${format}.${name}`).not.toMatch(/^\w+\.?$/u);
       }
     }
     expect(described.import).toBe(root.import);
+  });
+
+  it('publishes every export option description exactly as authored in the override ledger', () => {
+    type Authored = {
+      publicName: string;
+      supported?: boolean;
+      formats?: string[];
+      description?: string;
+      variants?: Array<Partial<Authored>>;
+    };
+    const ledger = JSON.parse(
+      readFileSync(new URL('../scripts/assimp-capability-overrides.json', import.meta.url), 'utf8'),
+    ) as {
+      properties: Record<string, Authored>;
+      formats: { routes: Record<string, { options?: Authored[] }> };
+    };
+    const authored = new Map<string, string | undefined>();
+    for (const option of Object.values(ledger.properties)) {
+      if (option.supported === false) continue;
+      for (const variant of option.variants ?? [{}]) {
+        const { publicName, formats, description } = { ...option, ...variant };
+        for (const format of formats ?? []) authored.set(`${format}.${publicName}`, description);
+      }
+    }
+    for (const [format, route] of Object.entries(ledger.formats.routes)) {
+      for (const option of route.options ?? [])
+        authored.set(`${format}.${option.publicName}`, option.description);
+    }
+    for (const [format, info] of Object.entries(described.export)) {
+      for (const [name, descriptor] of Object.entries(info.exportOptions)) {
+        const key = `${format}.${name}`;
+        expect(authored.get(key), key).toBeDefined();
+        expect((descriptor as { description: string }).description, key).toBe(authored.get(key));
+      }
+    }
   });
 
   it('keeps prose out of the root registry', () => {

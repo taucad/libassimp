@@ -172,7 +172,7 @@
             "kind": "boolean",
             "default": true,
             "owners": ["FBX"],
-            "description": "Write binary FBX when true and ASCII FBX when false.",
+            "description": "Write binary FBX. When off, writes ASCII FBX.",
             "source": "assimp/code/Common/Exporter.cpp"
           }
         ],
@@ -204,7 +204,7 @@
             "kind": "boolean",
             "default": true,
             "owners": ["Obj"],
-            "description": "Write an MTL sidecar when the scene has materials.",
+            "description": "Write an MTL material file next to the OBJ when the scene has materials.",
             "source": "assimp/code/Common/Exporter.cpp"
           }
         ],
@@ -226,7 +226,7 @@
             "kind": "boolean",
             "default": false,
             "owners": ["Ply"],
-            "description": "Write binary PLY when true and ASCII PLY when false.",
+            "description": "Write binary PLY. When off, writes ASCII PLY.",
             "source": "assimp/code/Common/Exporter.cpp"
           }
         ],
@@ -253,7 +253,7 @@
             "kind": "boolean",
             "default": false,
             "owners": ["STL"],
-            "description": "Write binary STL when true and ASCII STL when false.",
+            "description": "Write binary STL. When off, writes ASCII STL.",
             "source": "assimp/code/Common/Exporter.cpp"
           }
         ],
@@ -285,26 +285,29 @@
     "3MF_EXPORT_APPLICATION": {
       "publicName": "application",
       "supported": true,
-      "formats": ["3mf"]
+      "formats": ["3mf"],
+      "description": "Name of the application that created the file, stored in the 3MF Application metadata. Leave empty to omit it."
     },
     "3MF_EXPORT_DECIMAL_PRECISION": {
       "publicName": "decimalPrecision",
       "supported": true,
       "formats": ["3mf"],
       "minimum": 1,
-      "maximum": 16
+      "maximum": 16,
+      "description": "Digits written after the decimal point for each vertex coordinate. The default keeps full single-precision accuracy. Fewer digits give a smaller file but can open tiny gaps between meshes."
     },
     "3MF_EXPORT_REQUIRE_MANIFOLD": {
       "publicName": "requireManifold",
       "supported": true,
       "formats": ["3mf"],
-      "description": "Whether every mesh must be manifold and oriented, as 3MF Core requires for model objects. When false, a mesh that is not is written as an object of type other instead of failing the export."
+      "description": "Fail the export when a mesh is not manifold and oriented, as 3MF Core requires for printable model objects. When off, such a mesh is written as an object of type other instead."
     },
     "3MF_EXPORT_UNIT": {
       "publicName": "unit",
       "supported": true,
       "formats": ["3mf"],
-      "values": ["micron", "millimeter", "centimeter", "inch", "foot", "meter"]
+      "values": ["micron", "millimeter", "centimeter", "inch", "foot", "meter"],
+      "description": "Length unit the 3MF file declares. When the source records its unit, coordinates are converted to this unit; otherwise they are written unchanged."
     },
     "3MF_EXPORT_UPAXIS": {
       "publicName": "upAxis",
@@ -318,7 +321,8 @@
         "x": 0,
         "y": 1,
         "z": 2
-      }
+      },
+      "description": "Axis that points up in the 3MF file. 3MF uses Z. When the source records its up axis, the model is rotated to match; otherwise it is written unchanged."
     },
     "AI_CONFIG_ANDROID_JNI_ASSIMP_MANAGER_SUPPORT": {
       "publicName": "androidJniAssimpManagerSupport",
@@ -355,13 +359,15 @@
     "bJoinIdenticalVertices": {
       "publicName": "joinIdenticalVertices",
       "supported": true,
-      "formats": ["obj", "fbx"]
+      "formats": ["obj", "fbx"],
+      "description": "Share one vertex between faces that use the same position instead of writing a copy for each face. Gives a smaller file."
     },
     "CHECK_IDENTITY_MATRIX_EPSILON": {
       "publicName": "identityMatrixEpsilon",
       "supported": true,
       "formats": ["glb", "gltf"],
-      "minimum": 0
+      "minimum": 0,
+      "description": "Tolerance for treating a node transform as the identity. A node whose matrix is within this distance of the identity is written without a matrix."
     },
     "EXPORT_BLOB_NAME": {
       "publicName": "exportBlobName",
@@ -371,25 +377,35 @@
     "EXPORT_FBX_TRANSPARENCY_FACTOR_REFER_TO_OPACITY": {
       "publicName": "transparencyFactorRefersToOpacity",
       "supported": true,
-      "formats": ["fbx"]
+      "formats": ["fbx"],
+      "description": "Write each material's TransparencyFactor as 1 minus its opacity. When off, TransparencyFactor is always 1."
     },
     "EXPORT_POINT_CLOUDS": {
       "publicName": "pointClouds",
       "supported": true,
-      "formats": [
-        "3mf",
-        "assjson",
-        "dae",
-        "fbx",
-        "glb",
-        "gltf",
-        "obj",
-        "ply",
-        "step",
-        "stl",
-        "usda",
-        "usdc",
-        "usdz"
+      "variants": [
+        {
+          "formats": [
+            "3mf",
+            "assjson",
+            "dae",
+            "fbx",
+            "glb",
+            "gltf",
+            "obj",
+            "ply",
+            "step",
+            "usda",
+            "usdc",
+            "usdz"
+          ],
+          "description": "Export meshes that have vertices but no faces, such as scanned point clouds. When off, every mesh must have faces."
+        },
+        {
+          "formats": ["stl"],
+          "description": "Export the vertices as a point cloud. ASCII STL then writes points instead of triangles, even for meshes with faces, and binary STL fails. Leave it off for ordinary models.",
+          "phases": ["export"]
+        }
       ]
     },
     "EXPORT_XFILE_64BIT": {
@@ -417,17 +433,20 @@
     "GLTF2_SPARSE_ACCESSOR_EXP": {
       "publicName": "sparseAccessors",
       "supported": true,
-      "formats": ["glb", "gltf"]
+      "formats": ["glb", "gltf"],
+      "description": "Store morph target offsets in sparse accessors, which write only the vertices a target moves. Smaller for targets that change few vertices."
     },
     "GLTF2_TARGET_NORMAL_EXP": {
       "publicName": "includeTargetNormals",
       "supported": true,
-      "formats": ["glb", "gltf"]
+      "formats": ["glb", "gltf"],
+      "description": "Write vertex normals for morph targets in addition to positions."
     },
     "GLTF2_TARGETNAMES_EXP": {
       "publicName": "includeTargetNames",
       "supported": true,
-      "formats": ["glb", "gltf"]
+      "formats": ["glb", "gltf"],
+      "description": "Write morph target names to each mesh's extras.targetNames."
     },
     "IMPORT_3DS_UNIT_SCALE_TO_METERS": {
       "publicName": "import3DsUnitScaleToMeters",
@@ -1024,24 +1043,28 @@
       "publicName": "animationIndex",
       "supported": true,
       "formats": ["usda", "usdc", "usdz"],
-      "minimum": 0
+      "minimum": 0,
+      "description": "Which animation to export, counting from 0, when several animations drive the same channels. USD has one timeline per stage, so animations on separate channels are merged instead."
     },
     "USD_EXPORT_COMPRESS_FLOAT_ARRAYS": {
       "publicName": "compressFloatArrays",
       "supported": true,
-      "formats": ["usdc", "usdz"]
+      "formats": ["usdc", "usdz"],
+      "description": "Use OpenUSD's lossless compression for integer-valued and low-cardinality float arrays in the binary USDC data."
     },
     "USD_EXPORT_MAX_FILE_SIZE_MB": {
       "publicName": "maxFileSizeMb",
       "supported": true,
       "formats": ["usda", "usdc", "usdz"],
-      "minimum": 0
+      "minimum": 0,
+      "description": "Largest binary USDC layer the writer may produce, in MiB. 0 uses the platform default: no limit natively, 2048 in WebAssembly. USDA output ignores it."
     },
     "USD_EXPORT_MAX_MEMORY_MB": {
       "publicName": "maxMemoryMb",
       "supported": true,
       "formats": ["usda", "usdc", "usdz"],
-      "minimum": 0
+      "minimum": 0,
+      "description": "Memory the binary USDC writer may use, in MiB. 0 uses the platform default: no limit natively, 2048 in WebAssembly. USDA output ignores it."
     },
     "USD_EXPORT_SOURCE_DIRECTORY": {
       "publicName": "sourceDirectory",
@@ -1051,39 +1074,46 @@
     "USDZ_EXPORT_ANIMATIONS": {
       "publicName": "animations",
       "supported": true,
-      "formats": ["usda", "usdc", "usdz"]
+      "formats": ["usda", "usdc", "usdz"],
+      "description": "Export animations."
     },
     "USDZ_EXPORT_CLEARCOAT": {
       "publicName": "clearcoat",
       "supported": true,
-      "formats": ["usda", "usdc", "usdz"]
+      "formats": ["usda", "usdc", "usdz"],
+      "description": "Map clearcoat factors and textures to the UsdPreviewSurface clearcoat inputs."
     },
     "USDZ_EXPORT_LIGHTS": {
       "publicName": "lights",
       "supported": true,
-      "formats": ["usdz"]
+      "formats": ["usdz"],
+      "description": "Keep lights in the USDZ package. ARKit allows no UsdLux prims, so lights are dropped unless this is on."
     },
     "USDZ_EXPORT_PHYSICS_JOINTS": {
       "publicName": "physicsJoints",
       "supported": true,
-      "formats": ["usdz"]
+      "formats": ["usdz"],
+      "description": "Keep UsdPhysics joint prims in the USDZ package. ARKit allows no joint prims, so joints are written as plain Xforms unless this is on."
     },
     "USE_GLTF_PBR_SPECULAR_GLOSSINESS": {
       "publicName": "useGltfPbrSpecularGlossiness",
       "supported": true,
-      "formats": ["glb", "gltf"]
+      "formats": ["glb", "gltf"],
+      "description": "Write specular materials with the deprecated KHR_materials_pbrSpecularGlossiness extension instead of KHR_materials_specular. Only KHR_materials_unlit can be combined with it."
     },
     "USE_UNLIMITED_BONES_PER VERTEX": {
       "publicName": "unlimitedSkinningBonesPerVertex",
       "supported": true,
-      "formats": ["glb", "gltf"]
+      "formats": ["glb", "gltf"],
+      "description": "Write every bone weight for each vertex. When off, each vertex keeps its four largest weights, the most glTF requires readers to support. Weights are not renormalized."
     },
     "JSON_SKIP_WHITESPACES": {
       "publicName": "skipWhitespaces",
       "supported": true,
       "formats": ["assjson"],
       "default": true,
-      "applyDefault": true
+      "applyDefault": true,
+      "description": "Write compact JSON with no indentation or line breaks."
     }
   },
   "postProcess": {
