@@ -293,10 +293,16 @@ if(LIBASSIMP_NATIVE_ADDON)
     # bomb under a data limit then aborts instead of failing the import.
     # Commit on demand instead (same speed and peak RSS).
     set(MI_EXTRA_CPPDEFS "MI_DEFAULT_ARENA_EAGER_COMMIT=0" CACHE STRING "" FORCE)
+    find_package(Git REQUIRED)
     FetchContent_Declare(
       mimalloc
       GIT_REPOSITORY "https://github.com/microsoft/mimalloc"
       GIT_TAG e874dbe8d7f248561dd9a65d2e07a204b93af067 # v3.1.6
+      # Backport selective arena purging from upstream 4068384292d4.
+      PATCH_COMMAND
+        "${CMAKE_COMMAND}" "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+        "-DPATCH=${CMAKE_CURRENT_SOURCE_DIR}/patches/mimalloc-selective-purge.patch"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/apply-patch.cmake"
       EXCLUDE_FROM_ALL
     )
     FetchContent_MakeAvailable(mimalloc)

@@ -4,3 +4,7 @@ tests/fixtures/** -text -diff
 
 # Fuzz seeds are byte-exact libFuzzer inputs written by scripts/generate-fuzz-corpus.mjs.
 tests/fuzz/corpus/** -text -diff
+
+# Patches are applied to upstream sources byte for byte: keep LF line endings
+# and the single-space context lines that whitespace checks would flag.
+patches/*.patch -text -whitespace
