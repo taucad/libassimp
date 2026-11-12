@@ -23,8 +23,8 @@ overrides:
   'source-map-js@1': 1.2.2
   # Origin: dompurify 3.4.17 fixes GHSA-mrv2-3pqr-j5jr and the SAFE_FOR_TEMPLATES bypass in Mermaid's sanitizer path.
   'dompurify@3': 3.4.17
-  # Origin: follow-redirects 1.16.1 fixes the array-form headers and sensitiveHeaders advisories in Nx's axios path.
-  'follow-redirects@1': 1.16.1
+  # Origin: follow-redirects 1.16.2 fixes the array-form headers and cross-realm sensitiveHeaders advisories in Nx's axios path.
+  'follow-redirects@1': 1.16.2
   # Origin: vite 8.2.4 fixes the launch-editor existence-check advisory in Vitest's browser path.
   'vite@8': 8.2.4
   # Origin: zod 4.6.6 fixes GHSA-mrhx-c7xc-m3w5 (oversized constrained collections) in knip's and Fumadocs' validation path.
