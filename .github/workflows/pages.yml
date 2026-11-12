@@ -1,0 +1,60 @@
+# Builds the docs site and uploads it to Cloudflare Pages: production from
+# main, a preview for every same-repository pull request. Then requests the
+# deployment just made. The project, the account and the deploy token are
+# written to this repository by tau-cloud (stacks/sites, docs/sites-stack.md);
+# nothing here names them.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: pages · deploy
+    # Fork and Dependabot pull requests receive no secrets, so they get no preview.
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '24'
+      - run: pnpm run docs:build
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        shell: bash
+        run: |
+          npx --yes wrangler@4.155.0 pages deploy docs-site/out \
+            --project-name="$PROJECT" --branch="$BRANCH" \
+            --commit-hash="$GITHUB_SHA" --commit-dirty=true | tee deploy.log
+          url="$(grep -Eo 'https://[^ ]+\.pages\.dev' deploy.log | head -1)"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          printf '## Cloudflare Pages\n\n%s deploy of %s: %s\n' "$BRANCH" "$GITHUB_SHA" "$url" >> "$GITHUB_STEP_SUMMARY"
+      # The immutable deployment URL, so the check never races the production alias.
+      - name: Check the deployment
+        env:
+          ORIGIN: ${{ steps.deploy.outputs.url }}
+        shell: bash
+        run: |
+          for path in / /docs /docs.mdx /docs/install.mdx /llms.txt; do
+            curl -fsS --retry 5 --retry-all-errors -o /dev/null -w "%{http_code} $path\n" "$ORIGIN$path"
+          done
+          curl -fsSI "$ORIGIN/docs.mdx" | grep -qi '^content-type: text/markdown'

@@ -5,7 +5,7 @@
 !.nx/version-plans/
 !.nx/version-plans/*.md
 .pnpm-store/
-.vercel
+.wrangler
 build/
 coverage/
 dist/

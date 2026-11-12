@@ -1,6 +1,7 @@
 // Static export cannot emit `out/docs/tutorial.mdx` directly: `app/docs/[[...slug]]` already owns
 // that segment. The generator writes to `out/llms.mdx/<rel>`; this moves each file to the URL the
-// site actually advertises, so no host rewrite is needed.
+// site actually advertises, so no host rewrite is needed: Cloudflare Pages serves `out/` as static
+// files, with the content types and redirects of `public/_headers` and `public/_redirects`.
 import { existsSync, globSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
