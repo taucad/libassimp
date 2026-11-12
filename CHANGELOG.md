@@ -1,3 +1,15 @@
+## 0.4.2 (2026-11-12)
+
+### 🩹 Fixes
+
+- Raise the follow-redirects override to 1.16.2 for GHSA-mrwp-f3q8-3g9p in the build tooling, and publish the documentation site from Cloudflare Pages. The package's runtime is unchanged. ([#76](https://github.com/taucad/libassimp/pull/76))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Opus 5.5
+- Richard Fontein @rifont
+
 ## 0.4.1 (2026-10-29)
 
 ### 🩹 Fixes
