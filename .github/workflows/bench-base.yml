@@ -42,7 +42,7 @@ jobs:
       CCACHE_MAXSIZE: 1G
       CCACHE_NOHASHDIR: 'true'
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.sha || inputs.ref || github.sha }}
           persist-credentials: false
@@ -55,7 +55,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           sha="$(git rev-parse HEAD:assimp)"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: restore
         with:
           path: src/wasm/libassimp.*
@@ -72,7 +72,7 @@ jobs:
             echo "CCACHE_COMPILERCHECK=string:$(cat emsdk-image.txt)"
           } >> "$GITHUB_ENV"
       # Restore only: ci.yml's build-wasm job owns these entries.
-      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: steps.restore.outputs.cache-matched-key == ''
         with:
           path: .ccache
@@ -85,12 +85,12 @@ jobs:
         env:
           LIBASSIMP_EMSDK: host
         run: node scripts/build-wasm.mjs
-      - uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: steps.restore.outputs.cache-hit != 'true'
         with:
           path: src/wasm/libassimp.*
           key: ${{ steps.restore.outputs.cache-primary-key }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bench-base-wasm
           path: src/wasm/libassimp.*
@@ -102,7 +102,7 @@ jobs:
     # Origin: the same ceiling as ci.yml's native-build job, which this mirrors.
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.sha || inputs.ref || github.sha }}
           persist-credentials: false
@@ -119,7 +119,7 @@ jobs:
         run: |
           manifest="$(node -p "const p=require('./package.json');const h=require('node:crypto').createHash('sha256');h.update(JSON.stringify([p.version,p.binary,p.devDependencies['node-addon-api'],p.devDependencies['cmake-js'],process.versions.node.split('.')[0]]));h.digest('hex').slice(0,16)")"
           echo "key=addon-v1-linux-x64-gnu-manylinux-$manifest-$INPUTS-$(git rev-parse HEAD:assimp)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: restore
         with:
           path: native-artifacts
@@ -134,12 +134,12 @@ jobs:
           scripts/build-manylinux.sh "${inc%%;*}" native-output
           mkdir -p native-artifacts
           cp native-output/libassimp.node native-artifacts/libassimp.linux-x64-gnu.node
-      - uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: steps.restore.outputs.cache-hit != 'true'
         with:
           path: native-artifacts
           key: ${{ steps.restore.outputs.cache-primary-key }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bench-base-native
           path: native-artifacts/libassimp.linux-x64-gnu.node
@@ -160,7 +160,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           submodules: ${{ matrix.tier == 'small' }}
@@ -191,7 +191,7 @@ jobs:
           node bench/matrix.mjs --backend "$BACKEND" --tier "$TIER" --inputs "$RUNNER_TEMP/matrix-inputs" \
             --build "build=$entry,addon=/tmp/build/native/libassimp.linux-x64-gnu.node,rev=$revision" \
             --out "/tmp/format-matrix/$BACKEND-$TIER.json"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: format-matrix-${{ matrix.backend }}-${{ matrix.tier }}
           path: /tmp/format-matrix/*.json
